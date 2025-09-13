@@ -1,7 +1,12 @@
-// netlify/functions/send-email.jsexports.handler = async (event) => {  try {    if (event.httpMethod !== 'POST') {      return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };    }
-    const { to, subject, html } = JSON.parse(event.body || '{}');    if (!to || !subject || !html) {      return { statusCode: 400, body: JSON.stringify({ error: 'Missing required fields: to, subject, html' }) };    }
-    const apikey = process.env.RESEND_API_KEY;    const from = process.env.FROM_EMAIL || 'onboarding@resend.dev';    if (!apikey) {      return { statusCode: 500, body: JSON.stringify({ error: 'Missing RESEND_API_KEY env var' }) };    }
-    const resp = await fetch('https://api.resend.com/emails', {      method: 'POST',      headers: {        Authorization: `Bearer ${apikey}`,        'Content-Type': 'application/json',      },      body: JSON.stringify({ from, to, subject, html }),    });
-    const data = await resp.json();
-    if (!resp.ok) {      console.error('Resend error:', data);      return { statusCode: resp.status, body: JSON.stringify({ ok: false, status: resp.status, data, message: data?.message }) };    }
-    return { statusCode: 200, body: JSON.stringify({ ok: true, id: data.id || null }) };  } catch (e) {    console.error(e);    return { statusCode: 500, body: JSON.stringify({ error: 'Server error' }) };  }};
+// netlify/functions/send-email.js
+const CORS_HEADERS = {  'Access-Control-Allow-Origin': '*',           // na produkcji możesz zawęzić do swojej domeny  'Access-Control-Allow-Methods': 'POST, OPTIONS',  'Access-Control-Allow-Headers': 'Content-Type',};
+exports.handler = async (event) => {  try {    // CORS preflight    if (event.httpMethod === 'OPTIONS') {      return { statusCode: 204, headers: CORS_HEADERS };    }
+    if (event.httpMethod !== 'POST') {      return {        statusCode: 405,        headers: CORS_HEADERS,        body: JSON.stringify({ error: 'Method not allowed' }),      };    }
+    // --- ZMIENNE ŚRODOWISKOWE (Netlify → Site settings → Environment variables) ---    // RESEND_API_KEY  – klucz API z Resend (obowiązkowo)    // FROM_EMAIL      – np. onboarding@resend.dev lub własna zweryfikowana domena    const apiKey = process.env.RESEND_API_KEY;    const from = process.env.FROM_EMAIL || 'onboarding@resend.dev';
+    if (!apiKey) {      return {        statusCode: 500,        headers: CORS_HEADERS,        body: JSON.stringify({ error: 'Missing RESEND_API_KEY' }),      };    }
+    let payload;    try {      payload = JSON.parse(event.body || '{}');    } catch {      return {        statusCode: 400,        headers: CORS_HEADERS,        body: JSON.stringify({ error: 'Invalid JSON body' }),      };    }
+    const { to, subject, html } = payload;    if (!to || !subject || !html) {      return {        statusCode: 400,        headers: CORS_HEADERS,        body: JSON.stringify({ error: 'Required fields: to, subject, html' }),      };    }
+    const resp = await fetch('https://api.resend.com/emails', {      method: 'POST',      headers: {        'Authorization': `Bearer ${apiKey}`,        'Content-Type': 'application/json',      },      body: JSON.stringify({ from, to, subject, html }),    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {      return {        statusCode: 502,        headers: CORS_HEADERS,        body: JSON.stringify({ ok: false, error: data }),      };    }
+    return {      statusCode: 200,      headers: CORS_HEADERS,      body: JSON.stringify({ ok: true, id: data.id || null }),    };  } catch (e) {    return {      statusCode: 500,      headers: CORS_HEADERS,      body: JSON.stringify({ error: 'Server error' }),    };  }};
