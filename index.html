@@ -1,0 +1,309 @@
+
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Massage & SPA — Rezerwacja</title>
+  <link rel="stylesheet" href="assets/style.css"/>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">
+        <img src="assets/logo.svg" alt="Massage & SPA"/>
+        <h1>Massage &amp; SPA</h1>
+      </div>
+      <div>
+        <a class="btn secondary" href="admin.html">Panel admin</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Rezerwacja</h2>
+      <form id="form" class="grid two">
+        <div>
+          <label>Imię i nazwisko *</label>
+          <input id="name" class="input" required/>
+        </div>
+        <div>
+          <label>Email *</label>
+          <input id="email" class="input" type="email" required/>
+        </div>
+        <div>
+          <label>Telefon *</label>
+          <input id="phone" class="input" type="tel" required/>
+        </div>
+        <div>
+          <label>Adres</label>
+          <input id="address" class="input" placeholder="Ulica, miasto"/>
+        </div>
+        <div>
+          <label>Zabieg *</label>
+          <select id="service" class="input"></select>
+        </div>
+        <div></div>
+        <div>
+          <label>Data *</label>
+          <input id="date" class="input" type="date" required/>
+        </div>
+        <div>
+          <label>Godzina *</label>
+          <select id="time" class="input"><option>Wybierz datę…</option></select>
+        </div>
+        <div class="grid" style="grid-column:1/-1">
+          <label>Uwagi</label>
+          <textarea id="notes" rows="4" class="input" placeholder="Np. preferencje, dolegliwości…"></textarea>
+        </div>
+        <div class="inline" style="grid-column:1/-1">
+          <input type="checkbox" id="rodo" style="width:18px;height:18px"/>
+          <label id="rodoLbl" for="rodo">Wyrażam zgodę na przetwarzanie danych osobowych w celu realizacji rezerwacji.</label>
+        </div>
+        <div style="grid-column:1/-1;display:flex;gap:10px">
+          <button class="btn" type="submit">Rezerwuj</button>
+                  </div>
+      </form>
+    </div>
+
+    <div class="footer">© Massage &amp; SPA • <span id="contact"></span></div>
+  </div>
+
+  <script src="assets/store.js"></script>
+  <script src="assets/app.js"></script><script src="calendar-patch.js" defer></script><script>(function(){  var DATE_SELECTORS=['#date','#bookingDate','#dateInput','input[name="date"]'];  var TIME_SELECTORS=['#time','#bookingTime','#timeSelect','select[name="time"]'];  function $(list){for(var i=0;i<list.length;i++){var el=document.querySelector(list[i]);if(el)return el}return null}  function injectCSS(css){var s=document.createElement('style');s.textContent=css;document.head.appendChild(s)}  function loadScript(src,cb){var s=document.createElement('script');s.src=src;s.onload=cb;document.head.appendChild(s)}  function loadCSS(href){var l=document.createElement('link');l.rel='stylesheet';l.href=href;document.head.appendChild(l)}  function parseSlots(){    var out=[];function add(d,t){if(!d||!t)return;if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return;if(!/^\d{2}:\d{2}$/.test(t))return;out.push({date:d,time:t})}    for(var i=0;i<localStorage.length;i++){      var k=localStorage.key(i),v=null;try{v=JSON.parse(localStorage.getItem(k))}catch(e){v=null} if(!v)continue;      if(Array.isArray(v)&&v.length){        if(typeof v[0]==='object'&&'date'in v[0]&&'time'in v[0]){v.forEach(function(x){add(x.date,x.time)});continue}        if(typeof v[0]==='string'){v.forEach(function(s){var m=s.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})$/);if(m)add(m[1],m[2])});continue}      }      if(v&&typeof v==='object'){        if(Array.isArray(v.slots)){v.slots.forEach(function(x){add(x.date,x.time)});continue}        var keys=Object.keys(v),used=false;        for(var j=0;j<keys.length;j++){var key=keys[j];if(/^\d{4}-\d{2}-\d{2}$/.test(key)&&Array.isArray(v[key])){v[key].forEach(function(t){add(key,String(t).slice(0,5))});used=true}}        if(used)continue;      }    }    return out;  }  function init(){    var dateEl=$(DATE_SELECTORS),timeEl=$(TIME_SELECTORS); if(!dateEl||!timeEl)return;    var slots=parseSlots(),days={}; slots.forEach(function(s){(days[s.date]||(days[s.date]=[])).includes(s.time)||days[s.date].push(s.time)});    var enabledDates=Object.keys(days);    if(typeof flatpickr!=='function'){console.warn('flatpickr not loaded');return}    flatpickr(dateEl,{      dateFormat:'Y-m-d',disableMobile:true,enable:enabledDates,      onDayCreate:function(_1,_2,_3,dayElem){        var y=dayElem.dateObj.getFullYear(),m=('0'+(dayElem.dateObj.getMonth()+1)).slice(-2),d=('0'+dayElem.dateObj.getDate()).slice(-2);        var key=y+'-'+m+'-'+d; if(days[key]) dayElem.classList.add('fp-has-slots');      },      onChange:function(selected){var sel=selected&&selected[0]; if(!sel)return;        var y=sel.getFullYear(),m=('0'+(sel.getMonth()+1)).slice(-2),d=('0'+sel.getDate()).slice(-2); var key=y+'-'+m+'-'+d;        while(timeEl.firstChild) timeEl.removeChild(timeEl.firstChild);        var times=(days[key]||[]).slice().sort();        if(!times.length){var o=document.createElement('option');o.value='';o.textContent='Brak wolnych godzin';o.disabled=true;o.selected=true;timeEl.appendChild(o);timeEl.disabled=true;return}        var ph=document.createElement('option');ph.value='';ph.textContent='Wybierz godzinę…';timeEl.appendChild(ph);        times.forEach(function(t){var o=document.createElement('option');o.value=t;o.textContent=t;timeEl.appendChild(o)}); timeEl.disabled=false;      }    });    injectCSS('.flatpickr-day.fp-has-slots{box-shadow:inset 0 0 0 2px rgba(72,222,151,.9);border-radius:8px}.flatpickr-day.fp-has-slots:hover{background:rgba(72,222,151,.15)}');  }  function boot(){    if(typeof flatpickr==='function'){init()}    else{loadCSS('https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css');loadScript('https://cdn.jsdelivr.net/npm/flatpickr',init)}  }  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();})();</script>
+
+<script>
+(function(){
+  // --- 0) Mały pasek diagnostyczny (zobaczysz co się dzieje) ---
+  function banner(msg){
+    var b=document.getElementById('diagBanner');
+    if(!b){ b=document.createElement('div'); b.id='diagBanner';
+      b.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;background:#0f1726;color:#cbe7ff;border:1px solid #2a3b5f;padding:8px 10px;border-radius:10px;font:12px/1.4 system-ui,Arial;z-index:9999';
+      document.body.appendChild(b);
+    }
+    b.textContent=msg;
+  }
+
+  // --- 1) Znajdź pola (próbujemy kilka wariantów ID/nazw) ---
+  function pick(selArr){ for(var i=0;i<selArr.length;i++){ var el=document.querySelector(selArr[i]); if(el) return el; } }
+  var dateEl = pick(['#date','#bookingDate','#dateInput','input[name="date"]','input[type="date"]']);
+  var timeEl = pick(['#time','#bookingTime','#timeSelect','select[name="time"]','select']);
+  if(!dateEl || !timeEl){ banner('Brak pól daty/godziny – sprawdź ID'); return; }
+
+  // --- 2) Wczytaj wolne terminy z różnych kluczy i ujednolić ---
+  var CANDIDATE_KEYS = ['FREE_SLOTS_V2','FREE_SLOTS','slots','freeSlotsISO'];
+  function loadSlotsAny(){
+    var best=[], bestKey='';
+    CANDIDATE_KEYS.forEach(function(k){
+      try{
+        var raw = localStorage.getItem(k); if(!raw) return;
+        var arr = JSON.parse(raw); if(!Array.isArray(arr)) return;
+        var norm=[];
+        arr.forEach(function(x){
+          if(!x) return;
+          if(typeof x==='string'){ // "YYYY-MM-DD HH:MM"
+            var m=x.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})$/);
+            if(m) norm.push({date:m[1], time:m[2]});
+          } else if (x.date && x.time){ // {date,time}
+            norm.push({date:String(x.date), time:String(x.time).slice(0,5)});
+          }
+        });
+        if(norm.length>best.length){ best=norm; bestKey=k; }
+      }catch(e){}
+    });
+    // sort
+    best.sort(function(a,b){return (a.date+a.time).localeCompare(b.date+b.time)});
+    return {slots:best, key:bestKey||'(brak)'};
+  }
+
+  var res = loadSlotsAny();
+  var SLOTS = res.slots;
+  banner('Znaleziono sloty: '+SLOTS.length+' (klucz: '+res.key+')');
+
+  // zbuduj mapę: "YYYY-MM-DD" -> ["HH:MM",...]
+  var map={};
+  SLOTS.forEach(function(s){ (map[s.date]||(map[s.date]=[])).push(s.time); });
+  Object.keys(map).forEach(function(d){ map[d]=Array.from(new Set(map[d])).sort(); });
+
+  // helper do wypełniania godzin
+  function fillTimes(dateStr){
+    timeEl.innerHTML='';
+    var times = map[dateStr]||[];
+    if(!times.length){
+      var o=document.createElement('option'); o.text='Brak wolnych godzin'; o.value=''; o.disabled=true; o.selected=true;
+      timeEl.appendChild(o); timeEl.disabled=true; return;
+    }
+    var ph=document.createElement('option'); ph.text='Wybierz godzinę…'; ph.value=''; ph.disabled=true; ph.selected=true;
+    timeEl.appendChild(ph);
+    times.forEach(function(t){ var o=document.createElement('option'); o.value=t; o.text=t; timeEl.appendChild(o); });
+    timeEl.disabled=false;
+  }
+  // placeholder na start
+  (function(){ timeEl.innerHTML=''; var o=document.createElement('option'); o.text='Najpierw wybierz datę…'; o.value=''; o.disabled=true; o.selected=true; timeEl.appendChild(o); timeEl.disabled=true; })();
+
+  // --- 3) Flatpickr jeśli jest/jeśli nie – natywny fallback ---
+  function fmt(d){var z=n=>('0'+n).slice(-2); return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());}
+  var enabledDays = Object.keys(map); // ["YYYY-MM-DD",...]
+
+  function attachNative(){
+    // walidacja po wyborze (akceptuj tylko dni z mapy)
+    dateEl.addEventListener('change', function(){
+      var val = dateEl.value;
+      if(!map[val]){ alert('Brak wolnych terminów w tym dniu. Wybierz inny.'); dateEl.value=''; timeEl.innerHTML=''; var o=document.createElement('option'); o.text='Najpierw wybierz datę…'; o.value=''; o.disabled=true; o.selected=true; timeEl.appendChild(o); timeEl.disabled=true; return; }
+      fillTimes(val);
+    });
+    banner('Tryb: natywny datepicker (bez kolorowania dni)');
+  }
+
+  function attachFlatpickr(){
+    var fp = flatpickr(dateEl, {
+      dateFormat:'Y-m-d',
+      disableMobile:true,
+      enable: function(date){ return !!map[fmt(date)]; },
+      onChange: function(dates, str){ if(str) fillTimes(str); },
+      onDayCreate: function(_,__,___,dayElem){
+        var d = fmt(dayElem.dateObj);
+        if(map[d]) dayElem.classList.add('has-slot');
+      }
+    });
+    // auto-set pierwszego dostępnego dnia
+    if(enabledDays.length){ fp.setDate(enabledDays[0], true); fillTimes(enabledDays[0]); }
+    // delikatny styl
+    var css='.flatpickr-day.has-slot{box-shadow:inset 0 0 0 2px rgba(99,255,185,.9);border-radius:8px}';
+    var s=document.createElement('style'); s.textContent=css; document.head.appendChild(s);
+    banner('Tryb: flatpickr (dni z dostępnością podświetlone)');
+  }
+
+  function boot(){
+    if(SLOTS.length===0){ banner('Brak zapisanych terminów. Dodaj w panelu admin na tej samej domenie.'); attachNative(); return; }
+    if(typeof flatpickr==='function'){ attachFlatpickr(); }
+    else { attachNative(); }
+  }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script>
+<!-- THANK-YOU BANNER AFTER BOOKING -->
+<style>
+#bookingThanks {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%,-50%);
+  background: #FFFFFF; color:#000; border:2px solid #000;
+  padding: 14px 18px; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  display:none; z-index: 9999; text-align:center;
+}
+#bookingThanks.show { display:block; animation: fadein .18s ease-out; }
+@keyframes fadein { from { opacity:0; transform: translateX(-50%) translateY(6px);} to { opacity:1; transform: translateX(-50%) translateY(0);} }
+</style>
+<div id="bookingThanks">Dziękujemy za dokonanie rezerwacji, poczekaj na jej potwierdzenie!// </div>
+<script>async function notifyAdminOnBooking(booking) {  // booking: obiekt z danymi rezerwacji, dostosuj do swoich pól  const subject = `Nowa rezerwacja: ${booking.serviceName} / ${booking.date} ${booking.time}`;  const html = `    <h2>Nowa rezerwacja</h2>    <p><b>Usługa:</b> ${booking.serviceName}</p>    <p><b>Data:</b> ${booking.date} ${booking.time}</p>    <p><b>Klient:</b> ${booking.name} (${booking.email || '-'})</p>    <p><b>Telefon:</b> ${booking.phone || '-'}</p>    <p><b>Uwagi:</b> ${booking.notes || '-'}</p>  `;
+  try {    await fetch('/.netlify/functions/send-email', {      method: 'POST',      headers: { 'Content-Type': 'application/json' },      body: JSON.stringify({        mode: 'admin', // <<< TYLKO do Ciebie        subject,        html      })    });  } catch (e) {    // celowo bez alertu dla klienta – tylko log    console.error('Mail do admina (rezerwuj) nie poszedł:', e);  }}
+// PRZYKŁAD użycia po udanym „Rezerwuj”:async function handleBookingSuccess(booking) {  // ...tu Twój obecny kod „Dziękujemy / reset formularza”...  notifyAdminOnBooking(booking);}</script>
+
+<script>
+(function(){
+  // Spróbujmy złapać formularz/buton po typowych ID z Twojej wersji:
+  const form   = document.getElementById('bookingForm') || document.querySelector('form#rezerwacja, form[data-booking], form');
+  const btn    = document.getElementById('bookBtn')     || document.querySelector('button#book, button[type="submit"]');
+
+  // Pola (użyjemy bezpiecznych selektorów – jeśli którychś nie ma, walidacja go pomija)
+  const svc  = document.getElementById('service') || document.querySelector('[name="service"], #usluga, select');
+  const date = document.getElementById('date')    || document.querySelector('[name="date"], #data, input[type="date"]');
+  const time = document.getElementById('time')    || document.querySelector('[name="time"], #godzina, select[name="time"]');
+  const name = document.getElementById('name')    || document.querySelector('[name="name"], #imie');
+  const phone= document.getElementById('phone')   || document.querySelector('[name="phone"], #telefon');
+  const email= document.getElementById('email')   || document.querySelector('[name="email"], input[type="email"]');
+  const rodo = document.getElementById('rodo')    || document.querySelector('[name="rodo"], input[type="checkbox"].rodo');
+
+  const toast = document.getElementById('bookingThanks');
+  if (!form || !btn || !toast) return; // nic nie psujemy, jeśli czegoś brakuje
+
+  function showThanks(){
+    toast.classList.add('show');
+    // schowaj po 4 sekundach
+    setTimeout(()=> toast.classList.remove('show'), 4000);
+  }
+
+  function isFilled(el){ return !!(el && (el.value || (el.checked!==undefined ? el.checked : false))); }
+
+  // Delikatne podpięcie: przed faktycznym wysłaniem zrób walidację i pokaż komunikat
+  form.addEventListener('submit', function(e){
+    // Minimalna walidacja pól (pomijamy te, których nie ma w HTML)
+    const missing = [];
+    if (svc  && !isFilled(svc))  missing.push('usługę');
+    if (date && !isFilled(date)) missing.push('datę');
+    if (time && !isFilled(time)) missing.push('godzinę');
+    if (name && !isFilled(name)) missing.push('imię');
+    if ((phone || email) && !(isFilled(phone) || isFilled(email))) missing.push('kontakt (telefon lub e-mail)');
+    if (rodo && !rodo.checked) missing.push('zgodę RODO');
+
+    if (missing.length){
+      e.preventDefault(); // zablokuj wysyłkę, jeśli braki
+      alert('Uzupełnij: ' + missing.join(', ') + '.');
+      return;
+    }
+
+    // Jeżeli formularz i tak wywołuje Twoją logikę (np. zapis do localStorage lub fetch),
+    // pozwalamy mu iść dalej — a podziękowanie pokażemy „od razu” użytkownikowi:
+    // Jeśli chcesz zostać na stronie bez przeładowania, odkomentuj e.preventDefault()
+    // i w swoim kodzie ręcznie zapisz rezerwację, a potem showThanks().
+    // e.preventDefault();
+
+    // Krótkie opóźnienie, żeby nie nadpisać działania Twojego handlera:
+    setTimeout(showThanks, 50);
+  }, { capture: true });
+})();
+</script>
+<script>
+(function(){
+  // wyślij powiadomienie do masażystki po złożeniu rezerwacji
+  const form = document.getElementById('form');
+  if (!form) return;
+
+  form.addEventListener('submit', function(){
+    try {
+      const get = id => document.getElementById(id)?.value || "";
+
+      // nazwa usługi jako tekst z <select> (ładniejsza w mailu)
+      const svcEl = document.getElementById('service');
+      const serviceName =
+        (svcEl && svcEl.options && svcEl.selectedIndex >= 0)
+          ? svcEl.options[svcEl.selectedIndex].text
+          : get('service');
+
+      const booking = {
+        name:   get('name'),
+        email:  get('email'),
+        phone:  get('phone'),
+        address:get('address'),
+        serviceName,
+        price:  "",               // opcjonalnie możesz wstawić cenę
+        date:   get('date'),
+        time:   get('time'),
+        notes:  get('notes')
+      };
+
+      // fire-and-forget (nie blokujemy działania formularza / Twoich skryptów)
+      fetch('/.netlify/functions/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ type:'notify', booking })
+      }).catch(()=>{});
+    } catch(_) {}
+  }, false);
+})();
+</script><button onclick="testMail()">Wyślij test</button>
+<script>
+async function testMail(){
+  const res = await fetch('/.netlify/functions/send-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      to: "niedzwiecki.mn@gmail.com",
+      subject: "Test z Massage & SPA",
+      html: "<p>Działa 🎉</p>"
+    })
+  });
+  const data = await res.json();
+  alert(JSON.stringify(data));
+}
+</script></body>
+</html>

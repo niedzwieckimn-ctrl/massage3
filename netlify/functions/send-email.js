@@ -1,0 +1,6 @@
+// netlify/functions/send-email.jsexport default async function handler(event) {  try {    if (event.httpMethod !== 'POST') {      return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };    }
+    const { to, subject, html } = JSON.parse(event.body || '{}');    if (!to || !subject || !html) {      return { statusCode: 400, body: JSON.stringify({ error: 'Missing required fields: to, subject, html' }) };    }
+    const apikey = process.env.RESEND_API_KEY;    const from = process.env.FROM_EMAIL || 'onboarding@resend.dev';    if (!apikey) {      return { statusCode: 500, body: JSON.stringify({ error: 'Missing RESEND_API_KEY env var' }) };    }
+    const resp = await fetch('https://api.resend.com/emails', {      method: 'POST',      headers: {        'Authorization': `Bearer ${apikey}`,        'Content-Type': 'application/json',      },      body: JSON.stringify({ from, to, subject, html })    });
+    const data = await resp.json();    if (!resp.ok) {      return { statusCode: resp.status, body: JSON.stringify({ ok: false, status: resp.status, data }) };    }
+    return { statusCode: 200, body: JSON.stringify({ ok: true, id: data.id }) };  } catch (e) {    console.error(e);    return { statusCode: 500, body: JSON.stringify({ error: 'Server error' }) };  }}
