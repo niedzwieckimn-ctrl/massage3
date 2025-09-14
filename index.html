@@ -301,33 +301,44 @@ async function reserveSubmit(e) {
 
   const reservation = {
     id: (crypto?.randomUUID?.() || Date.now().toString(36)),
-    service: document.querySelector('#service')?.value || '(brak usługi)',
+    service: document.querySelector('#service')?.value || '',
     date: document.querySelector('#date')?.value || '',
     time: document.querySelector('#time')?.value || '',
     notes: document.querySelector('#notes')?.value || '',
-    price: document.querySelector('#price')?.value || '', // jeśli masz pole z ceną
     client: {
       name:  document.querySelector('#name')?.value?.trim() || '',
       email: document.querySelector('#email')?.value?.trim() || '',
-      phone: document.querySelector('#phone')?.value?.trim() || '',
-      address: document.querySelector('#address')?.value?.trim() || '' // ← dodałem adres
+      phone: document.querySelector('#phone')?.value?.trim() || ''
     }
   };
 
-  const res = await fetch('/.netlify/functions/send-email', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mode: 'reserve', reservation })
-  });
+  try {
+    const res = await fetch('/.netlify/functions/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'reserve', reservation })
+    });
 
-  if (!res.ok) {
-    alert('❌ Błąd wysyłki rezerwacji');
-    return;
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok && data?.ok === true) {
+      alert('✅ Rezerwacja wysłana do masażystki');
+      return;
+    }
+
+    // błąd zwrócony przez funkcję
+    alert('❌ Błąd wysyłki rezerwacji: ' + (data?.error || res.status));
+  } catch (err) {
+    // błąd sieci/przeglądarki
+    alert('❌ Błąd sieci przy wysyłce rezerwacji');
+    console.error(err);
   }
-  alert('✅ Rezerwacja wysłana do masażystki');
 }
+
+// usuń wcześniejsze nasłuchy i dodaj jeden
 document.querySelector('#form')?.addEventListener('submit', reserveSubmit);
 </script>
+
 
 </body>
 </html>
