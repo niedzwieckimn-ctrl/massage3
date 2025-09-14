@@ -308,6 +308,48 @@ document.querySelector('#form')?.addEventListener('submit', reserveSubmit);
 </script>
 
 
+<script>
+async function reserveSubmit(e) {
+  e.preventDefault();
+
+  const svcEl = document.querySelector('#service');
+  const serviceName =
+    svcEl?.options?.[svcEl.selectedIndex]?.text || svcEl?.value || "";
+
+  const reservation = {
+    id: (crypto?.randomUUID?.() || Date.now().toString(36)),
+    service: serviceName,
+    date: document.querySelector('#date')?.value || '',
+    time: document.querySelector('#time')?.value || '',
+    notes: document.querySelector('#notes')?.value || '',
+    client: {
+      name: document.querySelector('#name')?.value || '',
+      email: document.querySelector('#email')?.value || '',
+      phone: document.querySelector('#phone')?.value || '',
+      address: document.querySelector('#address')?.value || ''   // <-- nowy element
+    }
+  };
+
+  try {
+    const res = await fetch('/.netlify/functions/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reservation })
+    });
+
+    const data = await res.json();
+    if (res.ok && data.ok) {
+      alert('✅ Dziękujemy za rezerwację! Dane wysłane do masażystki.');
+    } else {
+      alert('❌ Błąd wysyłki: ' + (data.error || res.status));
+    }
+  } catch (err) {
+    alert('❌ Błąd sieci: ' + err.message);
+  }
+}
+
+document.querySelector('#form')?.addEventListener('submit', reserveSubmit);
+</script>
 
 </body>
 </html>
