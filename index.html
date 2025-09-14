@@ -193,62 +193,9 @@
 #bookingThanks.show { display:block; animation: fadein .18s ease-out; }
 @keyframes fadein { from { opacity:0; transform: translateX(-50%) translateY(6px);} to { opacity:1; transform: translateX(-50%) translateY(0);} }
 </style>
-div id="bookingThanks">Dziękujemy za dokonanie rezerwacji, poczekaj na jej potwierdzenie!// </div>
+<div id="bookingThanks">Dziękujemy za dokonanie rezerwacji, poczekaj na jej potwierdzenie! </div>
 </script>
 <script>
-(function(){
-  // wyślij powiadomienie do masażystki po złożeniu rezerwacji
-  const form = document.getElementById('form');
-  if (!form) return;
-
-  form.addEventListener('submit', function(){
-    try {
-      const get = id => document.getElementById(id)?.value || "";
-
-      // nazwa usługi jako tekst z <select> (ładniejsza w mailu)
-      const svcEl = document.getElementById('service');
-      const serviceName =
-        (svcEl && svcEl.options && svcEl.selectedIndex >= 0)
-          ? svcEl.options[svcEl.selectedIndex].text
-          : get('service');
-
-      const booking = {
-        name:   get('name'),
-        email:  get('email'),
-        phone:  get('phone'),
-        address:get('address'),
-        serviceName,
-        price:  "",               // opcjonalnie możesz wstawić cenę
-        date:   get('date'),
-        time:   get('time'),
-        notes:  get('notes')
-      };
-
-      // fire-and-forget (nie blokujemy działania formularza / Twoich skryptów)
-      fetch('/.netlify/functions/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ type:'notify', booking })
-      }).catch(()=>{});
-    } catch(_) {}
-  }, false);
-})();
-</script>
-<script>
-async function testMail(){
-  const res = await fetch('/.netlify/functions/send-email', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      to: "niedzwiecki.mn@gmail.com",
-      subject: "Test z Massage & SPA",
-      html: "<p>Działa 🎉</p>"
-    })
-  });
-  const data = await res.json();
-  alert(JSON.stringify(data));
-}
-</script><script>
 async function sendMail(to, subject, html) {
   try {
     const r = await fetch('/.netlify/functions/send-email', {
