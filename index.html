@@ -194,7 +194,6 @@
 @keyframes fadein { from { opacity:0; transform: translateX(-50%) translateY(6px);} to { opacity:1; transform: translateX(-50%) translateY(0);} }
 </style>
 <div id="bookingThanks">Dziękujemy za dokonanie rezerwacji, poczekaj na jej potwierdzenie!// </div>
-})();
 </script>
 <script>
 (function(){
@@ -234,7 +233,7 @@
     } catch(_) {}
   }, false);
 })();
-</script><button onclick="testMail()">Wyślij test</button>
+</script>
 <script>
 async function testMail(){
   const res = await fetch('/.netlify/functions/send-email', {
@@ -296,5 +295,38 @@ document.addEventListener('click', async (e) => {
   // WYŚLIJ tylko do Ciebie przy "Rezerwuj"
   await sendMail('niedzwiecki.mn@gmail.com', subject, html);
 });
-</script></body>
+</script><script>
+async function reserveSubmit(e) {
+  e.preventDefault();
+
+  const reservation = {
+    id: (crypto?.randomUUID?.() || Date.now().toString(36)),
+    service: document.querySelector('#service')?.value || '',
+    date: document.querySelector('#date')?.value || '',
+    time: document.querySelector('#time')?.value || '',
+    notes: document.querySelector('#notes')?.value || '',
+    client: {
+      name:  document.querySelector('#name')?.value?.trim() || '',
+      email: document.querySelector('#email')?.value?.trim() || '',
+      phone: document.querySelector('#phone')?.value?.trim() || ''
+    }
+  };
+
+  try {
+    const res = await fetch('/.netlify/functions/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'reserve', reservation })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    alert('✅ Rezerwacja wysłana do masażystki');
+  } catch (err) {
+    console.error(err);
+    alert('❌ Błąd wysyłki rezerwacji');
+  }
+}
+
+document.querySelector('#form')?.addEventListener('submit', reserveSubmit);
+</script>
+</body>
 </html>

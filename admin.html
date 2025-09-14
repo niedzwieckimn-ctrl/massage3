@@ -280,7 +280,7 @@ function isConfirmBtn(el){
 }
 async function notifyConfirmToAdminAndClient(booking) {  // booking powinien zawierać: email klienta, nazwę usługi, datę/godzinę itd.  const subject = `Potwierdzenie: ${booking.serviceName} / ${booking.date} ${booking.time}`;  const htmlForClient = `    <h2>Potwierdzenie wizyty</h2>    <p>Twoja rezerwacja została potwierdzona.</p>    <p><b>Usługa:</b> ${booking.serviceName}</p>    <p><b>Data:</b> ${booking.date} ${booking.time}</p>    <p>Do zobaczenia!</p>  `;
   try {    await fetch('/.netlify/functions/send-email', {      method: 'POST',      headers: { 'Content-Type': 'application/json' },      body: JSON.stringify({        mode: 'both', // <<< do Ciebie i do klienta        to: booking.email, // mail klienta        subject: subject,        html: htmlForClient      })    });  } catch (e) {    alert('Uwaga: nie udało się wysłać maili z potwierdzeniem (sprawdź konsolę).');    console.error('Mail (potwierdź) nie poszedł:', e);  }}
-// PRZYKŁAD użycia po zapisaniu statusu „potwierdzona”:async function handleConfirmSuccess(booking) {  // ...tu Twój kod: odśwież listę, badge „Potwierdzona” itd....  await notifyConfirmToAdminAndClient(booking);}
+// PRZYKŁAD użycia po zapisaniu statusu „potwierdzona”:async function handleConfirmSuccess(booking) {  // ...tu Twój kod: odśwież listę, badge „Potwierdzona” itd....  await notifyConfirmToAdminAndClient(booking);}</script>
 
 // pobierz dane z WIERZA TABELI (wg nagłówków)
 function extractFromRow(tr){
@@ -375,8 +375,36 @@ document.addEventListener('click', async (e)=>{
     alert("❌ Błąd wysyłki potwierdzenia.");
   }
 });
-</script><script>// funkcja wspólna do wysyłania mailiasync function sendMail(to, subject, html) {  try {    const res = await fetch('/.netlify/functions/send-email', {      method: 'POST',      headers: { 'Content-Type': 'application/json' },      body: JSON.stringify({ to, subject, html })    });    const data = await res.json();    console.log("Email response:", data);  } catch (err) {    console.error("Błąd wysyłki maila:", err);  }}
-// przykładowa logika po kliknięciu "Potwierdź"async function notifyConfirm(booking) {  const subject = `Rezerwacja potwierdzona: ${booking.service} / ${booking.date} ${booking.time}`;  const html = `    <h2>Twoja rezerwacja została potwierdzona</h2>    <p>Usługa: <b>${booking.service}</b></p>    <p>Termin: ${booking.date} ${booking.time}</p>    <p>Dane klienta: ${booking.name}, ${booking.email}, ${booking.phone}</p>  `;  // mail do klienta  await sendMail(booking.email, subject, html);  // kopia do Ciebie  await sendMail("niedzwiecki.mn@gmail.com", subject, html);}
-// nasłuch na kliknięcie "Potwierdź"document.addEventListener("click", e => {  if (e.target && e.target.textContent.toLowerCase().includes("potwierdź")) {    const row = e.target.closest("tr");    if (!row) return;    const booking = {      name: row.querySelector("[data-name]")?.dataset.value || "",      email: row.querySelector("[data-email]")?.dataset.value || "",      phone: row.querySelector("[data-phone]")?.dataset.value || "",      service: row.querySelector("[data-service]")?.dataset.value || "",      date: row.querySelector("[data-date]")?.dataset.value || "",      time: row.querySelector("[data-time]")?.dataset.value || ""    };    notifyConfirm(booking);  }});</script>
+</script><script>
+async function sendConfirm(reservation) {
+  try {
+    const res = await fetch('/.netlify/functions/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'confirm', reservation })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    alert('📩 Potwierdzenie wysłane do masażystki i klienta');
+  } catch (err) {
+    console.error(err);
+    alert('❌ Błąd wysyłki potwierdzenia');
+  }
+}
+
+// przykład: nasłuch na kliknięcie przycisku "Potwierdź"
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action="confirm"]');
+  if (!btn) return;
+
+  // dane rezerwacji możesz mieć w atrybucie:
+  // <tr data-booking='{"id":"abc","date":"2025-09-20","time":"10:30","service":"Masaż","client":{"name":"Jan","email":"jan@example.com"}}'>
+  const row = btn.closest('[data-booking]');
+  if (!row) { alert('Brak danych rezerwacji'); return; }
+
+  const reservation = JSON.parse(row.getAttribute('data-booking'));
+  sendConfirm(reservation);
+});
+</script>
+
 </body>
 </html>
