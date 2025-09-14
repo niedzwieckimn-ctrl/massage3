@@ -311,7 +311,30 @@ document.addEventListener('click', (e) => {
   const reservation = JSON.parse(row.getAttribute('data-booking'));
   sendConfirm(reservation);
 });
+</script><script>
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-action="confirm"]');
+  if (!btn) return;
+
+  // załóżmy, że dane rezerwacji masz w atrybucie data-booking na elemencie wiersza/karty:
+  const host = btn.closest('[data-booking]');
+  if (!host) return alert('Brak danych rezerwacji');
+
+  const reservation = JSON.parse(host.getAttribute('data-booking') || '{}');
+  if (!reservation?.client?.email) return alert('Brak e-maila klienta');
+
+  const res = await fetch('/.netlify/functions/send-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode: 'confirm', reservation })
+  });
+
+  const data = await res.json().catch(()=> ({}));
+  if (res.ok && data.ok) alert('📩 Potwierdzenie wysłane (admin + klient)');
+  else alert('❌ Błąd wysyłki');
+});
 </script>
+
 
 </body>
 </html>

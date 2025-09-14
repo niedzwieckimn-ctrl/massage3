@@ -30,6 +30,48 @@ exports.handler = async (event) => {
     <p><b>Adres klienta:</b> ${reservation.client?.address || ""}</p>
     ${reservation.notes ? `<p><b>Uwagi:</b> ${reservation.notes}</p>` : ""}
   `;
+  // sprawdzamy tryb
+let messages = [];
+
+if (reservation.mode === "confirm") {
+  if (!reservation.client?.email) {
+    return { statusCode: 400, body: "Missing client email for confirm" };
+  }
+
+  // mail do masażystki
+  messages.push({
+    from,
+    to: [therapist],
+    subject: `POTWIERDZONO: ${reservation.service || "Usługa"} — ${reservation.date || ""} ${reservation.time || ""}`,
+    html,
+  });
+
+  // mail do klienta
+  const htmlClient = `
+    <h2>Potwierdzenie wizyty</h2>
+    <p>Cześć ${reservation.client?.name || ""},</p>
+    <p>Twoja wizyta została potwierdzona.</p>
+    <ul>
+      <li><b>Usługa:</b> ${reservation.service || "-"}</li>
+      <li><b>Termin:</b> ${reservation.date || ""} ${reservation.time || ""}</li>
+    </ul>
+  `;
+  messages.push({
+    from,
+    to: [reservation.client.email],
+    subject: `Twoja wizyta potwierdzona: ${reservation.service || ""}`,
+    html: htmlClient,
+  });
+} else {
+  // tryb domyślny: rezerwacja → tylko do masażystki
+  messages.push({
+    from,
+    to: [therapist],
+    subject,
+    html,
+  });
+}
+
 
   try {
     const resp = await fetch("https://api.resend.com/emails", {
