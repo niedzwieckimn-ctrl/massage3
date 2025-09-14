@@ -196,53 +196,6 @@
 <div id="bookingThanks">Dziękujemy za dokonanie rezerwacji, poczekaj na jej potwierdzenie! </div>
 </script>
 <script>
-async function sendMail(to, subject, html) {
-  try {
-    const r = await fetch('/.netlify/functions/send-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to, subject, html })
-    });
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok || data.ok === false) {
-      console.error('Send mail error:', data);
-      return false;
-    }
-    return true;
-  } catch (e) {
-    console.error('Send mail error:', e);
-    return false;
-  }
-}
-
-// PROSTE podpięcie przycisku "Rezerwuj" (tylko do Ciebie)
-document.addEventListener('click', async (e) => {
-  const btn = e.target.closest('button, a, input[type="submit"]');
-  if (!btn) return;
-  if (!/^\s*rezerwuj\s*$/i.test(btn.textContent || btn.value || '')) return;
-
-  // ZBIERZ DANE z formularza – dopasuj selektory do swoich pól
-  const name = document.querySelector('[name="name"], #name, [data-name]')?.value || '';
-  const phone = document.querySelector('[name="phone"], #phone, [data-phone]')?.value || '';
-  const email = document.querySelector('[name="email"], #email, [data-email]')?.value || '';
-  const service = document.querySelector('[name="service"], #service, [data-service]')?.value || '';
-  const date = document.querySelector('[name="date"], #date, [data-date]')?.value || '';
-  const time = document.querySelector('[name="time"], #time, [data-time]')?.value || '';
-  const notes = document.querySelector('[name="notes"], #notes, [data-notes]')?.value || '';
-
-  const subject = `Nowa rezerwacja: ${service} / ${date} ${time}`;
-  const html = `
-    <h2>Nowa rezerwacja</h2>
-    <p><b>Usługa:</b> ${service}</p>
-    <p><b>Termin:</b> ${date} ${time}</p>
-    <p><b>Klient:</b> ${name} (${email}, ${phone})</p>
-    <p><b>Uwagi:</b> ${notes || '-'}</p>
-  `;
-
-  // WYŚLIJ tylko do Ciebie przy "Rezerwuj"
-  await sendMail('niedzwiecki.mn@gmail.com', subject, html);
-});
-</script><script>
 async function reserveSubmit(e) {
   e.preventDefault();
 
