@@ -242,7 +242,71 @@ document.addEventListener('click', async (e) => {
   // WYŚLIJ tylko do Ciebie przy "Rezerwuj"
   await sendMail('niedzwiecki.mn@gmail.com', subject, html);
 });
+</script><script>
+/* ZABEZPIECZENIE: tylko jedno wysłanie na klik */
+let SENDING = false;
+
+async function reserveSubmit(e) {
+  e.preventDefault();
+  if (SENDING) return;
+  SENDING = true;
+
+  // Nazwa usługi z <select id="service"> — najpierw tekst opcji, potem value
+  const svcEl = document.querySelector('#service');
+  const serviceName =
+    (svcEl && svcEl.options && svcEl.selectedIndex >= 0
+      ? (svcEl.options[svcEl.selectedIndex].text || '').trim()
+      : '') || (svcEl?.value || '').trim();
+
+  const date = (document.querySelector('#date')?.value || '').trim();
+  const time = (document.querySelector('#time')?.value || '').trim();
+  const name = (document.querySelector('#name')?.value || '').trim();
+  const email = (document.querySelector('#email')?.value || '').trim();
+  const phone = (document.querySelector('#phone')?.value || '').trim();
+  const notes = (document.querySelector('#notes')?.value || '').trim();
+
+  // ---- WYŚLIJ TYLKO DO MASAŻYSTKI (jak masz to ustawione teraz) ----
+  const toTherapist = 'massage.n.spa@gmail.com'; // <-- zostaw tak, jak masz obecnie
+
+  const subject = `NOWA REZERWACJA: ${serviceName || 'Usługa'} — ${date} ${time}`;
+  const html =
+    `<h2>Nowa rezerwacja</h2>
+     <p><b>Usługa:</b> ${serviceName || '—'}</p>
+     <p><b>Termin:</b> ${date} ${time}</p>
+     <p><b>Klient:</b> ${name} (${email}${phone ? ', ' + phone : ''})</p>
+     ${notes ? `<p><b>Uwagi:</b> ${notes.replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]))}</p>` : ''}`;
+
+  try {
+    // UJEDNOLICONY request pod Twoją obecną wersję funkcji (to/subject/html)
+    const res = await fetch('/.netlify/functions/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: toTherapist, subject, html })
+    });
+
+    // Jeśli funkcja zwraca JSON — spróbuj odczytać, ale sukces = status 200-299
+    const txt = await res.text();
+    let data = {};
+    try { data = JSON.parse(txt); } catch {}
+    if (res.ok) {
+      alert('✅ Dziękujemy za rezerwację! Wiadomość została wysłana do masażystki.');
+    } else {
+      alert('❌ Błąd wysyłki: ' + (data.error || txt || res.status));
+      console.error('Send error:', res.status, txt);
+    }
+  } catch (err) {
+    alert('❌ Błąd sieci podczas wysyłki.');
+    console.error(err);
+  } finally {
+    // odblokuj kolejne wysyłki
+    SENDING = false;
+  }
+}
+
+/* Usuń wcześniejsze nasłuchy jeśli były i dodaj JEDEN */
+document.querySelector('#form')?.addEventListener('submit', reserveSubmit);
 </script>
+
 
 
 </body>
