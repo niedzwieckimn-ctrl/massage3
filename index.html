@@ -194,58 +194,6 @@
 @keyframes fadein { from { opacity:0; transform: translateX(-50%) translateY(6px);} to { opacity:1; transform: translateX(-50%) translateY(0);} }
 </style>
 <div id="bookingThanks">Dziękujemy za dokonanie rezerwacji, poczekaj na jej potwierdzenie!// </div>
-
-(function(){
-  // Spróbujmy złapać formularz/buton po typowych ID z Twojej wersji:
-  const form   = document.getElementById('bookingForm') || document.querySelector('form#rezerwacja, form[data-booking], form');
-  const btn    = document.getElementById('bookBtn')     || document.querySelector('button#book, button[type="submit"]');
-
-  // Pola (użyjemy bezpiecznych selektorów – jeśli którychś nie ma, walidacja go pomija)
-  const svc  = document.getElementById('service') || document.querySelector('[name="service"], #usluga, select');
-  const date = document.getElementById('date')    || document.querySelector('[name="date"], #data, input[type="date"]');
-  const time = document.getElementById('time')    || document.querySelector('[name="time"], #godzina, select[name="time"]');
-  const name = document.getElementById('name')    || document.querySelector('[name="name"], #imie');
-  const phone= document.getElementById('phone')   || document.querySelector('[name="phone"], #telefon');
-  const email= document.getElementById('email')   || document.querySelector('[name="email"], input[type="email"]');
-  const rodo = document.getElementById('rodo')    || document.querySelector('[name="rodo"], input[type="checkbox"].rodo');
-
-  const toast = document.getElementById('bookingThanks');
-  if (!form || !btn || !toast) return; // nic nie psujemy, jeśli czegoś brakuje
-
-  function showThanks(){
-    toast.classList.add('show');
-    // schowaj po 4 sekundach
-    setTimeout(()=> toast.classList.remove('show'), 4000);
-  }
-
-  function isFilled(el){ return !!(el && (el.value || (el.checked!==undefined ? el.checked : false))); }
-
-  // Delikatne podpięcie: przed faktycznym wysłaniem zrób walidację i pokaż komunikat
-  form.addEventListener('submit', function(e){
-    // Minimalna walidacja pól (pomijamy te, których nie ma w HTML)
-    const missing = [];
-    if (svc  && !isFilled(svc))  missing.push('usługę');
-    if (date && !isFilled(date)) missing.push('datę');
-    if (time && !isFilled(time)) missing.push('godzinę');
-    if (name && !isFilled(name)) missing.push('imię');
-    if ((phone || email) && !(isFilled(phone) || isFilled(email))) missing.push('kontakt (telefon lub e-mail)');
-    if (rodo && !rodo.checked) missing.push('zgodę RODO');
-
-    if (missing.length){
-      e.preventDefault(); // zablokuj wysyłkę, jeśli braki
-      alert('Uzupełnij: ' + missing.join(', ') + '.');
-      return;
-    }
-
-    // Jeżeli formularz i tak wywołuje Twoją logikę (np. zapis do localStorage lub fetch),
-    // pozwalamy mu iść dalej — a podziękowanie pokażemy „od razu” użytkownikowi:
-    // Jeśli chcesz zostać na stronie bez przeładowania, odkomentuj e.preventDefault()
-    // i w swoim kodzie ręcznie zapisz rezerwację, a potem showThanks().
-    // e.preventDefault();
-
-    // Krótkie opóźnienie, żeby nie nadpisać działania Twojego handlera:
-    setTimeout(showThanks, 50);
-  }, { capture: true });
 })();
 </script>
 <script>
