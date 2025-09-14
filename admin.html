@@ -260,58 +260,6 @@
 })();
 </script>
 <script>
-// --- POMOCNICZE: normalizacja tekstu PL
-function norm(s){ return (s||"").toLowerCase().trim()
-  .replaceAll('\u00A0',' ').replace(/\s+/g,' '); }
-
-// --- mapowanie nagłówków na klucze
-const HEAD_MAP = {
-  "imię i nazwisko":"name", "imię":"name", "nazwisko":"name", "klient":"name",
-  "email":"email", "e-mail":"email",
-  "telefon":"phone", "tel":"phone",
-  "zabieg":"service", "usługa":"service", "rodzaj masażu":"service",
-  "data":"date", "termin":"date",
-  "godzina":"time", "godz":"time"
-};
-
-// znajdź tekst przycisku
-function isConfirmBtn(el){
-  return el && /potwierdź/i.test(el.textContent||"");
-}
-async function notifyConfirmToAdminAndClient(booking) {  // booking powinien zawierać: email klienta, nazwę usługi, datę/godzinę itd.  const subject = `Potwierdzenie: ${booking.serviceName} / ${booking.date} ${booking.time}`;  const htmlForClient = `    <h2>Potwierdzenie wizyty</h2>    <p>Twoja rezerwacja została potwierdzona.</p>    <p><b>Usługa:</b> ${booking.serviceName}</p>    <p><b>Data:</b> ${booking.date} ${booking.time}</p>    <p>Do zobaczenia!</p>  `;
-  try {    await fetch('/.netlify/functions/send-email', {      method: 'POST',      headers: { 'Content-Type': 'application/json' },      body: JSON.stringify({        mode: 'both', // <<< do Ciebie i do klienta        to: booking.email, // mail klienta        subject: subject,        html: htmlForClient      })    });  } catch (e) {    alert('Uwaga: nie udało się wysłać maili z potwierdzeniem (sprawdź konsolę).');    console.error('Mail (potwierdź) nie poszedł:', e);  }}
-// PRZYKŁAD użycia po zapisaniu statusu „potwierdzona”:async function handleConfirmSuccess(booking) {  // ...tu Twój kod: odśwież listę, badge „Potwierdzona” itd....  await notifyConfirmToAdminAndClient(booking);}</script>
-
-</script><script>
-async function sendConfirm(reservation) {
-  try {
-    const res = await fetch('/.netlify/functions/send-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode: 'confirm', reservation })
-    });
-    if (!res.ok) throw new Error(await res.text());
-    alert('📩 Potwierdzenie wysłane do masażystki i klienta');
-  } catch (err) {
-    console.error(err);
-    alert('❌ Błąd wysyłki potwierdzenia');
-  }
-}
-
-// przykład: nasłuch na kliknięcie przycisku "Potwierdź"
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-action="confirm"]');
-  if (!btn) return;
-
-  // dane rezerwacji możesz mieć w atrybucie:
-  // <tr data-booking='{"id":"abc","date":"2025-09-20","time":"10:30","service":"Masaż","client":{"name":"Jan","email":"jan@example.com"}}'>
-  const row = btn.closest('[data-booking]');
-  if (!row) { alert('Brak danych rezerwacji'); return; }
-
-  const reservation = JSON.parse(row.getAttribute('data-booking'));
-  sendConfirm(reservation);
-});
-</script><script>
 document.addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-action="confirm"]');
   if (!btn) return;
