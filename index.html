@@ -194,12 +194,7 @@
 @keyframes fadein { from { opacity:0; transform: translateX(-50%) translateY(6px);} to { opacity:1; transform: translateX(-50%) translateY(0);} }
 </style>
 <div id="bookingThanks">Dziękujemy za dokonanie rezerwacji, poczekaj na jej potwierdzenie!// </div>
-// --- helper: wspólna funkcja do wysyłkiasync function sendMail(to, subject, html) {  try {    const r = await fetch('/.netlify/functions/send-email', {      method: 'POST',      headers: { 'Content-Type': 'application/json' },      body: JSON.stringify({ to, subject, html })    });    const data = await r.json().catch(()=>({}));    if (!r.ok || data?.ok === false) console.error('sendMail fail', r.status, data);  } catch (e) {    console.error('sendMail error', e);  }}
-// --- budowa obiektu booking z Twoich pól (dopasuj ID jeśli masz inne)function buildBookingFromForm() {  const get = (id) => document.getElementById(id)?.value?.trim() || '';  return {    name: get('name') || get('clientName') || get('fullName'),    email: get('email') || get('clientEmail'),    phone: get('phone') || get('clientPhone'),    serviceName: (document.getElementById('serviceSelect')?.value                 || document.querySelector('[name="service"]')?.value                 || 'Usługa').trim(),    date: get('date') || get('dateInput'),    time: get('time') || get('timeSelect'),    notes: get('notes') || get('notesInput')  };}
-// --- wyślij do Ciebie po udanym utworzeniu rezerwacjiasync function notifyAdminOnBooking(booking) {  const subject = `Nowa rezerwacja: ${booking.serviceName} / ${booking.date} ${booking.time}`;  const html = `    <h3>Nowa rezerwacja</h3>    <p><b>Usługa:</b> ${booking.serviceName}</p>    <p><b>Termin:</b> ${booking.date} ${booking.time}</p>    <p><b>Klient:</b> ${booking.name} (${booking.email || '-'}, tel: ${booking.phone || '-'})</p>    ${booking.notes ? `<p><b>Uwagi:</b> ${booking.notes}</p>` : ''}  `;  await sendMail('niedzwiecki.mn@gmail.com', subject, html);}
-// --- PODPINAMY SIĘ *po* sukcesie rezerwacji// 1) jeśli masz funkcję, która już pokazuje „Dziękujemy”, po jej zakończeniu wywołaj:window.afterBookingSuccess = async function () {  const booking = buildBookingFromForm();  await notifyAdminOnBooking(booking);};
-// 2) awaryjnie – jeśli nie masz gdzie wstrzyknąć: nasłuch na submit z "miękkim" opóźnieniem,// żeby nie psuć Twojej logiki. Jeśli masz własny handler, ten tylko dośle maila.(function attachBookingMailOnce(){  const form = document.querySelector('form#bookingForm') || document.querySelector('form[data-booking]');  if (!form) return;  if (form.__mailHooked) return; form.__mailHooked = true;
-  form.addEventListener('submit', (e)=>{    setTimeout(()=>{      try {        const booking = buildBookingFromForm();        if (booking.date && booking.serviceName) notifyAdminOnBooking(booking);      } catch(err){ console.error(err); }    }, 300); // chwilkę po Twojej obsłudze  });})();
+
 (function(){
   // Spróbujmy złapać formularz/buton po typowych ID z Twojej wersji:
   const form   = document.getElementById('bookingForm') || document.querySelector('form#rezerwacja, form[data-booking], form');
@@ -306,5 +301,52 @@ async function testMail(){
   const data = await res.json();
   alert(JSON.stringify(data));
 }
+</script><script>
+async function sendMail(to, subject, html) {
+  try {
+    const r = await fetch('/.netlify/functions/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, subject, html })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || data.ok === false) {
+      console.error('Send mail error:', data);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('Send mail error:', e);
+    return false;
+  }
+}
+
+// PROSTE podpięcie przycisku "Rezerwuj" (tylko do Ciebie)
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('button, a, input[type="submit"]');
+  if (!btn) return;
+  if (!/^\s*rezerwuj\s*$/i.test(btn.textContent || btn.value || '')) return;
+
+  // ZBIERZ DANE z formularza – dopasuj selektory do swoich pól
+  const name = document.querySelector('[name="name"], #name, [data-name]')?.value || '';
+  const phone = document.querySelector('[name="phone"], #phone, [data-phone]')?.value || '';
+  const email = document.querySelector('[name="email"], #email, [data-email]')?.value || '';
+  const service = document.querySelector('[name="service"], #service, [data-service]')?.value || '';
+  const date = document.querySelector('[name="date"], #date, [data-date]')?.value || '';
+  const time = document.querySelector('[name="time"], #time, [data-time]')?.value || '';
+  const notes = document.querySelector('[name="notes"], #notes, [data-notes]')?.value || '';
+
+  const subject = `Nowa rezerwacja: ${service} / ${date} ${time}`;
+  const html = `
+    <h2>Nowa rezerwacja</h2>
+    <p><b>Usługa:</b> ${service}</p>
+    <p><b>Termin:</b> ${date} ${time}</p>
+    <p><b>Klient:</b> ${name} (${email}, ${phone})</p>
+    <p><b>Uwagi:</b> ${notes || '-'}</p>
+  `;
+
+  // WYŚLIJ tylko do Ciebie przy "Rezerwuj"
+  await sendMail('niedzwiecki.mn@gmail.com', subject, html);
+});
 </script></body>
 </html>
