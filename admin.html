@@ -258,31 +258,45 @@
     render();
   }
 })();
-</script>
-<script>
+</script><script>
 document.addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-action="confirm"]');
   if (!btn) return;
 
-  // załóżmy, że dane rezerwacji masz w atrybucie data-booking na elemencie wiersza/karty:
   const host = btn.closest('[data-booking]');
   if (!host) return alert('Brak danych rezerwacji');
 
   const reservation = JSON.parse(host.getAttribute('data-booking') || '{}');
   if (!reservation?.client?.email) return alert('Brak e-maila klienta');
 
-  const res = await fetch('/.netlify/functions/send-email', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mode: 'confirm', reservation })
-  });
+  // LOG WYCHODZĄCY
+  console.log('[ADMIN] outgoing payload:', { mode: 'confirm', reservation });
 
-  const data = await res.json().catch(()=> ({}));
-  if (res.ok && data.ok) alert('📩 Potwierdzenie wysłane (admin + klient)');
-  else alert('❌ Błąd wysyłki');
+  try {
+    const res = await fetch('/.netlify/functions/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'confirm', reservation })
+    });
+
+    const text = await res.text();
+    let data = {};
+    try { data = JSON.parse(text); } catch {}
+
+    // LOG PRZYCHODZĄCY
+    console.log('[ADMIN] response:', res.status, text);
+
+    if (res.ok && data.ok) {
+      alert('📩 Potwierdzenie wysłane (admin + klient)');
+    } else {
+      alert('❌ Błąd wysyłki (' + res.status + '): ' + (data.error || text));
+    }
+  } catch (err) {
+    console.error('[ADMIN] fetch error:', err);
+    alert('❌ Błąd sieci: ' + err.message);
+  }
 });
 </script>
-
 
 </body>
 </html>

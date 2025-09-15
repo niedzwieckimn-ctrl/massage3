@@ -13,8 +13,15 @@ exports.handler = async (event) => {
   }
 
   let mode, reservation;
-  try { ({ mode, reservation } = JSON.parse(event.body || "{}")); }
-  catch { return { statusCode: 400, body: "Invalid JSON" }; }
+try {
+  ({ mode, reservation } = JSON.parse(event.body || "{}"));
+} catch {
+  return { statusCode: 400, body: "Invalid JSON" };
+}
+
+// 🔹 LOG diagnostyczny
+console.log('[FN] mode:', mode, '| admin:', process.env.ADMIN_EMAIL, '| client:', reservation?.client?.email);
+
 
   if (!reservation) {
     return { statusCode: 400, body: "Missing reservation" };
