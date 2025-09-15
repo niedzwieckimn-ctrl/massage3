@@ -297,6 +297,68 @@ document.addEventListener('click', async (e) => {
   }
 });
 </script>
+<script>
+// Helpers
+const dt = (b) => new Date(`${b.date}T${(b.time||'00:00')}`);
+const fmt = (b) => dt(b).toLocaleString('pl-PL', {
+  day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'
+}).replace('.', ''); // 15 wrz 2025, 21:52
+
+// RENDER Nadchodzące wizyty z DATY WIZYTY (nie z createdAt)
+async function renderUpcoming(bookings) {
+  // bookings: [{ id, service, date, time, client:{name,email}, ... }]
+  const list = document.querySelector('#upcoming-list'); // <div id="upcoming-list"></div>
+  if (!list) return;
+
+  // sortuj po terminie wizyty
+  bookings = [...bookings].sort((a,b)=> dt(a) - dt(b));
+
+  list.innerHTML = bookings.map(b => {
+    const safe = {
+      id: b.id || '',
+      service: b.service || '',
+      date: b.date || '',
+      time: b.time || '',
+      notes: b.notes || '',
+      client: {
+        name:  b.client?.name || '',
+        email: b.client?.email || '',
+        phone: b.client?.phone || '',
+        address: b.client?.address || ''
+      }
+    };
+
+    const bookingJson = encodeURIComponent(JSON.stringify(safe));
+
+    return `
+      <div class="booking-item"
+           data-booking="${bookingJson}">
+        <div class="row">
+          <div class="info">
+            <strong>${fmt(b)}</strong> — ${safe.service}
+            ${safe.client.name ? ` <span class="muted">(${safe.client.name})</span>` : ''}
+          </div>
+          <div class="actions">
+            <span class="badge ${b.status==='confirmed'?'ok':'muted'}">
+              ${b.status==='confirmed'?'Potwierdzona':'Do potwierdzenia'}
+            </span>
+            <button class="btn green" data-action="confirm">Potwierdź</button>
+            <button class="btn red"   data-action="delete">Usuń</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// PRZYKŁAD użycia — podaj swoje źródło bookings:
+(async function boot(){
+  // TODO: tu wczytaj swoje rezerwacje (z Supabase/local), ważne by miały pola: date, time, service, client.email
+  // const bookings = await loadBookingsSomehow();
+  const bookings = window.__BOOKINGS__ || []; // placeholder jeżeli już masz gdzieś w kodzie
+  renderUpcoming(bookings);
+})();
+</script>
 
 </body>
 </html>
