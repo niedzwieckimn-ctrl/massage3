@@ -353,7 +353,71 @@ async function reserveSubmit(e) {
 }
 
 document.querySelector('#form')?.addEventListener('submit', reserveSubmit);
+</script><!-- === SEND RESERVATION (safe, standalone) === -->
+<script>
+(() => {
+  const form = document.querySelector('#form');
+  if (!form) return;
+
+  let SENDING = false;
+
+  async function onSubmit(e){
+    e.preventDefault();
+    if (SENDING) return;
+    SENDING = true;
+
+    // Pobierz nazwę usługi (tekst opcji) – NIE rusza sekcji cennika
+    const svcEl = document.querySelector('#service');
+    const serviceName =
+      (svcEl?.options?.[svcEl.selectedIndex]?.text || '').trim() ||
+      (svcEl?.value || '').trim();
+
+    // Zbuduj OBOWIĄZKOWY obiekt "reservation"
+    const reservation = {
+      id: (crypto?.randomUUID?.() || Date.now().toString(36)),
+      service: serviceName,
+      date:  (document.querySelector('#date')?.value || '').trim(),
+      time:  (document.querySelector('#time')?.value || '').trim(),
+      notes: (document.querySelector('#notes')?.value || '').trim(),
+      client: {
+        name:    (document.querySelector('#name')?.value || '').trim(),
+        email:   (document.querySelector('#email')?.value || '').trim(),
+        phone:   (document.querySelector('#phone')?.value || '').trim(),
+        address: (document.querySelector('#address')?.value || '').trim()
+      }
+    };
+
+    try {
+      const res = await fetch('/.netlify/functions/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // ⬇⬇⬇ WAŻNE: wysyłamy { mode, reservation } – inaczej backend zwróci "Missing reservation"
+        body: JSON.stringify({ mode: 'reserve', reservation })
+      });
+
+      const txt = await res.text();
+      let data = {}; try { data = JSON.parse(txt); } catch {}
+
+      if (res.ok && data.ok === true) {
+        alert('✅ Dziękujemy za rezerwację! Wiadomość została wysłana.');
+      } else {
+        alert('❌ Błąd wysyłki: ' + (data.error || txt || res.status));
+        console.error('send-email error:', res.status, txt);
+      }
+    } catch (err) {
+      alert('❌ Błąd sieci: ' + err.message);
+      console.error(err);
+    } finally {
+      SENDING = false;
+    }
+  }
+
+  // nie koliduje z innymi skryptami
+  form.addEventListener('submit', onSubmit);
+})();
 </script>
+<!-- === /SEND RESERVATION === -->
+
 
 </body>
 </html>
