@@ -334,7 +334,11 @@ async function reserveSubmit(e) {
     const res = await fetch('/.netlify/functions/send-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reservation })
+      body: JSON.stringify({
+  mode: 'reserve',
+  reservation: OBIEKT_KTÓRY_TERAZ_WYSYŁASZ
+})
+
     });
 
     const data = await res.json();
