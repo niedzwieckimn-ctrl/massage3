@@ -258,6 +258,110 @@
     render();
   }
 })();
+</script><script>
+// === Nadchodzące wizyty (localStorage → #upcoming) ===
+function lsGet(key, def=[]) { try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(def)); } catch { return def; } }
+function fmtDT(d,t){ const x=new Date(`${d}T${t||'00:00'}`); return isNaN(x)?`${d} ${t||''}`:x.toLocaleString('pl-PL',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).replace('.',''); }
+
+function renderUpcoming(){
+  const box = document.getElementById('upcoming'); // <div id="upcoming" ...>
+  if (!box) return;
+
+  const bookings = lsGet('bookings').filter(b=>b?.date && b?.time)
+    .sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+
+  if (!bookings.length) {
+    box.innerHTML = '<div class="row muted">Brak nadchodzących wizyt</div>';
+    return;
+  }
+
+  box.innerHTML = bookings.map(b => {
+    const safe = {
+      id: b.id || '',
+      service: b.service || b.serviceName || '',
+      date: b.date || (b.startDateTime||'').slice(0,10),
+      time: b.time || (b.startDateTime||'').slice(11,16),
+      notes: b.notes || '',
+      client: {
+        name:  b.client?.name || b.name || '',
+        email: b.client?.email || b.email || '',
+        phone: b.client?.phone || b.phone || '',
+        address: b.client?.address || b.address || ''
+      },
+      status: b.status || 'pending'
+    };
+    const payload = encodeURIComponent(JSON.stringify(safe));
+    const badge = safe.status === 'confirmed' ? '<span class="badge ok">Potwierdzona</span>' : '<span class="badge muted">Do potwierdzenia</span>';
+
+    return `
+      <div class="row booking" data-booking="${payload}">
+        <span><b>${fmtDT(safe.date, safe.time)}</b> — ${safe.service} ${safe.client.name ? `(<i>${safe.client.name}</i>)` : ''}</span>
+        <span class="actions">
+          ${badge}
+          <button class="btn success" data-action="confirm">Potwierdź</button>
+          <button class="btn danger"  data-action="delete">Usuń</button>
+        </span>
+      </div>
+    `;
+  }).join('');
+}
+
+// start
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', renderUpcoming, {once:true});
+} else { renderUpcoming(); }
 </script>
+<script>
+// === Akcje: Potwierdź / Usuń ===
+document.addEventListener('click', async (e) => {
+  // POTWIERDŹ
+  const btnC = e.target.closest('[data-action="confirm"]');
+  if (btnC) {
+    const host = btnC.closest('[data-booking]');
+    if (!host) return alert('Brak danych rezerwacji');
+    let reservation={};
+    try { reservation = JSON.parse(decodeURIComponent(host.getAttribute('data-booking')) || '{}'); }
+    catch { return alert('Błędny JSON data-booking'); }
+
+    if (!reservation?.client?.email) return alert('Brak e-maila klienta');
+
+    try {
+      const res = await fetch('/.netlify/functions/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'confirm', reservation })
+      });
+      const txt = await res.text(); let data={}; try{ data=JSON.parse(txt);}catch{}
+      if (res.ok && data.ok === true) {
+        // zaznacz w localStorage jako confirmed
+        const all = JSON.parse(localStorage.getItem('bookings') || '[]')
+          .map(b => (b.id===reservation.id ? {...b, status:'confirmed'} : b));
+        localStorage.setItem('bookings', JSON.stringify(all));
+        renderUpcoming();
+        alert('📩 Potwierdzenie wysłane (admin + klient)');
+      } else {
+        alert('❌ Błąd wysyłki ('+res.status+'): ' + (data.error || txt));
+      }
+    } catch (err) {
+      alert('❌ Błąd sieci: ' + err.message);
+    }
+    return;
+  }
+
+  // USUŃ
+  const btnD = e.target.closest('[data-action="delete"]');
+  if (btnD) {
+    const host = btnD.closest('[data-booking]');
+    if (!host) return;
+    let resv={}; try { resv = JSON.parse(decodeURIComponent(host.getAttribute('data-booking')) || '{}'); } catch {}
+    const all = JSON.parse(localStorage.getItem('bookings') || '[]')
+      .filter(b => b.id !== resv.id);
+    localStorage.setItem('bookings', JSON.stringify(all));
+    renderUpcoming();
+    return;
+  }
+});
+</script>
+
 </body>
 </html>
