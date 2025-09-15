@@ -298,67 +298,58 @@ document.addEventListener('click', async (e) => {
 });
 </script>
 <script>
-// Helpers
-const dt = (b) => new Date(`${b.date}T${(b.time||'00:00')}`);
-const fmt = (b) => dt(b).toLocaleString('pl-PL', {
-  day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'
-}).replace('.', ''); // 15 wrz 2025, 21:52
-
-// RENDER Nadchodzące wizyty z DATY WIZYTY (nie z createdAt)
-async function renderUpcoming(bookings) {
-  // bookings: [{ id, service, date, time, client:{name,email}, ... }]
-  const list = document.querySelector('#upcoming-list'); // <div id="upcoming-list"></div>
-  if (!list) return;
-
-  // sortuj po terminie wizyty
-  bookings = [...bookings].sort((a,b)=> dt(a) - dt(b));
-
-  list.innerHTML = bookings.map(b => {
-    const safe = {
-      id: b.id || '',
-      service: b.service || '',
-      date: b.date || '',
-      time: b.time || '',
-      notes: b.notes || '',
-      client: {
-        name:  b.client?.name || '',
-        email: b.client?.email || '',
-        phone: b.client?.phone || '',
-        address: b.client?.address || ''
-      }
-    };
-
-    const bookingJson = encodeURIComponent(JSON.stringify(safe));
-
-    return `
-      <div class="booking-item"
-           data-booking="${bookingJson}">
-        <div class="row">
-          <div class="info">
-            <strong>${fmt(b)}</strong> — ${safe.service}
-            ${safe.client.name ? ` <span class="muted">(${safe.client.name})</span>` : ''}
-          </div>
-          <div class="actions">
-            <span class="badge ${b.status==='confirmed'?'ok':'muted'}">
-              ${b.status==='confirmed'?'Potwierdzona':'Do potwierdzenia'}
-            </span>
-            <button class="btn green" data-action="confirm">Potwierdź</button>
-            <button class="btn red"   data-action="delete">Usuń</button>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
+// --- render Nadchodzących wizyt z localStorage ---
+function loadBookings(){
+  try { return JSON.parse(localStorage.getItem('bookings') || '[]'); }
+  catch(e){ return []; }
 }
 
-// PRZYKŁAD użycia — podaj swoje źródło bookings:
-(async function boot(){
-  // TODO: tu wczytaj swoje rezerwacje (z Supabase/local), ważne by miały pola: date, time, service, client.email
-  // const bookings = await loadBookingsSomehow();
-  const bookings = window.__BOOKINGS__ || []; // placeholder jeżeli już masz gdzieś w kodzie
-  renderUpcoming(bookings);
-})();
+function fmtDateTime(dateStr,timeStr){
+  const dt = new Date(`${dateStr}T${timeStr}:00`);
+  if(isNaN(dt)) return `${dateStr} ${timeStr}`;
+  return dt.toLocaleString('pl-PL',{
+    year:'numeric',month:'short',day:'2-digit',
+    hour:'2-digit',minute:'2-digit'
+  }).replace('.','');
+}
+
+function renderUpcoming(){
+  const bookings = loadBookings()
+    .sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const box = document.getElementById('upcoming');
+  if(!box) return;
+  box.innerHTML = '';
+
+  if(!bookings.length){
+    box.innerHTML = '<div class="row muted">Brak nadchodzących wizyt</div>';
+    return;
+  }
+
+  bookings.forEach(b=>{
+    const div = document.createElement('div');
+    div.className = 'row';
+    // dodajemy data-booking żeby działał confirm
+    div.setAttribute('data-booking', JSON.stringify(b));
+
+    div.innerHTML = `
+      <span><b>${fmtDateTime(b.date,b.time)}</b> — ${b.service||''} 
+        ${b.client?.name ? '('+b.client.name+')':''}
+      </span>
+      <button class="btn success" data-action="confirm">Potwierdź</button>
+      <button class="btn danger" data-action="delete">Usuń</button>
+    `;
+    box.appendChild(div);
+  });
+}
+
+// odpal raz na starcie
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', renderUpcoming, {once:true});
+} else {
+  renderUpcoming();
+}
 </script>
+
 
 </body>
 </html>
