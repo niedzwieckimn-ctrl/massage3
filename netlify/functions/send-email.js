@@ -6,15 +6,22 @@ exports.handler = async (event) => {
 
   const RESEND_API_KEY = process.env.RESEND_API_KEY;
   const FROM_EMAIL     = process.env.FROM_EMAIL;
-  const ADMIN_EMAIL    = process.env.ADMIN_EMAIL; // adres masażystki/admina
+  const ADMIN_EMAIL    = process.env.ADMIN_EMAIL; // Twój adres „admin/terapeutka”
 
   if (!RESEND_API_KEY || !FROM_EMAIL || !ADMIN_EMAIL) {
     return { statusCode: 500, body: "Missing env: RESEND_API_KEY / FROM_EMAIL / ADMIN_EMAIL" };
   }
 
   let mode, reservation;
-  try { ({ mode, reservation } = JSON.parse(event.body || "{}")); }
-  catch { return { statusCode: 400, body: "Invalid JSON" }; }
+try {
+  ({ mode, reservation } = JSON.parse(event.body || "{}"));
+} catch {
+  return { statusCode: 400, body: "Invalid JSON" };
+}
+
+// 🔹 LOG diagnostyczny
+console.log('[FN] mode:', mode, '| admin:', process.env.ADMIN_EMAIL, '| client:', reservation?.client?.email);
+
 
   if (!reservation) {
     return { statusCode: 400, body: "Missing reservation" };
@@ -42,10 +49,12 @@ exports.handler = async (event) => {
       <li><b>Usługa:</b> ${reservation.service || "-"}</li>
       <li><b>Termin:</b> ${reservation.date || ""} ${reservation.time || ""}</li>
       ${reservation.price ? `<li><b>Cena:</b> ${reservation.price} zł</li>` : ""}
+      ${reservation.therapistName ? `<li><b>Terapeutka:</b> ${reservation.therapistName}</li>` : ""}
     </ul>
     ${reservation.id ? `<hr/><small>ID: ${reservation.id}</small>` : ""}
   `;
 
+  // Zbuduj listę wiadomości wg trybu
   const messages = [];
   if (mode === "confirm") {
     if (!reservation.client?.email) {
@@ -73,6 +82,7 @@ exports.handler = async (event) => {
     });
   }
 
+  // Wyślij kolejno
   for (const msg of messages) {
     const resp = await fetch("https://api.resend.com/emails", {
       method: "POST",
