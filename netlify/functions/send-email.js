@@ -1,103 +1,76 @@
-exports.handler = async (event) => {
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: "Method Not Allowed" };
-  }
+// netlify/functions/send-email.js
+const cors = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
 
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.FROM_EMAIL;
-  const therapist = process.env.THERAPIST_EMAIL;
-
-  let mode, reservation;
-  try {
-    ({ mode, reservation } = JSON.parse(event.body || "{}"));
-  } catch {
-    return { statusCode: 400, body: "Invalid JSON" };
-  }
-
-  if (!reservation) {
-    return { statusCode: 400, body: "Missing reservation" };
-  }
-
-  const subject = `NOWA REZERWACJA: ${reservation.service || "Usługa"} — ${reservation.date || ""} ${reservation.time || ""}`;
-
-  const html = `
-    <h2>Nowa rezerwacja</h2>
-    <p><b>Usługa:</b> ${reservation.service || "-"}</p>
-    <p><b>Termin:</b> ${reservation.date || ""} ${reservation.time || ""}</p>
-    <p><b>Klient:</b> ${reservation.client?.name || ""}</p>
-    <p><b>Email klienta:</b> ${reservation.client?.email || ""}</p>
-    <p><b>Telefon klienta:</b> ${reservation.client?.phone || ""}</p>
-    <p><b>Adres klienta:</b> ${reservation.client?.address || ""}</p>
-    ${reservation.notes ? `<p><b>Uwagi:</b> ${reservation.notes}</p>` : ""}
-  `;
-  // sprawdzamy tryb
-let messages = [];
-
-if (reservation.mode === "confirm") {
-  if (!reservation.client?.email) {
-    return { statusCode: 400, body: "Missing client email for confirm" };
-  }
-
-  // mail do masażystki
-  messages.push({
-    from,
-    to: [therapist],
-    subject: `POTWIERDZONO: ${reservation.service || "Usługa"} — ${reservation.date || ""} ${reservation.time || ""}`,
-    html,
-  });
-
-  // mail do klienta
-  const htmlClient = `
-    <h2>Potwierdzenie wizyty</h2>
-    <p>Cześć ${reservation.client?.name || ""},</p>
-    <p>Twoja wizyta została potwierdzona.</p>
-    <ul>
-      <li><b>Usługa:</b> ${reservation.service || "-"}</li>
-      <li><b>Termin:</b> ${reservation.date || ""} ${reservation.time || ""}</li>
-    </ul>
-  `;
-  messages.push({
-    from,
-    to: [reservation.client.email],
-    subject: `Twoja wizyta potwierdzona: ${reservation.service || ""}`,
-    html: htmlClient,
-  });
-} else {
-  // tryb domyślny: rezerwacja → tylko do masażystki
-  messages.push({
-    from,
-    to: [therapist],
-    subject,
-    html,
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'content-type': 'application/json', ...cors },
   });
 }
 
+export default async (request) => {
+  if (request.method === 'OPTIONS') return new Response('', { status: 204, headers: cors });
+  if (request.method !== 'POST') return json({ error: 'Method Not Allowed' }, 405);
 
-  try {
-    const resp = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from,
-        to: [therapist], // zawsze masażystka z ENV
-        subject,
-        html,
-      }),
-    });
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.FROM_EMAIL || 'onboarding@resend.dev';
+  const therapist = process.env.THERAPIST_EMAIL; // np. massage.n.spa@gmail.com
+  if (!apiKey) return json({ error: 'Missing RESEND_API_KEY env var' }, 500);
+  if (!therapist) return json({ error: 'Missing THERAPIST_EMAIL env var' }, 500);
 
-    if (!resp.ok) {
-      return { statusCode: resp.status, body: await resp.text() };
-    }
+  const { mode, reservation } = await request.json().catch(()=>({}));
+  if (!mode || !reservation) return json({ error: 'Missing mode or reservation' }, 400);
 
-    return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ok: true }),
-    };
-  } catch (err) {
-    return { statusCode: 500, body: "Error: " + err.message };
+  const subjectBase = `${reservation.service} — ${reservation.date} ${reservation.time}`;
+
+  const htmlTherapist = `
+    <h2>${mode === 'reserve' ? 'Nowa rezerwacja' : 'Rezerwacja POTWIERDZONA'}</h2>
+    <p><b>Usługa:</b> ${reservation.service}</p>
+    <p><b>Termin:</b> ${reservation.date} ${reservation.time}</p>
+    <p><b>Klient:</b> ${reservation.client?.name || ''} (${reservation.client?.email || ''}${reservation.client?.phone ? ', ' + reservation.client.phone : ''})</p>
+    ${reservation.notes ? `<p><b>Uwagi:</b> ${reservation.notes}</p>` : ''}
+    ${reservation.price ? `<p><b>Cena:</b> ${reservation.price} zł</p>` : ''}
+    ${reservation.id ? `<hr/><small>ID: ${reservation.id}</small>` : ''}
+  `;
+
+  const htmlClient = `
+    <h2>Potwierdzenie wizyty</h2>
+    <p>Cześć ${reservation.client?.name || ''},</p>
+    <p>Potwierdzamy Twoją rezerwację:</p>
+    <ul>
+      <li><b>Usługa:</b> ${reservation.service}</li>
+      <li><b>Termin:</b> ${reservation.date} ${reservation.time}</li>
+      ${reservation.price ? `<li><b>Cena:</b> ${reservation.price} zł</li>` : ''}
+    </ul>
+    <p>Do zobaczenia!<br/>Massage & SPA</p>
+    ${reservation.id ? `<hr/><small>ID: ${reservation.id}</small>` : ''}
+  `;
+
+  const payloads = [];
+  if (mode === 'reserve') {
+    payloads.push({ from, to: [therapist], subject: `NOWA REZERWACJA: ${subjectBase}`, html: htmlTherapist });
+  } else if (mode === 'confirm') {
+    if (!reservation.client?.email) return json({ error: 'Missing client email' }, 400);
+    payloads.push({ from, to: [therapist], subject: `POTWIERDZONO: ${subjectBase}`, html: htmlTherapist });
+    payloads.push({ from, to: [reservation.client.email], subject: `Twoja wizyta potwierdzona: ${subjectBase}`, html: htmlClient });
+  } else {
+    return json({ error: 'Unknown mode' }, 400);
   }
+
+  for (const msg of payloads) {
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(msg),
+    });
+    if (!resp.ok) {
+      const data = await resp.text();
+      return json({ ok: false, status: resp.status, data }, 502);
+    }
+  }
+  return json({ ok: true }, 200);
 };
