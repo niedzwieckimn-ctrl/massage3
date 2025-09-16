@@ -182,74 +182,7 @@
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
 </script>
-<!-- THANK-YOU BANNER AFTER BOOKING -->
-<style>
-#bookingThanks {
-  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%,-50%);
-  background: #FFFFFF; color:#000; border:2px solid #000;
-  padding: 14px 18px; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.35);
-  display:none; z-index: 9999; text-align:center;
-}
-#bookingThanks.show { display:block; animation: fadein .18s ease-out; }
-@keyframes fadein { from { opacity:0; transform: translateX(-50%) translateY(6px);} to { opacity:1; transform: translateX(-50%) translateY(0);} }
-</style>
-<div id="bookingThanks">Dziękujemy za dokonanie rezerwacji, poczekaj na jej potwierdzenie!// </div>
-})();
-</script>
 <script>
-(function(){
-  // wyślij powiadomienie do masażystki po złożeniu rezerwacji
-  const form = document.getElementById('form');
-  if (!form) return;
-
-  form.addEventListener('submit', function(){
-    try {
-      const get = id => document.getElementById(id)?.value || "";
-
-      // nazwa usługi jako tekst z <select> (ładniejsza w mailu)
-      const svcEl = document.getElementById('service');
-      const serviceName =
-        (svcEl && svcEl.options && svcEl.selectedIndex >= 0)
-          ? svcEl.options[svcEl.selectedIndex].text
-          : get('service');
-
-      const booking = {
-        name:   get('name'),
-        email:  get('email'),
-        phone:  get('phone'),
-        address:get('address'),
-        serviceName,
-        price:  "",               // opcjonalnie możesz wstawić cenę
-        date:   get('date'),
-        time:   get('time'),
-        notes:  get('notes')
-      };
-
-      // fire-and-forget (nie blokujemy działania formularza / Twoich skryptów)
-      fetch('/.netlify/functions/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ type:'notify', booking })
-      }).catch(()=>{});
-    } catch(_) {}
-  }, false);
-})();
-</script><button onclick="testMail()">Wyślij test</button>
-<script>
-async function testMail(){
-  const res = await fetch('/.netlify/functions/send-email', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      to: "niedzwiecki.mn@gmail.com",
-      subject: "Test z Massage & SPA",
-      html: "<p>Działa 🎉</p>"
-    })
-  });
-  const data = await res.json();
-  alert(JSON.stringify(data));
-}
-</script><script>
 async function sendMail(to, subject, html) {
   try {
     const r = await fetch('/.netlify/functions/send-email', {
@@ -296,46 +229,17 @@ document.addEventListener('click', async (e) => {
   // WYŚLIJ tylko do Ciebie przy "Rezerwuj"
   await sendMail('niedzwiecki.mn@gmail.com', subject, html);
 });
-</script><script>
-async function reserveSubmit(e) {
-  e.preventDefault();
-
-  const svcEl = document.querySelector('#service');
-  const serviceName =
-    svcEl?.options?.[svcEl.selectedIndex]?.text || svcEl?.value || "";
-
-  const reservation = {
-    id: (crypto?.randomUUID?.() || Date.now().toString(36)),
-    service: serviceName,
-    date: document.querySelector('#date')?.value || '',
-    time: document.querySelector('#time')?.value || '',
-    notes: document.querySelector('#notes')?.value || '',
-    client: {
-      name: document.querySelector('#name')?.value || '',
-      email: document.querySelector('#email')?.value || '',
-      phone: document.querySelector('#phone')?.value || '',
-      address: document.querySelector('#address')?.value || ''   // <-- nowy element
-    }
-  };
-
-  try {
-    const res = await fetch('/.netlify/functions/send-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reservation })
-    });
-
-    const data = await res.json();
-    if (res.ok && data.ok) {
-      alert('✅ Dziękujemy za rezerwację! Dane wysłane do masażystki.');
-    } else {
-      alert('❌ Błąd wysyłki: ' + (data.error || res.status));
-    }
-  } catch (err) {
-    alert('❌ Błąd sieci: ' + err.message);
-  }
+</script><!-- Poprawny baner "dziękujemy" (poza <script>) -->
+<style>
+#bookingThanks {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  background: #fff; color:#000; border:2px solid #000;
+  padding: 14px 18px; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  display:none; z-index: 9999; text-align:center;
 }
-
-document.querySelector('#form')?.addEventListener('submit', reserveSubmit);
-</script></body>
+#bookingThanks.show { display:block; animation: fadein .18s ease-out; }
+@keyframes fadein { from { opacity:0; transform: translateX(-50%) translateY(6px);} to { opacity:1; transform: translateX(-50%) translateY(0);} }
+</style>
+<div id="bookingThanks">Dziękujemy za dokonanie rezerwacji, poczekaj na jej potwierdzenie!</div>
+</body>
 </html>
