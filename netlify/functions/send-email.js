@@ -14,9 +14,7 @@ function json(data, status = 200) {
 
 export default async (request, context) => {
   try {
-    // Preflight CORS
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
-
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
     const text = await request.text();
@@ -27,13 +25,39 @@ export default async (request, context) => {
       return json({ error: 'Invalid JSON' }, 400);
     }
 
-    const { to, subject, html } = payload;
-    if (!to || !subject || !html) return json({ error: 'Missing fields: to, subject, html' }, 400);
+    const { reservation } = payload;
+    if (!reservation) return json({ error: 'Missing reservation' }, 400);
 
+    // Dane z env
     const apiKey = process.env.RESEND_API_KEY;
     const from = process.env.FROM_EMAIL || 'onboarding@resend.dev';
-    if (!apiKey) return json({ error: 'Missing RESEND_API_KEY env var' }, 500);
+    const to = process.env.ADMIN_EMAIL; // adres masażystki/admina
 
+    if (!apiKey || !to) return json({ error: 'Missing env vars (RESEND_API_KEY, ADMIN_EMAIL)' }, 500);
+
+    // Temat wiadomości
+    const subject = `NOWA REZERWACJA #${reservation.id || ''} — ${reservation.service || 'Zabieg'} — ${reservation.date || ''} ${reservation.time || ''}`.trim();
+
+    // Treść wiadomości
+    const html = `
+      <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.5;color:#111">
+        <h3 style="margin:0 0 16px">Nowa rezerwacja</h3>
+        <table style="border-collapse:collapse;width:100%;max-width:640px">
+          <tbody>
+            <tr><td style="padding:8px;border-bottom:1px solid #eee;width:220px"><strong>Nr rezerwacji</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${reservation.id || '-'}</td></tr>
+            <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Imię i nazwisko</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${reservation.client?.name || '-'}</td></tr>
+            <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Adres</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${reservation.client?.address || '-'}</td></tr>
+            <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Nr telefonu</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${reservation.client?.phone || '-'}</td></tr>
+            <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Email klienta</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${reservation.client?.email || '-'}</td></tr>
+            <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Nazwa zabiegu</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${reservation.service || '-'}</td></tr>
+            <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Data i godzina</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${reservation.date || '-'} ${reservation.time || ''}</td></tr>
+            <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Uwagi</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${reservation.notes || '-'}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    // Wysyłka przez Resend
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
