@@ -209,7 +209,7 @@
     e.preventDefault();
     const svc = getTextOfSelect('#service');
     const reservation = {
-      id: String(Math,floor(1000 + Math.random() * 9000)),
+      id: String(Math.floor(1000 + Math.random() * 9000)),
       service: svc,
       date: document.querySelector('#date')?.value || '',
       time: document.querySelector('#time')?.value || '',
