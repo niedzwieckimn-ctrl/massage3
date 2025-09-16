@@ -240,5 +240,97 @@
       alert('❌ Błąd sieci: ' + err.message);
     }
   });
-})();</script></body>
+})();</script><style>
+  /* wizualne oznaczenie zajętych */
+  .slot.taken, [data-slot].taken, button.taken, .time-btn.taken {
+    opacity: .45; pointer-events: none; text-decoration: line-through;
+  }
+</style>
+<script>
+/* --- 1) PODMIANA WIDOCZNYCH NAZW --- */
+(function renameLabels(){
+  const map = { 'Przegląd':'Rezerwacje', 'Terminy':'Wolne terminy' };
+  const sel = 'h1,h2,h3,h4,button,a,[aria-label],[title],.tab,.nav a,.menu a,.btn';
+  const apply = (el, attr) => {
+    const v = el[attr]?.trim?.(); if (!v) return;
+    if (map[v]) el.setAttribute(attr, map[v]);
+  };
+  (function run(){
+    document.querySelectorAll(sel).forEach(el=>{
+      const t = (el.textContent||'').trim(); if (map[t]) el.textContent = el.textContent.replace(t, map[t]);
+      apply(el,'aria-label'); apply(el,'title');
+    });
+  })();
+})();
+
+/* --- 2) UTIL: wczytanie rezerwacji (na potrzeby blokady) --- */
+function loadBookings(){ try { return JSON.parse(localStorage.getItem('bookings')||'[]'); } catch { return []; } }
+
+/* Znajdź i zdejmij slot (po data+time) z UI */
+function removeSlotFromUI(date, time){
+  if(!date) return;
+  // 2a) wyłącz przyciski slotów z data-date/data-time
+  document.querySelectorAll('[data-date][data-time], .slot, .time-btn, button').forEach(el=>{
+    const d = el.getAttribute?.('data-date') || el.dataset?.date;
+    const t = el.getAttribute?.('data-time') || el.dataset?.time;
+    if (d===date && t===time) {
+      el.classList.add('taken');
+      el.setAttribute('aria-disabled','true');
+      el.title = 'Termin zajęty';
+      // jeżeli to element listy/przycisku we "Wolnych terminach" – usuń go całkiem:
+      if (el.closest('[data-list="free-slots"], #free-slots, .free-slots, [data-section="free"]')) {
+        const row = el.closest('li, .row, .slot, .time-btn, button') || el;
+        row.remove();
+      }
+    }
+  });
+  // 2b) na wszelki wypadek – usuń z prostych list tekstowych "YYYY-MM-DD HH:MM"
+  const stamp = (date + ' ' + (time||'')).trim();
+  if (stamp) {
+    document.querySelectorAll('#free-slots li, .free-slots li, [data-list="free-slots"] li').forEach(li=>{
+      if (li.textContent.includes(stamp)) li.remove();
+    });
+  }
+}
+
+/* Oznacz już zajęte (przy pierwszym załadowaniu strony) */
+(function markTakenOnLoad(){
+  const booked = loadBookings();
+  booked.forEach(b => removeSlotFromUI(b.date, b.time));
+})();
+
+/* --- 3) INTERCEPT wysyłki: automatycznie reaguj po udanej rezerwacji --- */
+(function interceptSendEmail(){
+  const origFetch = window.fetch;
+  window.fetch = async function(input, init){
+    // przejmij tylko POST na /.netlify/functions/send-email
+    const url = (typeof input === 'string') ? input : (input?.url || '');
+    const isSend = url.includes('/.netlify/functions/send-email') && (init?.method || input?.method || 'GET').toUpperCase()==='POST';
+    let reservation = null;
+
+    if (isSend) {
+      try {
+        const bodyText = init?.body || (await input?.clone?.()?.text?.());
+        const parsed = JSON.parse(bodyText || '{}');
+        // obsłuż oba przypadki: {reservation} albo {to,subject,html} (wtedy nie wiemy terminu)
+        if (parsed && parsed.reservation) reservation = parsed.reservation;
+      } catch {}
+    }
+
+    const resp = await origFetch(input, init);
+    // po udanym wysłaniu – zdejmij slot z wolnych
+    if (isSend && resp.ok && reservation) {
+      try {
+        const { date, time } = reservation;
+        // zapisz do localStorage (utrwalenie) i zdejmij z UI
+        const all = loadBookings(); all.push(reservation);
+        localStorage.setItem('bookings', JSON.stringify(all));
+        removeSlotFromUI(date, time);
+      } catch {}
+    }
+    return resp;
+  };
+})();
+</script>
+</body>
 </html>
