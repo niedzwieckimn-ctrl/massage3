@@ -1,76 +1,73 @@
 
-<!doctype html>
+<!DOCTYPE html>
+
 <html lang="pl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Massage & SPA — Rezerwacja</title>
-  <link rel="stylesheet" href="assets/style.css"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Massage &amp; SPA — Rezerwacja</title>
+<link href="assets/style.css" rel="stylesheet"/>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="brand">
-        <img src="assets/logo.svg" alt="Massage & SPA"/>
-        <h1>Massage &amp; SPA</h1>
-      </div>
-      <div>
-        <a class="btn secondary" href="admin.html">Panel admin</a>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Rezerwacja</h2>
-      <form id="form" class="grid two">
-        <div>
-          <label>Imię i nazwisko *</label>
-          <input id="name" class="input" required/>
-        </div>
-        <div>
-          <label>Email *</label>
-          <input id="email" class="input" type="email" required/>
-        </div>
-        <div>
-          <label>Telefon *</label>
-          <input id="phone" class="input" type="tel" required/>
-        </div>
-        <div>
-          <label>Adres</label>
-          <input id="address" class="input" placeholder="Ulica, miasto"/>
-        </div>
-        <div>
-          <label>Zabieg *</label>
-          <select id="service" class="input"></select>
-        </div>
-        <div></div>
-        <div>
-          <label>Data *</label>
-          <input id="date" class="input" type="date" required/>
-        </div>
-        <div>
-          <label>Godzina *</label>
-          <select id="time" class="input"><option>Wybierz datę…</option></select>
-        </div>
-        <div class="grid" style="grid-column:1/-1">
-          <label>Uwagi</label>
-          <textarea id="notes" rows="4" class="input" placeholder="Np. preferencje, dolegliwości…"></textarea>
-        </div>
-        <div class="inline" style="grid-column:1/-1">
-          <input type="checkbox" id="rodo" style="width:18px;height:18px"/>
-          <label id="rodoLbl" for="rodo">Wyrażam zgodę na przetwarzanie danych osobowych w celu realizacji rezerwacji.</label>
-        </div>
-        <div style="grid-column:1/-1;display:flex;gap:10px">
-          <button class="btn" type="submit">Rezerwuj</button>
-                  </div>
-      </form>
-    </div>
-
-    <div class="footer">© Massage &amp; SPA • <span id="contact"></span></div>
-  </div>
-
-  <script src="assets/store.js"></script>
-  <script src="assets/app.js"></script><script src="calendar-patch.js" defer></script><script>(function(){  var DATE_SELECTORS=['#date','#bookingDate','#dateInput','input[name="date"]'];  var TIME_SELECTORS=['#time','#bookingTime','#timeSelect','select[name="time"]'];  function $(list){for(var i=0;i<list.length;i++){var el=document.querySelector(list[i]);if(el)return el}return null}  function injectCSS(css){var s=document.createElement('style');s.textContent=css;document.head.appendChild(s)}  function loadScript(src,cb){var s=document.createElement('script');s.src=src;s.onload=cb;document.head.appendChild(s)}  function loadCSS(href){var l=document.createElement('link');l.rel='stylesheet';l.href=href;document.head.appendChild(l)}  function parseSlots(){    var out=[];function add(d,t){if(!d||!t)return;if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return;if(!/^\d{2}:\d{2}$/.test(t))return;out.push({date:d,time:t})}    for(var i=0;i<localStorage.length;i++){      var k=localStorage.key(i),v=null;try{v=JSON.parse(localStorage.getItem(k))}catch(e){v=null} if(!v)continue;      if(Array.isArray(v)&&v.length){        if(typeof v[0]==='object'&&'date'in v[0]&&'time'in v[0]){v.forEach(function(x){add(x.date,x.time)});continue}        if(typeof v[0]==='string'){v.forEach(function(s){var m=s.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})$/);if(m)add(m[1],m[2])});continue}      }      if(v&&typeof v==='object'){        if(Array.isArray(v.slots)){v.slots.forEach(function(x){add(x.date,x.time)});continue}        var keys=Object.keys(v),used=false;        for(var j=0;j<keys.length;j++){var key=keys[j];if(/^\d{4}-\d{2}-\d{2}$/.test(key)&&Array.isArray(v[key])){v[key].forEach(function(t){add(key,String(t).slice(0,5))});used=true}}        if(used)continue;      }    }    return out;  }  function init(){    var dateEl=$(DATE_SELECTORS),timeEl=$(TIME_SELECTORS); if(!dateEl||!timeEl)return;    var slots=parseSlots(),days={}; slots.forEach(function(s){(days[s.date]||(days[s.date]=[])).includes(s.time)||days[s.date].push(s.time)});    var enabledDates=Object.keys(days);    if(typeof flatpickr!=='function'){console.warn('flatpickr not loaded');return}    flatpickr(dateEl,{      dateFormat:'Y-m-d',disableMobile:true,enable:enabledDates,      onDayCreate:function(_1,_2,_3,dayElem){        var y=dayElem.dateObj.getFullYear(),m=('0'+(dayElem.dateObj.getMonth()+1)).slice(-2),d=('0'+dayElem.dateObj.getDate()).slice(-2);        var key=y+'-'+m+'-'+d; if(days[key]) dayElem.classList.add('fp-has-slots');      },      onChange:function(selected){var sel=selected&&selected[0]; if(!sel)return;        var y=sel.getFullYear(),m=('0'+(sel.getMonth()+1)).slice(-2),d=('0'+sel.getDate()).slice(-2); var key=y+'-'+m+'-'+d;        while(timeEl.firstChild) timeEl.removeChild(timeEl.firstChild);        var times=(days[key]||[]).slice().sort();        if(!times.length){var o=document.createElement('option');o.value='';o.textContent='Brak wolnych godzin';o.disabled=true;o.selected=true;timeEl.appendChild(o);timeEl.disabled=true;return}        var ph=document.createElement('option');ph.value='';ph.textContent='Wybierz godzinę…';timeEl.appendChild(ph);        times.forEach(function(t){var o=document.createElement('option');o.value=t;o.textContent=t;timeEl.appendChild(o)}); timeEl.disabled=false;      }    });    injectCSS('.flatpickr-day.fp-has-slots{box-shadow:inset 0 0 0 2px rgba(72,222,151,.9);border-radius:8px}.flatpickr-day.fp-has-slots:hover{background:rgba(72,222,151,.15)}');  }  function boot(){    if(typeof flatpickr==='function'){init()}    else{loadCSS('https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css');loadScript('https://cdn.jsdelivr.net/npm/flatpickr',init)}  }  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();})();</script>
-
+<div class="container">
+<div class="header">
+<div class="brand">
+<img alt="Massage &amp; SPA" src="assets/logo.svg"/>
+<h1>Massage &amp; SPA</h1>
+</div>
+<div>
+<a class="btn secondary" href="admin.html">Panel admin</a>
+</div>
+</div>
+<div class="card">
+<h2>Rezerwacja</h2>
+<form class="grid two" id="form">
+<div>
+<label>Imię i nazwisko *</label>
+<input class="input" id="name" required=""/>
+</div>
+<div>
+<label>Email *</label>
+<input class="input" id="email" required="" type="email"/>
+</div>
+<div>
+<label>Telefon *</label>
+<input class="input" id="phone" required="" type="tel"/>
+</div>
+<div>
+<label>Adres</label>
+<input class="input" id="address" placeholder="Ulica, miasto"/>
+</div>
+<div>
+<label>Zabieg *</label>
+<select class="input" id="service"></select>
+</div>
+<div></div>
+<div>
+<label>Data *</label>
+<input class="input" id="date" required="" type="date"/>
+</div>
+<div>
+<label>Godzina *</label>
+<select class="input" id="time"><option>Wybierz datę…</option></select>
+</div>
+<div class="grid" style="grid-column:1/-1">
+<label>Uwagi</label>
+<textarea class="input" id="notes" placeholder="Np. preferencje, dolegliwości…" rows="4"></textarea>
+</div>
+<div class="inline" style="grid-column:1/-1">
+<input id="rodo" style="width:18px;height:18px" type="checkbox"/>
+<label for="rodo" id="rodoLbl">Wyrażam zgodę na przetwarzanie danych osobowych w celu realizacji rezerwacji.</label>
+</div>
+<div style="grid-column:1/-1;display:flex;gap:10px">
+<button class="btn" type="submit">Rezerwuj</button>
+</div>
+</form>
+</div>
+<div class="footer">© Massage &amp; SPA • <span id="contact"></span></div>
+</div>
+<script src="assets/store.js"></script>
+<script src="assets/app.js"></script><script defer="" src="calendar-patch.js"></script><script>(function(){  var DATE_SELECTORS=['#date','#bookingDate','#dateInput','input[name="date"]'];  var TIME_SELECTORS=['#time','#bookingTime','#timeSelect','select[name="time"]'];  function $(list){for(var i=0;i<list.length;i++){var el=document.querySelector(list[i]);if(el)return el}return null}  function injectCSS(css){var s=document.createElement('style');s.textContent=css;document.head.appendChild(s)}  function loadScript(src,cb){var s=document.createElement('script');s.src=src;s.onload=cb;document.head.appendChild(s)}  function loadCSS(href){var l=document.createElement('link');l.rel='stylesheet';l.href=href;document.head.appendChild(l)}  function parseSlots(){    var out=[];function add(d,t){if(!d||!t)return;if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return;if(!/^\d{2}:\d{2}$/.test(t))return;out.push({date:d,time:t})}    for(var i=0;i<localStorage.length;i++){      var k=localStorage.key(i),v=null;try{v=JSON.parse(localStorage.getItem(k))}catch(e){v=null} if(!v)continue;      if(Array.isArray(v)&&v.length){        if(typeof v[0]==='object'&&'date'in v[0]&&'time'in v[0]){v.forEach(function(x){add(x.date,x.time)});continue}        if(typeof v[0]==='string'){v.forEach(function(s){var m=s.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})$/);if(m)add(m[1],m[2])});continue}      }      if(v&&typeof v==='object'){        if(Array.isArray(v.slots)){v.slots.forEach(function(x){add(x.date,x.time)});continue}        var keys=Object.keys(v),used=false;        for(var j=0;j<keys.length;j++){var key=keys[j];if(/^\d{4}-\d{2}-\d{2}$/.test(key)&&Array.isArray(v[key])){v[key].forEach(function(t){add(key,String(t).slice(0,5))});used=true}}        if(used)continue;      }    }    return out;  }  function init(){    var dateEl=$(DATE_SELECTORS),timeEl=$(TIME_SELECTORS); if(!dateEl||!timeEl)return;    var slots=parseSlots(),days={}; slots.forEach(function(s){(days[s.date]||(days[s.date]=[])).includes(s.time)||days[s.date].push(s.time)});    var enabledDates=Object.keys(days);    if(typeof flatpickr!=='function'){console.warn('flatpickr not loaded');return}    flatpickr(dateEl,{      dateFormat:'Y-m-d',disableMobile:true,enable:enabledDates,      onDayCreate:function(_1,_2,_3,dayElem){        var y=dayElem.dateObj.getFullYear(),m=('0'+(dayElem.dateObj.getMonth()+1)).slice(-2),d=('0'+dayElem.dateObj.getDate()).slice(-2);        var key=y+'-'+m+'-'+d; if(days[key]) dayElem.classList.add('fp-has-slots');      },      onChange:function(selected){var sel=selected&&selected[0]; if(!sel)return;        var y=sel.getFullYear(),m=('0'+(sel.getMonth()+1)).slice(-2),d=('0'+sel.getDate()).slice(-2); var key=y+'-'+m+'-'+d;        while(timeEl.firstChild) timeEl.removeChild(timeEl.firstChild);        var times=(days[key]||[]).slice().sort();        if(!times.length){var o=document.createElement('option');o.value='';o.textContent='Brak wolnych godzin';o.disabled=true;o.selected=true;timeEl.appendChild(o);timeEl.disabled=true;return}        var ph=document.createElement('option');ph.value='';ph.textContent='Wybierz godzinę…';timeEl.appendChild(ph);        times.forEach(function(t){var o=document.createElement('option');o.value=t;o.textContent=t;timeEl.appendChild(o)}); timeEl.disabled=false;      }    });    injectCSS('.flatpickr-day.fp-has-slots{box-shadow:inset 0 0 0 2px rgba(72,222,151,.9);border-radius:8px}.flatpickr-day.fp-has-slots:hover{background:rgba(72,222,151,.15)}');  }  function boot(){    if(typeof flatpickr==='function'){init()}    else{loadCSS('https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css');loadScript('https://cdn.jsdelivr.net/npm/flatpickr',init)}  }  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();})();</script>
 <script>
 (function(){
   // --- 0) Mały pasek diagnostyczny (zobaczysz co się dzieje) ---
@@ -182,54 +179,7 @@
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
 </script>
-<script>
-async function sendMail(to, subject, html) {
-  try {
-    const r = await fetch('/.netlify/functions/send-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to, subject, html })
-    });
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok || data.ok === false) {
-      console.error('Send mail error:', data);
-      return false;
-    }
-    return true;
-  } catch (e) {
-    console.error('Send mail error:', e);
-    return false;
-  }
-}
-
-// PROSTE podpięcie przycisku "Rezerwuj" (tylko do Ciebie)
-document.addEventListener('click', async (e) => {
-  const btn = e.target.closest('button, a, input[type="submit"]');
-  if (!btn) return;
-  if (!/^\s*rezerwuj\s*$/i.test(btn.textContent || btn.value || '')) return;
-
-  // ZBIERZ DANE z formularza – dopasuj selektory do swoich pól
-  const name = document.querySelector('[name="name"], #name, [data-name]')?.value || '';
-  const phone = document.querySelector('[name="phone"], #phone, [data-phone]')?.value || '';
-  const email = document.querySelector('[name="email"], #email, [data-email]')?.value || '';
-  const service = document.querySelector('[name="service"], #service, [data-service]')?.value || '';
-  const date = document.querySelector('[name="date"], #date, [data-date]')?.value || '';
-  const time = document.querySelector('[name="time"], #time, [data-time]')?.value || '';
-  const notes = document.querySelector('[name="notes"], #notes, [data-notes]')?.value || '';
-
-  const subject = `Nowa rezerwacja: ${service} / ${date} ${time}`;
-  const html = `
-    <h2>Nowa rezerwacja</h2>
-    <p><b>Usługa:</b> ${service}</p>
-    <p><b>Termin:</b> ${date} ${time}</p>
-    <p><b>Klient:</b> ${name} (${email}, ${phone})</p>
-    <p><b>Uwagi:</b> ${notes || '-'}</p>
-  `;
-
-  // WYŚLIJ tylko do Ciebie przy "Rezerwuj"
-  await sendMail('niedzwiecki.mn@gmail.com', subject, html);
-});
-</script><!-- Poprawny baner "dziękujemy" (poza <script>) -->
+<!-- Poprawny baner "dziękujemy" (poza <script>) -->
 <style>
 #bookingThanks {
   position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
@@ -241,5 +191,54 @@ document.addEventListener('click', async (e) => {
 @keyframes fadein { from { opacity:0; transform: translateX(-50%) translateY(6px);} to { opacity:1; transform: translateX(-50%) translateY(0);} }
 </style>
 <div id="bookingThanks">Dziękujemy za dokonanie rezerwacji, poczekaj na jej potwierdzenie!</div>
-</body>
+<script>
+(() => {
+  const form = document.querySelector('#form');
+  if (!form) return;
+
+  function getTextOfSelect(selector) {
+    const el = document.querySelector(selector);
+    if (el && el.tagName === 'SELECT') {
+      const opt = el.options[el.selectedIndex];
+      return (opt && opt.text || '').trim();
+    }
+    return (el && el.value || '').trim();
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const svc = getTextOfSelect('#service');
+    const reservation = {
+      id: (crypto?.randomUUID?.() || Date.now().toString(36)),
+      service: svc,
+      date: document.querySelector('#date')?.value || '',
+      time: document.querySelector('#time')?.value || '',
+      notes: document.querySelector('#notes')?.value || '',
+      client: {
+        name: document.querySelector('#name')?.value || '',
+        email: document.querySelector('#email')?.value || '',
+        phone: document.querySelector('#phone')?.value || '',
+        address: document.querySelector('#address')?.value || ''
+      }
+    };
+
+    try {
+      const res = await fetch('/.netlify/functions/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reservation })
+      });
+      const text = await res.text();
+      let data = {}; try { data = JSON.parse(text); } catch {}
+      if (res.ok && data.ok) {
+        const b = document.getElementById('bookingThanks');
+        if (b) { b.classList.add('show'); setTimeout(()=>b.classList.remove('show'), 3500); }
+      } else {
+        alert('❌ Błąd wysyłki: ' + (data.error || text || res.status));
+      }
+    } catch (err) {
+      alert('❌ Błąd sieci: ' + err.message);
+    }
+  });
+})();</script></body>
 </html>
