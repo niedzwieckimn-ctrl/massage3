@@ -29,9 +29,10 @@ export default async (request, context) => {
     if (!reservation) return json({ error: 'Missing reservation' }, 400);
 
     // Dane z env
-    const apiKey = process.env.RESEND_API_KEY;
-    const from = process.env.FROM_EMAIL || 'onboarding@resend.dev';
-    const to = process.env.ADMIN_EMAIL; // adres masażystki/admina
+    const apiKey = context.env.RESEND_API_KEY;
+const from = context.env.FROM_EMAIL || 'onboarding@resend.dev';
+const to = context.env.ADMIN_EMAIL;
+
 
     if (!apiKey || !to) return json({ error: 'Missing env vars (RESEND_API_KEY, ADMIN_EMAIL)' }, 500);
 
