@@ -433,3 +433,144 @@ document.addEventListener('DOMContentLoaded', ()=>{
     }
   });
 })();
+// ===== [HOTFIX ADMIN] naprawa "Invalid Date", duplikatów i starych kluczy =====
+(() => {
+  if (window.__ADMIN_HOTFIX__) return; window.__ADMIN_HOTFIX__ = true;
+
+  const STORAGE_KEYS = ['availableSlots','slots','freeSlots'];
+  const TARGET_KEY = 'availableSlots';
+
+  // -- bezpieczne parse
+  function safeParse(s, fb){ try { return JSON.parse(s); } catch { return fb; } }
+  function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+
+  // -- normalizacja pojedynczego slotu -> {date:'YYYY-MM-DD', time:'HH:MM'} lub null
+  const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+  function normSlot(s){
+    if (!s) return null;
+    let d = (s.date || '').trim();
+    let t = (s.time || '').trim();
+    // podetnij HH:MM:SS -> HH:MM
+    if (t.length >= 5) t = t.slice(0,5);
+    // spróbuj rozpoznać datę, jeśli nie w ISO
+    if (!ISO_DATE.test(d)) {
+      // czasem bywa dd.mm.yyyy albo yyyy/mm/dd
+      const dt = new Date(d);
+      if (!Number.isNaN(dt.getTime())) {
+        const yyyy = String(dt.getFullYear());
+        const mm = String(dt.getMonth()+1).padStart(2,'0');
+        const dd = String(dt.getDate()).padStart(2,'0');
+        d = `${yyyy}-${mm}-${dd}`;
+      }
+    }
+    // walidacja końcowa
+    if (!ISO_DATE.test(d) || !/^\d{2}:\d{2}$/.test(t)) return null;
+    const test = new Date(`${d}T${t}:00`);
+    if (Number.isNaN(test.getTime())) return null;
+    return { date: d, time: t };
+  }
+
+  // -- wczytaj z wielu kluczy, znormalizuj, zdeduplikuj
+  function loadMergedSlots(){
+    const bag = [];
+    for (const k of STORAGE_KEYS){
+      const arr = safeParse(localStorage.getItem(k), []);
+      if (Array.isArray(arr)) bag.push(...arr);
+    }
+    const normed = bag.map(normSlot).filter(Boolean);
+    const seen = new Set();
+    const out = [];
+    for (const s of normed){
+      const key = `${s.date}T${s.time}`;
+      if (!seen.has(key)){ seen.add(key); out.push(s); }
+    }
+    return out.sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+  }
+
+  function writeBackUnified(slots){
+    // zawsze zapisuj tylko pod TARGET_KEY, a pozostałe wyczyść
+    save(TARGET_KEY, slots);
+    for (const k of STORAGE_KEYS){
+      if (k !== TARGET_KEY) localStorage.removeItem(k);
+    }
+  }
+
+  // -- render listy (działa z dowolnymi przyciskami Usuń)
+  const list = document.querySelector('#slotsList');
+  function pretty(dt){ return new Date(dt).toLocaleString('pl-PL',{dateStyle:'medium',timeStyle:'short'}); }
+  function render(){
+    if (!list) return;
+    const slots = safeParse(localStorage.getItem(TARGET_KEY), []);
+    list.innerHTML = '';
+    slots.forEach((s, i)=>{
+      const item = document.createElement('div');
+      item.className = 'slotItem row';
+      item.dataset.date = s.date;
+      item.dataset.time = s.time;
+      item.innerHTML = `
+        <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <div><strong>${pretty(`${s.date}T${s.time}:00`)}</strong></div>
+          <button class="btn btn-danger removeSlot" data-index="${i}">Usuń</button>
+        </div>`;
+      list.appendChild(item);
+    });
+  }
+
+  // -- init: scalenie i naprawa
+  (function initRepair(){
+    const merged = loadMergedSlots();       // z wielu kluczy → lista OK
+    writeBackUnified(merged);               // zapisz tylko do availableSlots
+    render();
+  })();
+
+  // -- add: podmień obsługę "Dodaj termin" tak, żeby najpierw naprawiała
+  const addBtn = document.querySelector('#addSlot');
+  const inDate = document.querySelector('#slotDate');
+  const inTime = document.querySelector('#slotTime');
+
+  function addSlotFixed(){
+    const merged = loadMergedSlots();
+    writeBackUnified(merged); // jeszcze raz zsynchronizuj przed dodaniem
+
+    const raw = { date: (inDate?.value||'').trim(), time: (inTime?.value||'').trim() };
+    const s = normSlot(raw);
+    if (!s){ alert('Wybierz poprawną datę (YYYY-MM-DD) i godzinę (HH:MM).'); return; }
+
+    // duplikaty
+    if (merged.some(x => x.date===s.date && x.time===s.time)){
+      alert('Taki termin już istnieje.');
+      return;
+    }
+
+    merged.push(s);
+    merged.sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+    writeBackUnified(merged);
+    render();
+  }
+
+  addBtn && addBtn.addEventListener('click', addSlotFixed);
+
+  // -- usuwanie: delegacja na każdy przycisk "Usuń", niezależnie od klasy
+  list && list.addEventListener('click', (e)=>{
+    const card = e.target.closest('.slotItem');
+    const btn = e.target.closest('button');
+    if (!card || !btn) return;
+    const d = card.dataset.date, t = card.dataset.time;
+    const merged = loadMergedSlots();
+    const idx = merged.findIndex(s => s.date===d && s.time===t);
+    if (idx > -1){
+      merged.splice(idx,1);
+      writeBackUnified(merged);
+      render();
+    }
+  });
+
+  // -- auto-refresh gdy inna karta coś zmieni
+  window.addEventListener('storage', (e)=>{
+    if (STORAGE_KEYS.includes(e.key)) {
+      const merged = loadMergedSlots();
+      writeBackUnified(merged);
+      render();
+    }
+  });
+})();
