@@ -178,154 +178,118 @@
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
-
-<script>
-/** === KONFIG: podaj(ą) się same najczęstsze kontenery "Terminy" ===
- * Jeśli Twój kontener ma inną nazwę (ID/klasę), po prostu dopisz ją do tablicy poniżej.
- */
-const TERM_CONT_SELECTORS = [
-  '#terminy',              // <div id="terminy">...</div>
-  '#wolne-terminy',        // <div id="wolne-terminy">...</div>
-  '#free-slots',           // <ul id="free-slots">...</ul>
-  '.free-slots',           // <div class="free-slots">...</div>
-  '[data-section="terminy"]',
-  '[data-list="free-slots"]'
-];
-
-// Szuka elementów tylko wewnątrz kontenerów "Terminy"
-function qInTerminy(selector) {
-  const found = [];
-  TERM_CONT_SELECTORS.forEach(sel => {
-    document.querySelectorAll(sel).forEach(box => {
-      box.querySelectorAll(selector).forEach(el => found.push(el));
-    });
-  });
-  return found;
-}
-
-// Usuń slot (dokładnie z "Terminy/Wolne terminy") po data+time
-function removeFromTerminy(date, time) {
-  if (!date) return;
-  const t = time || '';
-
-  // 1) Przycisk/element z atrybutami data-date / data-time
-  qInTerminy('[data-date][data-time]').forEach(el => {
-    const d = el.getAttribute('data-date') || el.dataset.date;
-    const hh = el.getAttribute('data-time') || el.dataset.time;
-    if (d === date && hh === t) {
-      (el.closest('li, .row, .slot, .time-btn, button') || el).remove();
-    }
-  });
-
-  // 2) Jeżeli lista jest tekstowa: usuń <li> zawierające "YYYY-MM-DD HH:MM"
-  const stamp = (date + (t ? ' ' + t : '')).trim();
-  if (stamp) {
-    qInTerminy('li').forEach(li => {
-      if ((li.textContent || '').includes(stamp)) li.remove();
-    });
-  }
-}
-
-// Przechwyć fetch tylko dla send-email i po sukcesie zdejmij slot z "Terminy"
-(function interceptSendEmail(){
-  const origFetch = window.fetch;
-  window.fetch = async function(input, init){
-    const url = (typeof input==='string') ? input : (input?.url || '');
-    const method = (init?.method || input?.method || 'GET').toUpperCase();
-    const isSend = url.includes('/.netlify/functions/send-email') && method === 'POST';
-
-    let reservation = null;
-    if (isSend) {
-      try {
-        const bodyText = init?.body || (await input?.clone?.()?.text?.());
-        const payload = JSON.parse(bodyText || '{}');
-        if (payload && payload.reservation) reservation = payload.reservation;
-      } catch {}
-    }
-
-    const resp = await origFetch(input, init);
-
-    if (isSend && resp.ok && reservation) {
-      // zdejmij slot TYLKO z kontenera Terminy/Wolne terminy
-      removeFromTerminy(reservation.date, reservation.time);
-      // (opcjonalnie) oznacz ten sam slot jako zajęty w kalendarzu, jeśli ma te same data-*
-      document.querySelectorAll('[data-date="'+reservation.date+'"][data-time="'+(reservation.time||'')+'"]').forEach(el=>{
-        el.classList.add('taken'); el.setAttribute('aria-disabled','true');
-      });
-    }
-    return resp;
-  };
-})();
-</script><script>
-// Zbuduj listę dni, dla których są wolne sloty (YYYY-MM-DD)
-function buildEnabledDatesFromStorage() {
-  try {
-    const slots = JSON.parse(localStorage.getItem('availableSlots') || '[]');
-    return [...new Set(slots
-      .filter(s => s?.date)
-      .map(s => s.date)
-    )];
-  } catch { return []; }
-}
-
-// Wywołaj po każdej zmianie slotów
-window.onSlotsChanged = function() {
-  // Flatpickr zwykle siedzi na #date i trzyma instancję w _flatpickr
-  const el = document.querySelector('#date');
-  const fp = el && el._flatpickr;
-  if (!fp) return; // jeśli brak flatpickr, nic nie rób
-
-  const enabled = buildEnabledDatesFromStorage();
-
-  // Ustaw dostępne dni (reszta logiki kalendarza zostaje bez zmian)
-  fp.set('enable', enabled);
-  fp.redraw();
-};
 </script>
-<div id="bookingThanks">✅ Dziękujemy za rezerwację! Poczekaj na potwierdzenie.</div>
+<!-- Poprawny baner "dziękujemy" (poza <script>) -->
 <style>
-  #bookingThanks{
-    position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
-    background:#fff; color:#000; border:2px solid #000;
-    padding:14px 18px; border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,.35);
-    display:none; z-index:9999; text-align:center;
-  }
-  #bookingThanks.show{ display:block; animation:fadein .18s ease-out; }
-  @keyframes fadein{ from{opacity:0; transform:translateX(-50%) translateY(6px)} to{opacity:1; transform:translateX(-50%) translateY(0)} }
+#bookingThanks {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  background: #fff; color:#000; border:2px solid #000;
+  padding: 14px 18px; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  display:none; z-index: 9999; text-align:center;
+}
+#bookingThanks.show { display:block; animation: fadein .18s ease-out; }
+@keyframes fadein { from { opacity:0; transform: translateX(-50%) translateY(6px);} to { opacity:1; transform: translateX(-50%) translateY(0);} }
 </style>
-<script id="booking-submit">
-(function(){
-  const form = document.querySelector('#form') || document.querySelector('form');
+<div id="bookingThanks">Dziękujemy za dokonanie rezerwacji, poczekaj na jej potwierdzenie!</div>
+<script>
+(() => {
+  const form = document.querySelector('#form');
   if (!form) return;
 
-  function txt(sel){
+  function getTextOfSelect(selector) {
+    const el = document.querySelector(selector);
+    if (el && el.tagName === 'SELECT') {
+      const opt = el.options[el.selectedIndex];
+      return (opt && opt.text || '').trim();
+    }
+    return (el && el.value || '').trim();
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const svc = getTextOfSelect('#service');
+    const reservation = {
+      id: (crypto?.randomUUID?.() || Date.now().toString(36)),
+      service: svc,
+      date: document.querySelector('#date')?.value || '',
+      time: document.querySelector('#time')?.value || '',
+      notes: document.querySelector('#notes')?.value || '',
+      client: {
+        name: document.querySelector('#name')?.value || '',
+        email: document.querySelector('#email')?.value || '',
+        phone: document.querySelector('#phone')?.value || '',
+        address: document.querySelector('#address')?.value || ''
+      }
+    };
+
+    try {
+      const res = await fetch('/.netlify/functions/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reservation })
+      });
+      const text = await res.text();
+      let data = {}; try { data = JSON.parse(text); } catch {}
+      if (res.ok && data.ok) {
+        const b = document.getElementById('bookingThanks');
+        if (b) { b.classList.add('show'); setTimeout(()=>b.classList.remove('show'), 3500); }
+      } else {
+        alert('❌ Błąd wysyłki: ' + (data.error || text || res.status));
+      }
+    } catch (err) {
+      alert('❌ Błąd sieci: ' + err.message);
+    }
+  });
+})();</script><!-- ==== WKLEJ TEN BLOK TUŻ PRZED </body> ==== -->
+
+<!-- Baner podziękowania (utworzy się raz; jeśli już masz #bookingThanks w CSS – zadziała też z klasą .show) -->
+<div id="bookingThanks" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#fff;color:#000;border:2px solid #000;padding:14px 18px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);display:none;z-index:9999;text-align:center">
+  ✅ Dziękujemy za rezerwację! Poczekaj na potwierdzenie.
+</div>
+<style id="__bookingThanksStyle">
+  #bookingThanks.show{display:block;animation:fadein .18s ease-out}
+  @keyframes fadein{from{opacity:0;transform:translateX(-50%) translateY(6px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+</style>
+
+<!-- JEDYNY handler rezerwacji: wysyłka + zapis + zdjęcie slotu + baner + refresh kalendarza -->
+<script id="booking-submit">
+(function () {
+  // 1) Znajdź formularz i zdejmij WSZYSTKIE stare listenery submit przez klon
+  let form = document.querySelector('#form') || document.querySelector('form');
+  if (!form) return;
+  const fresh = form.cloneNode(true);
+  form.parentNode.replaceChild(fresh, form);
+  form = fresh;
+
+  // 2) Helper do pobierania wartości/tekstu (dla selecta zwracamy widoczny tekst opcji – nazwa zabiegu)
+  function val(sel){
     const el = document.querySelector(sel);
     if (!el) return '';
-    if (el.tagName === 'SELECT') {
+    if (el.tagName === 'SELECT'){
       const opt = el.options[el.selectedIndex];
       return (opt?.text || opt?.label || '').trim();
     }
     return (el.value || '').trim();
   }
 
+  // 3) Jedyny listener submit
   let SENDING = false;
-  form.addEventListener('submit', async function(e){
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    e.stopImmediatePropagation();   // wyłącz inne submit handlery
-    if (SENDING) return;
+    if (SENDING) return; 
     SENDING = true;
 
     const reservation = {
-      id: String(Math.floor(1000 + Math.random() * 9000)),
-      service: txt('#service'),
-      date: txt('#date'),
-      time: txt('#time'),
-      notes: txt('#notes'),
+      id: String(Math.floor(1000 + Math.random() * 9000)), // krótki 4-cyfrowy numer
+      service: val('#service'),
+      date:    val('#date'),
+      time:    val('#time'),
+      notes:   val('#notes'),
       client: {
-        name: txt('#name'),
-        email: txt('#email'),
-        phone: txt('#phone'),
-        address: txt('#address'),
+        name:    val('#name'),
+        email:   val('#email'),
+        phone:   val('#phone'),
+        address: val('#address'),
       },
     };
 
@@ -335,36 +299,38 @@ window.onSlotsChanged = function() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reservation })
       });
-      const text = await res.text(); let data={}; try{ data = JSON.parse(text); }catch{}
+      const raw = await res.text(); let data = {}; try { data = JSON.parse(raw); } catch {}
 
       if (res.ok && data.ok) {
-        // bookings
+        // A) Dopisz rezerwację (z DATĄ WIZYTY) do localStorage.bookings
         try {
-          const arr = JSON.parse(localStorage.getItem('bookings') || '[]');
-          arr.push({ ...reservation, createdAt: new Date().toISOString(), status: 'Oczekująca' });
-          localStorage.setItem('bookings', JSON.stringify(arr));
+          const list = JSON.parse(localStorage.getItem('bookings') || '[]');
+          list.push({ ...reservation, createdAt: new Date().toISOString(), status: 'Oczekująca' });
+          localStorage.setItem('bookings', JSON.stringify(list));
         } catch {}
 
-        // zdejmij slot (availableSlots)
+        // B) Zdejmij slot z wolnych terminów (availableSlots)
         try {
-          const arr = JSON.parse(localStorage.getItem('availableSlots') || '[]');
-          const i = arr.findIndex(s => s?.date === reservation.date &&
-            (String(s.time||'').slice(0,5) === String(reservation.time||'').slice(0,5)));
+          const slots = JSON.parse(localStorage.getItem('availableSlots') || '[]');
+          const i = slots.findIndex(s =>
+            s?.date === reservation.date &&
+            String(s.time||'').slice(0,5) === String(reservation.time||'').slice(0,5)
+          );
           if (i > -1) {
-            arr.splice(i,1);
-            localStorage.setItem('availableSlots', JSON.stringify(arr));
+            slots.splice(i, 1);
+            localStorage.setItem('availableSlots', JSON.stringify(slots));
           }
         } catch {}
 
-        // baner
+        // C) Baner „Dziękujemy…”
         const b = document.getElementById('bookingThanks');
         if (b){ b.classList.add('show'); setTimeout(()=>b.classList.remove('show'), 3500); }
 
-        // odśwież kalendarz
+        // D) Odśwież kalendarz (jeśli masz hook)
         window.onSlotsChanged && window.onSlotsChanged();
 
       } else {
-        alert('❌ Błąd wysyłki: ' + (data.error || text || res.status));
+        alert('❌ Błąd wysyłki: ' + (data.error || raw || res.status));
       }
     } catch (err) {
       alert('❌ Błąd sieci: ' + err.message);
@@ -375,5 +341,10 @@ window.onSlotsChanged = function() {
 })();
 </script>
 
+<!-- (opcjonalnie) jeśli nie masz zdefiniowanego hooka, zapewnij pustą funkcję, by uniknąć błędów -->
+<script>
+  window.onSlotsChanged = window.onSlotsChanged || function(){};
+</script>
+<!-- ==== KONIEC WSTAWKI ==== -->
 </body>
 </html>

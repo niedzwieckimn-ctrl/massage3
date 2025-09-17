@@ -37,8 +37,8 @@
     <!-- App -->
     <div id="appView" style="display:none">
       <div class="tabbar">
-        <div class="tab active" data-tab="dashboard">Rezerwacje</div>
-        <div class="tab" data-tab="slots">Wolne Terminy</div>
+        <div class="tab active" data-tab="dashboard">Przegląd</div>
+        <div class="tab" data-tab="slots">Terminy</div>
         <div class="tab" data-tab="services">Usługi & Cennik</div>
         <div class="tab" data-tab="clients">Klienci</div>
         <div class="tab" data-tab="settings">Ustawienia</div>
@@ -46,13 +46,13 @@
 
       <!-- Dashboard -->
       <div class="card tabpane" data-pane="dashboard">
-        <h2>Wzystkie rezerwacje</h2>
+        <h2>Nadchodzące wizyty</h2>
         <div id="upcoming" class="grid"></div>
       </div>
 
       <!-- Slots -->
       <div class="card tabpane" data-pane="slots" style="display:none">
-        <h2>Wolne Terminy</h2>
+        <h2>Terminy</h2>
         <div class="grid two">
           <div>
             <label>Data</label>
@@ -375,122 +375,8 @@ document.addEventListener('click', async (e)=>{
     alert("❌ Błąd wysyłki potwierdzenia.");
   }
 });
-</script>
-<script>
-const elDate = document.querySelector('#slotDate');   // <input type="date">
-const elTime = document.querySelector('#slotTime');   // <input type="time">
-const btnAdd = document.querySelector('#addSlot');    // button
-const slotsList = document.querySelector('#slotsList');// kontener listy
-
-function loadSlots(){ try{ return JSON.parse(localStorage.getItem('availableSlots')||'[]'); }catch{ return []; } }
-function saveSlots(a){ localStorage.setItem('availableSlots', JSON.stringify(a)); }
-
-const ISO_DATE=/^\d{4}-\d{2}-\d{2}$/; const ISO_TIME=/^\d{2}:\d{2}$/;
-function isValidIso(d,t){ if(!ISO_DATE.test(d||'')||!ISO_TIME.test(t||'')) return false; const x=new Date(`${d}T${t}:00`); return !Number.isNaN(x.getTime()); }
-
-function purgeBrokenSlots(){
-  const cleaned = loadSlots().filter(s => isValidIso(s?.date, s?.time));
-  saveSlots(cleaned);
-}
-
-function renderSlots(){
-  const slots = loadSlots().sort((a,b)=>(`${a.date}T${a.time}`).localeCompare(`${b.date}T${b.time}`));
-  slotsList.innerHTML='';
-  slots.forEach((s, idx)=>{
-    const pretty = new Date(`${s.date}T${s.time}:00`).toLocaleString('pl-PL',{dateStyle:'medium',timeStyle:'short'});
-    const row = document.createElement('div');
-    row.className = 'slotItem row';
-    row.dataset.date = s.date; row.dataset.time = s.time;
-    row.innerHTML = `
-      <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-        <div><strong>${pretty}</strong></div>
-        <button class="btn btn-danger removeSlot" data-index="${idx}">Usuń</button>
-      </div>`;
-    slotsList.appendChild(row);
-  });
-}
-
-function addSlot(){
-  const date=(elDate?.value||'').trim(); const time=(elTime?.value||'').trim();
-  if(!isValidIso(date,time)){ alert('Podaj poprawną datę (YYYY-MM-DD) i godzinę (HH:MM).'); return; }
-  const arr=loadSlots();
-  if(arr.some(s=>s.date===date && s.time===time)){ alert('Taki termin już istnieje.'); return; }
-  arr.push({date,time}); saveSlots(arr); renderSlots();
-}
-
-// usuwanie
-slotsList?.addEventListener('click',(e)=>{
-  const btn=e.target.closest('.removeSlot'); if(!btn) return;
-  const idx=Number(btn.dataset.index); const arr=loadSlots();
-  if(Number.isFinite(idx)){ arr.splice(idx,1); saveSlots(arr); renderSlots(); }
-});
-
-// start + nasłuch zmian z innych kart
-purgeBrokenSlots(); renderSlots();
-btnAdd?.addEventListener('click', addSlot);
-window.addEventListener('storage',(e)=>{
-  if(['availableSlots','slots','freeSlots'].includes(e.key)){ purgeBrokenSlots(); renderSlots(); }
-});
-</script>
-<script>
-const upcomingBox = document.querySelector('#upcoming');
-
-function loadBookings(){ try{ return JSON.parse(localStorage.getItem('bookings')||'[]'); }catch{ return []; } }
-function saveBookings(a){ localStorage.setItem('bookings', JSON.stringify(a)); }
-
-function toVisitDate(b){
-  if(!b?.date || !b?.time) return null;
-  const d=new Date(`${b.date}T${b.time}:00`);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function purgeBadBookings(){
-  const cleaned = loadBookings().filter(b => !!toVisitDate(b));
-  saveBookings(cleaned);
-}
-
-function renderBookings(){
-  const arr = loadBookings().map(b=>({...b,_dt:toVisitDate(b)})).filter(b=>b._dt).sort((a,b)=>a._dt-b._dt);
-  upcomingBox.innerHTML='';
-  arr.forEach(b=>{
-    const pretty=b._dt.toLocaleString('pl-PL',{dateStyle:'medium',timeStyle:'short'});
-    const card=document.createElement('div');
-    card.className='card'; card.dataset.date=b.date; card.dataset.time=b.time;
-    card.innerHTML=`
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-        <div>
-          <strong>${pretty}</strong> — ${b.service || 'Zabieg'}
-          <div style="opacity:.8">${b.client?.name || ''} (${b.client?.email || ''}, ${b.client?.phone || ''})</div>
-        </div>
-        <div style="display:flex;gap:8px">
-          <span class="badge">${b.status || 'Oczekująca'}</span>
-          <button class="btn btn-success confirm">Potwierdź</button>
-          <button class="btn btn-danger remove">Usuń</button>
-        </div>
-      </div>`;
-    upcomingBox.appendChild(card);
-  });
-}
-
-upcomingBox?.addEventListener('click',(e)=>{
-  const card=e.target.closest('.card'); if(!card) return;
-  const date=card.dataset.date, time=card.dataset.time;
-  if(e.target.closest('.remove')){
-    const filtered=loadBookings().filter(b=>!(b.date===date && b.time===time));
-    saveBookings(filtered); renderBookings(); return;
-  }
-  if(e.target.closest('.confirm')){
-    const all=loadBookings(); const i=all.findIndex(b=>b.date===date && b.time===time);
-    if(i!==-1){ all[i].status='Potwierdzona'; saveBookings(all); renderBookings(); }
-  }
-});
-
-purgeBadBookings(); renderBookings();
-window.addEventListener('storage', (e)=>{
-  if(['bookings','availableSlots','slots','freeSlots'].includes(e.key)){
-    purgeBadBookings(); renderBookings();
-  }
-});
-</script>
+</script><script>// funkcja wspólna do wysyłania mailiasync function sendMail(to, subject, html) {  try {    const res = await fetch('/.netlify/functions/send-email', {      method: 'POST',      headers: { 'Content-Type': 'application/json' },      body: JSON.stringify({ to, subject, html })    });    const data = await res.json();    console.log("Email response:", data);  } catch (err) {    console.error("Błąd wysyłki maila:", err);  }}
+// przykładowa logika po kliknięciu "Potwierdź"async function notifyConfirm(booking) {  const subject = `Rezerwacja potwierdzona: ${booking.service} / ${booking.date} ${booking.time}`;  const html = `    <h2>Twoja rezerwacja została potwierdzona</h2>    <p>Usługa: <b>${booking.service}</b></p>    <p>Termin: ${booking.date} ${booking.time}</p>    <p>Dane klienta: ${booking.name}, ${booking.email}, ${booking.phone}</p>  `;  // mail do klienta  await sendMail(booking.email, subject, html);  // kopia do Ciebie  await sendMail("niedzwiecki.mn@gmail.com", subject, html);}
+// nasłuch na kliknięcie "Potwierdź"document.addEventListener("click", e => {  if (e.target && e.target.textContent.toLowerCase().includes("potwierdź")) {    const row = e.target.closest("tr");    if (!row) return;    const booking = {      name: row.querySelector("[data-name]")?.dataset.value || "",      email: row.querySelector("[data-email]")?.dataset.value || "",      phone: row.querySelector("[data-phone]")?.dataset.value || "",      service: row.querySelector("[data-service]")?.dataset.value || "",      date: row.querySelector("[data-date]")?.dataset.value || "",      time: row.querySelector("[data-time]")?.dataset.value || ""    };    notifyConfirm(booking);  }});</script>
 </body>
 </html>
