@@ -322,12 +322,40 @@ function removeFromTerminy(date, time) {
   };
 })();
 </script><script>
+// 1) Pobierz TEKST wybranej usługi (nie value/ID)
+function getSelectedText(sel){
+  const el = document.querySelector(sel);
+  if (!el) return '';
+  const opt = el.options[el.selectedIndex];
+  return (opt && (opt.text || opt.label || '')).trim();
+}
+
+// 2) Usuń slot z lokalnych magazynów (różne klucze na wszelki wypadek)
+function removeSlotFromStorage(date, time){
+  const keys = ['availableSlots','slots','freeSlots'];
+  keys.forEach(k=>{
+    try {
+      const arr = JSON.parse(localStorage.getItem(k) || '[]');
+      const i = arr.findIndex(s =>
+        s && s.date === date &&
+        ((s.time || '') === (time || '') ||
+         (s.time || '').slice(0,5) === (time || '').slice(0,5))
+      );
+      if (i !== -1) {
+        arr.splice(i,1);
+        localStorage.setItem(k, JSON.stringify(arr));
+      }
+    } catch {}
+  });
+}
+
 document.querySelector('form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
 
+  // 3) ZBUDUJ rezerwację z TEKSTEM usługi
   const reservation = {
-    id: String(Math.floor(1000 + Math.random() * 9000)), // 4-cyfrowy nr
-    service: document.querySelector('#service')?.value || '',
+    id: String(Math.floor(1000 + Math.random() * 9000)),
+    service: getSelectedText('#service'),            // ⬅️ TU JEST ZMIANA
     date: document.querySelector('#date')?.value || '',
     time: document.querySelector('#time')?.value || '',
     notes: document.querySelector('#notes')?.value || '',
@@ -345,24 +373,22 @@ document.querySelector('form')?.addEventListener('submit', async (e) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reservation })
     });
-
     const data = await res.json();
 
     if (res.ok && data.ok) {
-      // ✅ Baner z podziękowaniem
+      // 4) PODZIĘKOWANIE (zostawiasz jak masz)
       const b = document.getElementById('bookingThanks');
-      if (b) {
-        b.classList.add('show');
-        setTimeout(() => b.classList.remove('show'), 4000);
-      }
+      if (b) { b.classList.add('show'); setTimeout(()=>b.classList.remove('show'), 4000); }
 
-      // ✅ Usuń slot z listy wolnych terminów (admin → slotsList)
-      const slots = JSON.parse(localStorage.getItem('availableSlots') || '[]');
-      const idx = slots.findIndex(s => s.date === reservation.date && s.time === reservation.time);
-      if (idx !== -1) {
-        slots.splice(idx, 1);
-        localStorage.setItem('availableSlots', JSON.stringify(slots));
-      }
+      // 5) ZDJĘCIE SLOTA z „Wolnych terminów” (localStorage)
+      removeSlotFromStorage(reservation.date, reservation.time);
+
+      // (opcjonalnie) Zapisz rezerwację do localStorage „bookings”
+      try {
+        const arr = JSON.parse(localStorage.getItem('bookings')||'[]');
+        arr.push(reservation);
+        localStorage.setItem('bookings', JSON.stringify(arr));
+      } catch {}
     } else {
       alert('❌ Błąd wysyłki: ' + (data.error || res.status));
     }
