@@ -178,75 +178,7 @@
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
-</script>
-<!-- Poprawny baner "dziękujemy" (poza <script>) -->
-<style>
-#bookingThanks {
-  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
-  background: #fff; color:#000; border:2px solid #000;
-  padding: 14px 18px; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.35);
-  display:none; z-index: 9999; text-align:center;
-}
-#bookingThanks.show { display:block; animation: fadein .18s ease-out; }
-@keyframes fadein { from { opacity:0; transform: translateX(-50%) translateY(6px);} to { opacity:1; transform: translateX(-50%) translateY(0);} }
-</style>
-<div id="bookingThanks">Dziękujemy za dokonanie rezerwacji, poczekaj na jej potwierdzenie!</div>
-<script>
-(() => {
-  const form = document.querySelector('#form');
-  if (!form) return;
 
-  function getTextOfSelect(selector) {
-    const el = document.querySelector(selector);
-    if (el && el.tagName === 'SELECT') {
-      const opt = el.options[el.selectedIndex];
-      return (opt && opt.text || '').trim();
-    }
-    return (el && el.value || '').trim();
-  }
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const svc = getTextOfSelect('#service');
-    const reservation = {
-      id: String(Math.floor(1000 + Math.random() * 9000)),
-      service: svc,
-      date: document.querySelector('#date')?.value || '',
-      time: document.querySelector('#time')?.value || '',
-      notes: document.querySelector('#notes')?.value || '',
-      client: {
-        name: document.querySelector('#name')?.value || '',
-        email: document.querySelector('#email')?.value || '',
-        phone: document.querySelector('#phone')?.value || '',
-        address: document.querySelector('#address')?.value || ''
-      }
-    };
-
-    try {
-      const res = await fetch('/.netlify/functions/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reservation })
-      });
-      const text = await res.text();
-      let data = {}; try { data = JSON.parse(text); } catch {}
-      if (res.ok && data.ok) {
-        const b = document.getElementById('bookingThanks');
-        if (b) { b.classList.add('show'); setTimeout(()=>b.classList.remove('show'), 3500); }
-		// odśwież kalendarz klienta
-window.onSlotsChanged && window.onSlotsChanged();
-
-      } else {
-        alert('❌ Błąd wysyłki: ' + (data.error || text || res.status));
-      }
-    } catch (err) {
-      alert('❌ Błąd sieci: ' + err.message);
-    }
-  });
-)();</script><style>
-  /* zajęte – na wszelki wypadek */
-  .taken { opacity:.45; pointer-events:none; text-decoration:line-through; }
-</style>
 <script>
 /** === KONFIG: podaj(ą) się same najczęstsze kontenery "Terminy" ===
  * Jeśli Twój kontener ma inną nazwę (ID/klasę), po prostu dopisz ją do tablicy poniżej.
@@ -361,78 +293,74 @@ window.onSlotsChanged = function() {
   #bookingThanks.show{ display:block; animation:fadein .18s ease-out; }
   @keyframes fadein{ from{opacity:0; transform:translateX(-50%) translateY(6px)} to{opacity:1; transform:translateX(-50%) translateY(0)} }
 </style>
-<script>
+<script id="booking-submit">
 (function(){
-  // FORMULARZ: jeśli masz #form – użyje go; inaczej weźmie pierwszy <form>
   const form = document.querySelector('#form') || document.querySelector('form');
   if (!form) return;
 
-  // z SELECTA zabiegu bierzemy widoczny tekst (np. "Masaż klasyczny 60 min — 180,00 zł")
-  function getSelectedText(sel){
+  function txt(sel){
     const el = document.querySelector(sel);
     if (!el) return '';
-    const opt = el.options[el.selectedIndex];
-    return (opt?.text || opt?.label || '').trim();
+    if (el.tagName === 'SELECT') {
+      const opt = el.options[el.selectedIndex];
+      return (opt?.text || opt?.label || '').trim();
+    }
+    return (el.value || '').trim();
   }
 
-  form.addEventListener('submit', async (e) => {
+  let SENDING = false;
+  form.addEventListener('submit', async function(e){
     e.preventDefault();
+    e.stopImmediatePropagation();   // wyłącz inne submit handlery
+    if (SENDING) return;
+    SENDING = true;
 
-    // ZBIÓR DANYCH REZERWACJI (spójne nazwy pól)
     const reservation = {
-      id: String(Math.floor(1000 + Math.random() * 9000)),       // krótki 4-cyfrowy numer
-      service: getSelectedText('#service'),
-      date: document.querySelector('#date')?.value || '',
-      time: document.querySelector('#time')?.value || '',
-      notes: document.querySelector('#notes')?.value || '',
+      id: String(Math.floor(1000 + Math.random() * 9000)),
+      service: txt('#service'),
+      date: txt('#date'),
+      time: txt('#time'),
+      notes: txt('#notes'),
       client: {
-        name: document.querySelector('#name')?.value || '',
-        email: document.querySelector('#email')?.value || '',
-        phone: document.querySelector('#phone')?.value || '',
-        address: document.querySelector('#address')?.value || ''
-      }
+        name: txt('#name'),
+        email: txt('#email'),
+        phone: txt('#phone'),
+        address: txt('#address'),
+      },
     };
 
     try {
-      // WYSYŁKA do Twojej funkcji (nie zmieniamy endpointu!)
       const res = await fetch('/.netlify/functions/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reservation })
       });
-
-      const text = await res.text();
-      let data = {}; try { data = JSON.parse(text); } catch {}
+      const text = await res.text(); let data={}; try{ data = JSON.parse(text); }catch{}
 
       if (res.ok && data.ok) {
-        // 1) DOPISZ rezerwację do localStorage (używamy daty WIZYTY)
+        // bookings
         try {
           const arr = JSON.parse(localStorage.getItem('bookings') || '[]');
-          arr.push({ ...reservation, createdAt: new Date().toISOString(), status:'Oczekująca' });
+          arr.push({ ...reservation, createdAt: new Date().toISOString(), status: 'Oczekująca' });
           localStorage.setItem('bookings', JSON.stringify(arr));
         } catch {}
 
-        // 2) ZDEJMIJ Z WOLNYCH TERMINÓW (obsługujemy 3 możliwe klucze)
-        ['availableSlots','slots','freeSlots'].forEach(k => {
-          try {
-            const arr = JSON.parse(localStorage.getItem(k) || '[]');
-            const i = arr.findIndex(s =>
-              s && s.date === reservation.date &&
-              ((s.time || '') === (reservation.time || '') ||
-               (s.time || '').slice(0,5) === (reservation.time || '').slice(0,5))
-            );
-            if (i !== -1) {
-              arr.splice(i,1);
-              localStorage.setItem(k, JSON.stringify(arr));
-            }
-          } catch {}
-        });
+        // zdejmij slot (availableSlots)
+        try {
+          const arr = JSON.parse(localStorage.getItem('availableSlots') || '[]');
+          const i = arr.findIndex(s => s?.date === reservation.date &&
+            (String(s.time||'').slice(0,5) === String(reservation.time||'').slice(0,5)));
+          if (i > -1) {
+            arr.splice(i,1);
+            localStorage.setItem('availableSlots', JSON.stringify(arr));
+          }
+        } catch {}
 
-        // 3) BANER „dziękujemy”
+        // baner
         const b = document.getElementById('bookingThanks');
         if (b){ b.classList.add('show'); setTimeout(()=>b.classList.remove('show'), 3500); }
 
-        // 4) ODŚWIEŻ kalendarz (jeśli masz flatpickr i globalny hook)
+        // odśwież kalendarz
         window.onSlotsChanged && window.onSlotsChanged();
 
       } else {
@@ -440,27 +368,11 @@ window.onSlotsChanged = function() {
       }
     } catch (err) {
       alert('❌ Błąd sieci: ' + err.message);
+    } finally {
+      SENDING = false;
     }
-  });
+  }, { capture: true });
 })();
-</script>
-
-<!-- (opcjonalny) hook dla flatpickr: zaktualizuj listę „enable” z localStorage -->
-<script>
-function buildEnabledDatesFromStorage() {
-  try {
-    const slots = JSON.parse(localStorage.getItem('availableSlots') || '[]');
-    return [...new Set(slots.filter(s => s?.date).map(s => s.date))];
-  } catch { return []; }
-}
-window.onSlotsChanged = function(){
-  const el = document.querySelector('#date');
-  const fp = el && el._flatpickr;
-  if (!fp) return;
-  const enabled = buildEnabledDatesFromStorage();
-  fp.set('enable', enabled);
-  fp.redraw();
-};
 </script>
 
 </body>
