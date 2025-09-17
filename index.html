@@ -322,108 +322,54 @@ function removeFromTerminy(date, time) {
   };
 })();
 </script><script>
-// === KONFIG: ID z Twojego admina (pasują do zrzutu)
-const elDate = document.querySelector('#slotDate');   // <input type="date">
-const elTime = document.querySelector('#slotTime');   // <input type="time">
-const btnAdd = document.querySelector('#addSlot');    // "Dodaj termin"
-const list   = document.querySelector('#slotsList');  // kontener listy
+document.querySelector('form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
 
-// --- storage helpers ---
-function loadSlots(){
-  try { return JSON.parse(localStorage.getItem('availableSlots') || '[]'); }
-  catch { return []; }
-}
-function saveSlots(arr){
-  localStorage.setItem('availableSlots', JSON.stringify(arr));
-}
+  const reservation = {
+    id: String(Math.floor(1000 + Math.random() * 9000)), // 4-cyfrowy nr
+    service: document.querySelector('#service')?.value || '',
+    date: document.querySelector('#date')?.value || '',
+    time: document.querySelector('#time')?.value || '',
+    notes: document.querySelector('#notes')?.value || '',
+    client: {
+      name: document.querySelector('#name')?.value || '',
+      email: document.querySelector('#email')?.value || '',
+      phone: document.querySelector('#phone')?.value || '',
+      address: document.querySelector('#address')?.value || ''
+    }
+  };
 
-// --- walidacja ISO ---
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;  // YYYY-MM-DD
-const ISO_TIME = /^\d{2}:\d{2}$/;        // HH:MM
+  try {
+    const res = await fetch('/.netlify/functions/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reservation })
+    });
 
-function isValidIso(date, time){
-  if (!ISO_DATE.test(date) || !ISO_TIME.test(time)) return false;
-  // prosty check czy Date nie zwraca Invalid:
-  const d = new Date(`${date}T${time}:00`);
-  return !Number.isNaN(d.getTime());
-}
+    const data = await res.json();
 
-// --- oczyszczenie starych/uszkodzonych wpisów (raz przy starcie) ---
-function purgeBroken(){
-  const cleaned = loadSlots().filter(s => isValidIso(s?.date, s?.time));
-  saveSlots(cleaned);
-}
+    if (res.ok && data.ok) {
+      // ✅ Baner z podziękowaniem
+      const b = document.getElementById('bookingThanks');
+      if (b) {
+        b.classList.add('show');
+        setTimeout(() => b.classList.remove('show'), 4000);
+      }
 
-// --- render listy (używamy data-* żeby index mógł łatwo zdejmować) ---
-function renderSlots(){
-  const slots = loadSlots().sort((a,b) => {
-    const A = `${a.date}T${a.time}:00`; const B = `${b.date}T${b.time}:00`;
-    return A.localeCompare(B);
-  });
-
-  list.innerHTML = '';
-  slots.forEach((s, idx) => {
-    // ładny napis dla człowieka:
-    const pretty = new Date(`${s.date}T${s.time}:00`)
-      .toLocaleString('pl-PL', { dateStyle: 'medium', timeStyle: 'short' });
-
-    const item = document.createElement('div');
-    item.className = 'slotItem row';
-    item.dataset.date = s.date;  // KLUCZOWE
-    item.dataset.time = s.time;  // KLUCZOWE
-    item.innerHTML = `
-      <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-        <div><strong>${pretty}</strong></div>
-        <button class="btn btn-danger removeSlot" data-index="${idx}">Usuń</button>
-      </div>
-    `;
-    list.appendChild(item);
-  });
-}
-
-// --- dodawanie terminu ---
-function addSlot(){
-  const date = (elDate?.value || '').trim(); // z <input type="date"> dostaniemy ISO
-  const time = (elTime?.value || '').trim(); // z <input type="time"> dostaniemy HH:MM
-
-  if (!isValidIso(date, time)) {
-    alert('Podaj poprawną datę (YYYY-MM-DD) i godzinę (HH:MM).');
-    return;
-  }
-
-  const slots = loadSlots();
-
-  // duplikaty out
-  if (slots.some(s => s.date === date && s.time === time)) {
-    alert('Taki termin już istnieje.');
-    return;
-  }
-
-  slots.push({ date, time });
-  saveSlots(slots);
-  renderSlots();
-
-  // opcjonalnie wyczyść inputy
-  // elTime.value = ''; elDate.value = '';
-}
-
-// --- usuwanie (delegacja) ---
-list?.addEventListener('click', (e) => {
-  const btn = e.target.closest('.removeSlot');
-  if (!btn) return;
-  const idx = Number(btn.dataset.index);
-  const slots = loadSlots();
-  if (Number.isFinite(idx) && slots[idx]) {
-    slots.splice(idx, 1);
-    saveSlots(slots);
-    renderSlots();
+      // ✅ Usuń slot z listy wolnych terminów (admin → slotsList)
+      const slots = JSON.parse(localStorage.getItem('availableSlots') || '[]');
+      const idx = slots.findIndex(s => s.date === reservation.date && s.time === reservation.time);
+      if (idx !== -1) {
+        slots.splice(idx, 1);
+        localStorage.setItem('availableSlots', JSON.stringify(slots));
+      }
+    } else {
+      alert('❌ Błąd wysyłki: ' + (data.error || res.status));
+    }
+  } catch (err) {
+    alert('❌ Błąd sieci: ' + err.message);
   }
 });
-
-// --- start ---
-purgeBroken();   // usuń "Invalid Date" z magazynu
-renderSlots();
-btnAdd?.addEventListener('click', addSlot);
 </script>
 
 </body>
