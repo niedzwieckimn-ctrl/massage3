@@ -379,41 +379,99 @@ document.addEventListener('click', async (e)=>{
 // przykładowa logika po kliknięciu "Potwierdź"async function notifyConfirm(booking) {  const subject = `Rezerwacja potwierdzona: ${booking.service} / ${booking.date} ${booking.time}`;  const html = `    <h2>Twoja rezerwacja została potwierdzona</h2>    <p>Usługa: <b>${booking.service}</b></p>    <p>Termin: ${booking.date} ${booking.time}</p>    <p>Dane klienta: ${booking.name}, ${booking.email}, ${booking.phone}</p>  `;  // mail do klienta  await sendMail(booking.email, subject, html);  // kopia do Ciebie  await sendMail("niedzwiecki.mn@gmail.com", subject, html);}
 // nasłuch na kliknięcie "Potwierdź"document.addEventListener("click", e => {  if (e.target && e.target.textContent.toLowerCase().includes("potwierdź")) {    const row = e.target.closest("tr");    if (!row) return;    const booking = {      name: row.querySelector("[data-name]")?.dataset.value || "",      email: row.querySelector("[data-email]")?.dataset.value || "",      phone: row.querySelector("[data-phone]")?.dataset.value || "",      service: row.querySelector("[data-service]")?.dataset.value || "",      date: row.querySelector("[data-date]")?.dataset.value || "",      time: row.querySelector("[data-time]")?.dataset.value || ""    };    notifyConfirm(booking);  }});</script>
 <script>
-// === Pomocnicze (zostaw w adminie) ===
-function loadSlots(){
-  try { return JSON.parse(localStorage.getItem('availableSlots') || '[]'); }
+// === Rezerwacje (lista w #upcoming) ===
+const upcomingBox = document.querySelector('#upcoming');
+
+// odczyt i zapis
+function loadBookings(){
+  try { return JSON.parse(localStorage.getItem('bookings') || '[]'); }
   catch { return []; }
 }
-function saveSlots(arr){
-  localStorage.setItem('availableSlots', JSON.stringify(arr));
+function saveBookings(arr){
+  localStorage.setItem('bookings', JSON.stringify(arr));
 }
 
-// Walidacja ISO, żeby nie było "Invalid Date"
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;  // YYYY-MM-DD
-const ISO_TIME = /^\d{2}:\d{2}$/;        // HH:MM
-function isValidIso(date, time){
-  if (!ISO_DATE.test(date || '') || !ISO_TIME.test(time || '')) return false;
-  const d = new Date(`${date}T${time}:00`);
-  return !Number.isNaN(d.getTime());
+// walidacja i parsowanie daty rezerwacji (nie czasu złożenia!)
+function toVisitDate(b){
+  if (!b?.date || !b?.time) return null;
+  const d = new Date(`${b.date}T${b.time}:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
-// WYCZYSZCZENIE śmieci (wywołaj raz przy starcie)
-function purgeBroken(){
-  const cleaned = loadSlots().filter(s => isValidIso(s?.date, s?.time));
-  saveSlots(cleaned);
+// usuń popsute wpisy (Invalid Date, brak pól)
+function purgeBadBookings(){
+  const cleaned = loadBookings().filter(b => !!toVisitDate(b));
+  saveBookings(cleaned);
 }
 
-// AUTO-ODŚWIEŻANIE listy gdy inna karta/strona zmieni slots
-window.addEventListener('storage', (e) => {
-  if (['availableSlots','slots','freeSlots'].includes(e.key)) {
-    // masz już funkcję renderującą listę? po prostu ją zawołaj:
-    if (typeof renderSlots === 'function') renderSlots();
+// render listy (sort po terminie wizyty)
+function renderBookings(){
+  const now = new Date();
+  const arr = loadBookings()
+    .map(b => ({...b, _dt: toVisitDate(b)}))
+    .filter(b => b._dt)                    // tylko poprawne
+    .sort((a,b) => a._dt - b._dt);         // rosnąco
+
+  upcomingBox.innerHTML = '';
+  arr.forEach(b => {
+    const pretty = b._dt.toLocaleString('pl-PL', { dateStyle: 'medium', timeStyle: 'short' });
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.date = b.date;
+    card.dataset.time = b.time;
+
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div>
+          <strong>${pretty}</strong> — ${b.service || 'Zabieg'}
+          <div style="opacity:.8">${b.client?.name || ''} (${b.client?.email || ''}, ${b.client?.phone || ''})</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <span class="badge">${(b.status || 'Oczekująca')}</span>
+          <button class="btn btn-success confirm">Potwierdź</button>
+          <button class="btn btn-danger remove">Usuń</button>
+        </div>
+      </div>
+    `;
+    upcomingBox.appendChild(card);
+  });
+}
+
+// akcje Potwierdź/Usuń (na razie lokalnie w storage)
+upcomingBox.addEventListener('click', (e) => {
+  const card = e.target.closest('.card'); if (!card) return;
+  const date = card.dataset.date, time = card.dataset.time;
+
+  if (e.target.closest('.remove')) {
+    const filtered = loadBookings().filter(b => !(b.date === date && b.time === time));
+    saveBookings(filtered);
+    renderBookings();
+    return;
+  }
+
+  if (e.target.closest('.confirm')) {
+    const all = loadBookings();
+    const idx = all.findIndex(b => b.date === date && b.time === time);
+    if (idx !== -1) {
+      all[idx].status = 'Potwierdzona';
+      saveBookings(all);
+      renderBookings();
+      // tu później (jeśli zechcesz) dołożymy wysyłkę maila do klienta
+    }
   }
 });
 
-// START – uruchom na końcu skryptu admina (po zdefiniowaniu renderSlots)
-purgeBroken();
-if (typeof renderSlots === 'function') renderSlots();
+// start
+purgeBadBookings();
+renderBookings();
+
+// auto-odświeżenie, gdy index.html zmieni bookings/slots
+window.addEventListener('storage', (e) => {
+  if (['bookings','availableSlots','slots','freeSlots'].includes(e.key)) {
+    purgeBadBookings();
+    renderBookings();
+  }
+});
 </script>
 </body>
 </html>
