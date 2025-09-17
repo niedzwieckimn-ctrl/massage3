@@ -240,89 +240,101 @@
       alert('❌ Błąd sieci: ' + err.message);
     }
   });
-})();</script><script id="time-linker">
-(function(){
-  const dateEl = document.querySelector('#date');
-  const timeEl = document.querySelector('#time');
-  if (!dateEl || !timeEl) return;
-
-  // --- helpers ---
-  function loadSlots(){
-    try { return JSON.parse(localStorage.getItem('availableSlots') || '[]'); }
-    catch { return []; }
-  }
-  function uniqueDates(slots){
-    return [...new Set(slots.filter(s => s && s.date).map(s => s.date))];
-  }
-  function timesForDate(date){
-    return loadSlots()
-      .filter(s => s && s.date === date && s.time)
-      .map(s => String(s.time).slice(0,5))
-      .sort((a,b)=>a.localeCompare(b));
+})();</script><!-- === REZERWACJA: jedyny handler + baner + zdejmowanie slotu === -->
+<script>
+(function () {
+  // BANER – zagwarantuj jeden
+  let banner = document.getElementById('bookingThanks');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'bookingThanks';
+    banner.textContent = '✅ Dziękujemy za rezerwację! Poczekaj na potwierdzenie.';
+    banner.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#fff;color:#000;border:2px solid #000;padding:14px 18px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);display:none;z-index:9999;text-align:center';
+    document.body.appendChild(banner);
+    const st = document.createElement('style');
+    st.textContent = '#bookingThanks.show{display:block;animation:fadein .18s ease-out}@keyframes fadein{from{opacity:0;transform:translateX(-50%) translateY(6px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
+    document.head.appendChild(st);
   }
 
-  // --- podświetlenie dni w kalendarzu (flatpickr) ---
-  function refreshCalendarEnabledDays(){
-    const fp = dateEl._flatpickr;
-    if (!fp) return;
-    fp.set('enable', uniqueDates(loadSlots()));
-    fp.redraw();
-  }
+  // Znajdź formularz i zdejmij wszystkie stare listenery (klon)
+  let form = document.querySelector('#form') || document.querySelector('form');
+  if (!form) return;
+  const clone = form.cloneNode(true);
+  form.parentNode.replaceChild(clone, form);
+  form = clone;
 
-  // --- uzupełnianie selecta z godzinami ---
-  function populateTimeOptions(){
-    const d = (dateEl.value || '').trim();
-    const times = d ? timesForDate(d) : [];
-
-    // wyczyść opcje
-    // (klonujemy select, żeby zdjąć ewentualne stare listenery z godzin)
-    const fresh = timeEl.cloneNode(false);
-    timeEl.parentNode.replaceChild(fresh, timeEl);
-
-    if (!d){
-      fresh.disabled = true;
-      fresh.append(new Option('— wybierz datę —',''));
-      return;
+  // Helper: ładny tekst z selecta (nazwa zabiegu)
+  function val(sel){
+    const el = document.querySelector(sel);
+    if (!el) return '';
+    if (el.tagName === 'SELECT') {
+      const opt = el.options[el.selectedIndex];
+      return (opt?.text || opt?.label || '').trim();
     }
-
-    if (times.length === 0){
-      fresh.disabled = true;
-      fresh.append(new Option('Brak wolnych godzin',''));
-      return;
-    }
-
-    fresh.disabled = false;
-    times.forEach(t => fresh.append(new Option(t, t)));
+    return (el.value || '').trim();
   }
 
-  // --- hook globalny wywoływany po rezerwacji / zmianie slotów ---
-  window.onSlotsChanged = function(){
-    refreshCalendarEnabledDays();
-    populateTimeOptions();
-  };
+  let SENDING = false;
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (SENDING) return; SENDING = true;
 
-  // --- nasłuch zmiany daty ---
-  dateEl.addEventListener('change', populateTimeOptions);
+    const reservation = {
+      id: String(Math.floor(1000 + Math.random() * 9000)),
+      service: val('#service'),
+      date: val('#date'),
+      time: val('#time'),
+      notes: val('#notes'),
+      client: {
+        name: val('#name'),
+        email: val('#email'),
+        phone: val('#phone'),
+        address: val('#address'),
+      },
+    };
 
-  // jeżeli używasz flatpickr – dopnij się do jego onChange tylko raz
-  if (dateEl._flatpickr && !dateEl.dataset.fpLinked){
-    dateEl._flatpickr.config.onChange.push(() => {
-      // daj flatpickr chwilę na uzupełnienie value
-      setTimeout(populateTimeOptions, 0);
-    });
-    dateEl.dataset.fpLinked = '1';
-  }
+    try {
+      const res = await fetch('/.netlify/functions/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reservation })
+      });
+      const txt = await res.text(); let data = {}; try { data = JSON.parse(txt); } catch {}
 
-  // start: podświetl dni i ustaw godziny dla obecnie wybranej daty (jeśli jest)
-  refreshCalendarEnabledDays();
-  populateTimeOptions();
+      if (res.ok && data.ok) {
+        // bookings – zapisz termin wizyty, nie czas kliknięcia
+        try {
+          const arr = JSON.parse(localStorage.getItem('bookings') || '[]');
+          arr.push({ ...reservation, createdAt: new Date().toISOString(), status: 'Oczekująca' });
+          localStorage.setItem('bookings', JSON.stringify(arr));
+        } catch {}
 
-  // jeśli inna karta/strona (admin) zmieni slots → odśwież
-  window.addEventListener('storage', (e)=>{
-    if (['availableSlots','slots','freeSlots'].includes(e.key)) {
-      window.onSlotsChanged();
+        // zdejmij slot z wolnych (availableSlots)
+        try {
+          const slots = JSON.parse(localStorage.getItem('availableSlots') || '[]');
+          const i = slots.findIndex(s =>
+            s?.date === reservation.date &&
+            String(s.time||'').slice(0,5) === String(reservation.time||'').slice(0,5)
+          );
+          if (i > -1) { slots.splice(i,1); localStorage.setItem('availableSlots', JSON.stringify(slots)); }
+        } catch {}
+
+        // baner
+        banner.classList.add('show');
+        setTimeout(()=>banner.classList.remove('show'), 3500);
+
+        // odśwież kalendarz/godziny (jeśli masz taki hook)
+        window.onSlotsChanged && window.onSlotsChanged();
+
+      } else {
+        alert('❌ Błąd wysyłki: ' + (data.error || txt || res.status));
+      }
+    } catch (err) {
+      alert('❌ Błąd sieci: ' + err.message);
+    } finally {
+      SENDING = false;
     }
-  });
+  }, { capture: true });
 })();
 </script>
 </body>

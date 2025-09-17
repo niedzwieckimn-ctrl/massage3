@@ -256,3 +256,180 @@ document.addEventListener('DOMContentLoaded', ()=>{
   el('#slotDate').setAttribute('min', today);
   requireAuth();
 });
+// ===== ADMIN: Wolne terminy (ISO) + Rezerwacje (termin wizyty) =====
+(() => {
+  if (window.__adminPatchInstalled) return;
+  window.__adminPatchInstalled = true;
+
+  // ---------- Wolne terminy ----------
+  const elDate = document.querySelector('#slotDate');   // <input type="date">
+  const elTime = document.querySelector('#slotTime');   // <input type="time">
+  const btnAdd = document.querySelector('#addSlot');    // button "Dodaj termin"
+  const slotsList = document.querySelector('#slotsList'); // kontener listy
+
+  function loadSlots(){ try { return JSON.parse(localStorage.getItem('availableSlots')||'[]'); } catch { return []; } }
+  function saveSlots(a){ localStorage.setItem('availableSlots', JSON.stringify(a)); }
+
+  const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;   // YYYY-MM-DD
+  const ISO_TIME = /^\d{2}:\d{2}$/;         // HH:MM
+
+  function isValidIso(d,t){
+    if (!ISO_DATE.test(d||'') || !ISO_TIME.test(t||'')) return false;
+    const x = new Date(`${d}T${t}:00`);
+    return !Number.isNaN(x.getTime());
+  }
+
+  function purgeBrokenSlots(){
+    const cleaned = loadSlots().filter(s => isValidIso(s?.date, s?.time));
+    saveSlots(cleaned);
+  }
+
+  function renderSlots(){
+    const slots = loadSlots().sort((a,b)=>(`${a.date}T${a.time}`).localeCompare(`${b.date}T${b.time}`));
+    if (!slotsList) return;
+    slotsList.innerHTML = '';
+    slots.forEach((s, idx) => {
+      const pretty = new Date(`${s.date}T${s.time}:00`).toLocaleString('pl-PL', { dateStyle:'medium', timeStyle:'short' });
+      const row = document.createElement('div');
+      row.className = 'slotItem row';
+      row.dataset.date = s.date;
+      row.dataset.time = s.time;
+      row.innerHTML = `
+        <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <div><strong>${pretty}</strong></div>
+          <button class="btn btn-danger removeSlot" data-index="${idx}">Usuń</button>
+        </div>
+      `;
+      slotsList.appendChild(row);
+    });
+  }
+
+  function addSlot(){
+    const date = (elDate?.value || '').trim();
+    const time = (elTime?.value || '').trim();
+
+    if (!isValidIso(date, time)) {
+      alert('Wybierz datę i godzinę (format YYYY-MM-DD i HH:MM).');
+      return;
+    }
+    const arr = loadSlots();
+    if (arr.some(s => s.date === date && s.time === time)) {
+      alert('Taki termin już istnieje.');
+      return;
+    }
+    arr.push({ date, time });
+    saveSlots(arr);
+    renderSlots();
+  }
+
+  slotsList?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.removeSlot');
+    if (!btn) return;
+    const idx = Number(btn.dataset.index);
+    const arr = loadSlots();
+    if (Number.isFinite(idx)) {
+      arr.splice(idx, 1);
+      saveSlots(arr);
+      renderSlots();
+    }
+  });
+
+  btnAdd?.addEventListener('click', addSlot);
+
+  // ---------- Rezerwacje (dashboard) ----------
+  const upcomingBox = document.querySelector('#upcoming');
+
+  function loadBookings(){ try { return JSON.parse(localStorage.getItem('bookings')||'[]'); } catch { return []; } }
+  function saveBookings(a){ localStorage.setItem('bookings', JSON.stringify(a)); }
+
+  function toVisitDate(b){
+    if (!b?.date || !b?.time) return null;
+    const d = new Date(`${b.date}T${b.time}:00`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  function purgeBadBookings(){
+    const cleaned = loadBookings().filter(b => !!toVisitDate(b));
+    saveBookings(cleaned);
+  }
+
+  function renderBookings(){
+    if (!upcomingBox) return;
+    const arr = loadBookings()
+      .map(b => ({ ...b, _dt: toVisitDate(b) }))
+      .filter(b => b._dt)
+      .sort((a,b) => a._dt - b._dt);
+
+    upcomingBox.innerHTML = '';
+    arr.forEach(b => {
+      const pretty = b._dt.toLocaleString('pl-PL', { dateStyle:'medium', timeStyle:'short' });
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.date = b.date;
+      card.dataset.time = b.time;
+
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <div>
+            <strong>${pretty}</strong> — ${b.service || 'Zabieg'}
+            <div style="opacity:.8">
+              ${b.client?.name || ''} (${b.client?.email || ''}${b.client?.phone ? ', ' + b.client.phone : ''})
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <span class="badge">${b.status || 'Oczekująca'}</span>
+            <button class="btn btn-success confirm">Potwierdź</button>
+            <button class="btn btn-danger remove">Usuń</button>
+          </div>
+        </div>
+      `;
+      upcomingBox.appendChild(card);
+    });
+  }
+
+  upcomingBox?.addEventListener('click', (e) => {
+    const card = e.target.closest('.card');
+    if (!card) return;
+    const date = card.dataset.date, time = card.dataset.time;
+
+    if (e.target.closest('.remove')) {
+      const filtered = loadBookings().filter(b => !(b.date === date && b.time === time));
+      saveBookings(filtered);
+      renderBookings();
+      return;
+    }
+
+    if (e.target.closest('.confirm')) {
+      const all = loadBookings();
+      const idx = all.findIndex(b => b.date === date && b.time === time);
+      if (idx !== -1) {
+        all[idx].status = 'Potwierdzona';
+        saveBookings(all);
+        renderBookings();
+        // tu ewentualnie można dodać wysyłkę maila do klienta
+      }
+    }
+  });
+
+  // ---------- Start + auto-odświeżanie ----------
+  function start(){
+    purgeBrokenSlots(); renderSlots();
+    purgeBadBookings(); renderBookings();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+
+  // reaguj na zmiany z klienta (inna karta/okno)
+  window.addEventListener('storage', (e) => {
+    if (['availableSlots','slots','freeSlots'].includes(e.key)) {
+      purgeBrokenSlots(); renderSlots();
+    }
+    if (['bookings'].includes(e.key)) {
+      purgeBadBookings(); renderBookings();
+    }
+  });
+})();
