@@ -1,1 +1,52 @@
-<!doctype html><html><body><h1>Admin fixed</h1></body></html>
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Massage & SPA — Admin</title>
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; margin: 0; padding: 24px; background:#fafafa; color:#111; }
+    .wrap { max-width: 1000px; margin: 0 auto; }
+    h2 { margin: 24px 0 12px; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .card { background:#fff; border:1px solid #ddd; border-radius:12px; padding:16px; }
+    label { display:block; font-weight:600; margin-bottom:6px; }
+    input, select, button { padding:10px; border-radius:10px; border:1px solid #ccc; background:#fff; }
+    button { border:0; background:#111; color:#fff; cursor:pointer; }
+    .row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 0; border-bottom:1px dashed #e5e5e5; }
+    .badge { display:inline-block; background:#555; color:#fff; border-radius:999px; padding:4px 8px; font-size:12px; }
+    .btn-danger { background:#b00020 !important; color:#fff; border:0; }
+    .btn-success { background:#0a7a2f !important; color:#fff; border:0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Panel administracyjny</h1>
+
+    <section class="card">
+      <h2>Wolne terminy</h2>
+      <div class="grid">
+        <div>
+          <label for="slotDate">Data</label>
+          <input id="slotDate" type="date" />
+        </div>
+        <div>
+          <label for="slotTime">Godzina</label>
+          <input id="slotTime" type="time" />
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button id="addSlot">Dodaj termin</button>
+      </div>
+      <div id="slotsList" style="margin-top:12px"></div>
+    </section>
+
+    <section class="card">
+      <h2>Nadchodzące wizyty</h2>
+      <div id="upcoming"></div>
+    </section>
+  </div>
+
+  <script src="admin.js" defer></script>
+</body>
+</html>

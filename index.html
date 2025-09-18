@@ -1,1 +1,84 @@
-<!doctype html><html><body><h1>Index fixed</h1></body></html>
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Massage & SPA — Rezerwacja</title>
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; margin: 0; padding: 24px; background:#fafafa; color:#111; }
+    .wrap { max-width: 900px; margin: 0 auto; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .card { background: #fff; border: 1px solid #ddd; border-radius: 12px; padding: 16px; }
+    label { display:block; font-weight:600; margin-bottom:6px; }
+    input, select, textarea { width:100%; padding:10px; border:1px solid #ccc; border-radius:10px; background:#fff; }
+    button { padding:10px 16px; border:0; border-radius:10px; background:#111; color:#fff; cursor:pointer; }
+    button:disabled { opacity:.5; cursor:default; }
+    #bookingThanks{
+      position:fixed;left:50%;bottom:24px;transform:translateX(-50%);
+      background:#fff;color:#000;border:2px solid #000;padding:14px 18px;border-radius:14px;
+      box-shadow:0 10px 30px rgba(0,0,0,.35);display:none;z-index:9999;text-align:center
+    }
+    #bookingThanks.show{display:block;animation:fadein .18s ease-out}
+    @keyframes fadein{from{opacity:0;transform:translateX(-50%) translateY(6px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Rezerwacja wizyty</h1>
+
+    <form id="form" class="card" autocomplete="on">
+      <div class="grid">
+        <div>
+          <label for="service">Usługa</label>
+          <select id="service" required>
+            <option value="">— wybierz zabieg —</option>
+            <option value="klasyczny">Masaż klasyczny</option>
+            <option value="relaksacyjny">Masaż relaksacyjny</option>
+            <option value="gorace-kamienie">Gorące kamienie</option>
+          </select>
+        </div>
+        <div>
+          <label for="date">Data</label>
+          <input id="date" type="date" required />
+        </div>
+        <div>
+          <label for="time">Godzina</label>
+          <select id="time" required>
+            <option value="">— wybierz datę —</option>
+          </select>
+        </div>
+        <div>
+          <label for="name">Imię i nazwisko</label>
+          <input id="name" type="text" required />
+        </div>
+        <div>
+          <label for="email">Email</label>
+          <input id="email" type="email" required />
+        </div>
+        <div>
+          <label for="phone">Telefon</label>
+          <input id="phone" type="tel" required />
+        </div>
+        <div class="grid" style="grid-template-columns:1fr;">
+          <label for="address">Adres (miasto, ulica, nr)</label>
+          <input id="address" type="text" />
+        </div>
+        <div class="grid" style="grid-template-columns:1fr;">
+          <label for="notes">Uwagi</label>
+          <textarea id="notes" rows="3" placeholder="Opcjonalnie"></textarea>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
+        <button type="submit" id="reserveBtn">Rezerwuj</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Baner -->
+  <div id="bookingThanks">✅ Dziękujemy za rezerwację! Poczekaj na potwierdzenie.</div>
+
+  <!-- Logika strony klienta -->
+  <script src="index.js" defer></script>
+</body>
+</html>
