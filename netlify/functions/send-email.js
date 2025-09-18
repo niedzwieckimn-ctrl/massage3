@@ -1,76 +1,53 @@
 // netlify/functions/send-email.js
-exports.handler = async (event) => {
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: "Method Not Allowed" };
-  }
+const cors = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
 
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.FROM_EMAIL;
-  const therapist = process.env.THERAPIST_EMAIL;
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'content-type': 'application/json', ...cors },
+  });
+}
 
-  let reservation;
+export default async (request, context) => {
   try {
-    ({ reservation } = JSON.parse(event.body || "{}"));
-  } catch {
-    return { statusCode: 400, body: "Invalid JSON" };
-  }
+    // Preflight CORS
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
 
-  if (!reservation) {
-    return { statusCode: 400, body: "Missing reservation" };
-  }
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
-  // === Temat maila ===
-  const subject =
-    `NOWA REZERWACJA #${reservation.id || ''} — ${reservation.service || 'Zabieg'} — ${reservation.date || ''} ${reservation.time || ''}`.trim();
-
-  // helper do czyszczenia HTML-a
-  const esc = (s = '') =>
-    String(s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
-
-  // === Treść maila (kolejność 1–8) ===
-  const html = `
-    <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.5;color:#111">
-      <h3 style="margin:0 0 16px">Nowa rezerwacja</h3>
-      <table style="border-collapse:collapse;width:100%;max-width:640px">
-        <tbody>
-          <tr><td style="padding:8px;border-bottom:1px solid #eee;width:220px"><strong>Nr rezerwacji</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${esc(reservation.id || '-')}</td></tr>
-          <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Imię i nazwisko</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${esc(reservation.client?.name || '-')}</td></tr>
-          <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Adres</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${esc(reservation.client?.address || '-')}</td></tr>
-          <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Nr telefonu</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${esc(reservation.client?.phone || '-')}</td></tr>
-          <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Email klienta</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${esc(reservation.client?.email || '-')}</td></tr>
-          <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Nazwa zabiegu</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${esc(reservation.service || '-')}</td></tr>
-          <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Data i godzina</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${esc(reservation.date || '-')} ${esc(reservation.time || '')}</td></tr>
-          <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Uwagi</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${esc(reservation.notes || '-')}</td></tr>
-        </tbody>
-      </table>
-    </div>
-  `;
-
-  try {
-    const resp = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from,
-        to: [therapist], // zawsze do masażystki
-        subject,
-        html,
-      }),
-    });
-
-    if (!resp.ok) {
-      return { statusCode: resp.status, body: await resp.text() };
+    const text = await request.text();
+    let payload = {};
+    try {
+      payload = JSON.parse(text || '{}');
+    } catch {
+      return json({ error: 'Invalid JSON' }, 400);
     }
 
-    return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ok: true }),
-    };
-  } catch (err) {
-    return { statusCode: 500, body: "Error: " + err.message };
+    const { to, subject, html } = payload;
+    if (!to || !subject || !html) return json({ error: 'Missing fields: to, subject, html' }, 400);
+
+    const apiKey = process.env.RESEND_API_KEY;
+    const from = process.env.FROM_EMAIL || 'onboarding@resend.dev';
+    if (!apiKey) return json({ error: 'Missing RESEND_API_KEY env var' }, 500);
+
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ from, to, subject, html }),
+    });
+
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) return json({ ok: false, status: resp.status, data }, 502);
+
+    return json({ ok: true, data }, 200);
+  } catch (e) {
+    return json({ error: 'Server error', detail: String(e) }, 500);
   }
 };
