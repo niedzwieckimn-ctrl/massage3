@@ -209,7 +209,7 @@
     e.preventDefault();
     const svc = getTextOfSelect('#service');
     const reservation = {
-      id: (crypto?.randomUUID?.() || Date.now().toString(36)),
+      id: (`0000` + Math.floor(Math.random() *10000)).slice(-4),
       service: svc,
       date: document.querySelector('#date')?.value || '',
       time: document.querySelector('#time')?.value || '',
