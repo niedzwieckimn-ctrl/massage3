@@ -148,7 +148,7 @@
       if(!map[val]){ alert('Brak wolnych terminów w tym dniu. Wybierz inny.'); dateEl.value=''; timeEl.innerHTML=''; var o=document.createElement('option'); o.text='Najpierw wybierz datę…'; o.value=''; o.disabled=true; o.selected=true; timeEl.appendChild(o); timeEl.disabled=true; return; }
       fillTimes(val);
     });
-    banner('Tryb: natywny datepicker (bez kolorowania dni)');
+   
   }
 
   function attachFlatpickr(){
