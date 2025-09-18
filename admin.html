@@ -279,8 +279,7 @@ const HEAD_MAP = {
 // znajdź tekst przycisku
 function isConfirmBtn(el){
   return el && /potwierdź/i.test(el.textContent||"");
-}b.status = 'Potwierdzona';
-saveBookings(allBookings);
+
 // DODAJ:
 if (window._confirmHook) window._confirmHook();
 
