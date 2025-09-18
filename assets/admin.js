@@ -104,7 +104,7 @@ function renderSlots(){
   el('#addSlot').onclick = ()=>{
     const d = el('#slotDate').value;
     const t = el('#slotTime').value;
-    if(!d||!t) { alert('Wybierz datę i godzinę'); return;}
+    if(!d||!t) { alert('Termin został dodany!'); return;}
     const iso = new Date(`${d}T${t}:00`).toISOString();
     const slots = Store.get('slots',[]);
     slots.push({id:Store.uid(), when:iso});
