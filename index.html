@@ -240,5 +240,71 @@
       alert('❌ Błąd sieci: ' + err.message);
     }
   });
-})();</script></body>
+})();</script><!-- Toast / Banner -->
+<div id="toast" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%) scale(0.98);opacity:0;z-index:9999;min-width:280px;max-width:90vw;padding:14px 18px;border-radius:12px;font:500 14px/1.4 system-ui,-apple-system,'Segoe UI',Roboto; box-shadow:0 8px 30px rgba(0,0,0,.22); transition:opacity .18s ease, transform .18s ease; pointer-events:none;">
+  <span id="toast-text"></span>
+</div>
+<script>
+(function(){
+  const toast = document.getElementById('toast');
+  const text  = document.getElementById('toast-text');
+  if(!toast || !text) return;
+
+  function paint(type){
+    // tło i kolor na podstawie typu
+    const bg = type === 'error' ? 'linear-gradient(135deg, #ff5252, #ff1744)'
+            : type === 'warn'  ? 'linear-gradient(135deg, #ffb300, #ff9800)'
+            :                    'linear-gradient(135deg, #2ecc71, #27ae60)'; // success
+    toast.style.background = bg;
+    toast.style.color = '#fff';
+  }
+
+  function showToast(msg, type='success', ttl=2600){
+    text.textContent = msg;
+    paint(type);
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) scale(1)';
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(()=>{
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(-50%) scale(0.98)';
+    }, ttl);
+  }
+
+  // Publiczne API – możesz wywołać z dowolnego miejsca:
+  window.showSuccess = (m, ttl)=> showToast(m || 'Gotowe ✅', 'success', ttl);
+  window.showError   = (m, ttl)=> showToast(m || 'Wystąpił błąd ❗', 'error', ttl);
+  window.showWarn    = (m, ttl)=> showToast(m || 'Uwaga ⚠️', 'warn', ttl);
+
+  // Przechwycenie wbudowanego alert(), żeby NIE dotykać app.js
+  const nativeAlert = window.alert.bind(window);
+  window.alert = function(msg){
+    try{
+      const s = String(msg || '');
+      const lower = s.toLowerCase();
+      const isError =
+        lower.includes('błąd') ||
+        lower.includes('blad') ||
+        lower.includes('nie') && lower.includes('moż') ||
+        lower.includes('zajęty') ||
+        lower.includes('uzupełnij') ||
+        lower.includes('invalid');
+      const isSuccess =
+        lower.includes('dziękuj') ||
+        lower.includes('dziekuj') ||
+        lower.includes('potwierdzono') ||
+        lower.includes('zapisano') ||
+        lower.includes('wysłano') || lower.includes('wyslano');
+
+      if(isError)   showError(s);
+      else if(isSuccess) showSuccess(s);
+      else          showWarn(s);
+    }catch(e){
+      // w skrajności – pokaż native
+      nativeAlert(msg);
+    }
+  };
+})();
+</script>
+</body>
 </html>

@@ -46,9 +46,11 @@
 
       <!-- Dashboard -->
       <div class="card tabpane" data-pane="dashboard">
-        <h2>Nadchodzące wizyty</h2>
+        <h2>Nie potwierdzone Rezerwacje</h2>
         <div id="upcoming" class="grid"></div>
-      </div>
+      </div><h2>Potwierdzone rezerwacje</h2>
+<div id="confirmed"></div>
+
 
       <!-- Slots -->
       <div class="card tabpane" data-pane="slots" style="display:none">
@@ -277,7 +279,11 @@ const HEAD_MAP = {
 // znajdź tekst przycisku
 function isConfirmBtn(el){
   return el && /potwierdź/i.test(el.textContent||"");
-}
+}b.status = 'Potwierdzona';
+saveBookings(allBookings);
+// DODAJ:
+if (window._confirmHook) window._confirmHook();
+
 async function notifyConfirmToAdminAndClient(booking) {  // booking powinien zawierać: email klienta, nazwę usługi, datę/godzinę itd.  const subject = `Potwierdzenie: ${booking.serviceName} / ${booking.date} ${booking.time}`;  const htmlForClient = `    <h2>Potwierdzenie wizyty</h2>    <p>Twoja rezerwacja została potwierdzona.</p>    <p><b>Usługa:</b> ${booking.serviceName}</p>    <p><b>Data:</b> ${booking.date} ${booking.time}</p>    <p>Do zobaczenia!</p>  `;
   try {    await fetch('/.netlify/functions/send-email', {      method: 'POST',      headers: { 'Content-Type': 'application/json' },      body: JSON.stringify({        mode: 'both', // <<< do Ciebie i do klienta        to: booking.email, // mail klienta        subject: subject,        html: htmlForClient      })    });  } catch (e) {    alert('Uwaga: nie udało się wysłać maili z potwierdzeniem (sprawdź konsolę).');    console.error('Mail (potwierdź) nie poszedł:', e);  }}
 // PRZYKŁAD użycia po zapisaniu statusu „potwierdzona”:async function handleConfirmSuccess(booking) {  // ...tu Twój kod: odśwież listę, badge „Potwierdzona” itd....  await notifyConfirmToAdminAndClient(booking);}
@@ -378,5 +384,160 @@ document.addEventListener('click', async (e)=>{
 </script><script>// funkcja wspólna do wysyłania mailiasync function sendMail(to, subject, html) {  try {    const res = await fetch('/.netlify/functions/send-email', {      method: 'POST',      headers: { 'Content-Type': 'application/json' },      body: JSON.stringify({ to, subject, html })    });    const data = await res.json();    console.log("Email response:", data);  } catch (err) {    console.error("Błąd wysyłki maila:", err);  }}
 // przykładowa logika po kliknięciu "Potwierdź"async function notifyConfirm(booking) {  const subject = `Rezerwacja potwierdzona: ${booking.service} / ${booking.date} ${booking.time}`;  const html = `    <h2>Twoja rezerwacja została potwierdzona</h2>    <p>Usługa: <b>${booking.service}</b></p>    <p>Termin: ${booking.date} ${booking.time}</p>    <p>Dane klienta: ${booking.name}, ${booking.email}, ${booking.phone}</p>  `;  // mail do klienta  await sendMail(booking.email, subject, html);  // kopia do Ciebie  await sendMail("niedzwiecki.mn@gmail.com", subject, html);}
 // nasłuch na kliknięcie "Potwierdź"document.addEventListener("click", e => {  if (e.target && e.target.textContent.toLowerCase().includes("potwierdź")) {    const row = e.target.closest("tr");    if (!row) return;    const booking = {      name: row.querySelector("[data-name]")?.dataset.value || "",      email: row.querySelector("[data-email]")?.dataset.value || "",      phone: row.querySelector("[data-phone]")?.dataset.value || "",      service: row.querySelector("[data-service]")?.dataset.value || "",      date: row.querySelector("[data-date]")?.dataset.value || "",      time: row.querySelector("[data-time]")?.dataset.value || ""    };    notifyConfirm(booking);  }});</script>
+<script>
+(function(){
+  // --- helpers do storage ---
+  function get(key, fallback){ try{ return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback)); }catch{ return fallback; } }
+  function set(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+
+  // znajdź rezerwację po id
+  function findBooking(id){
+    const bookings = get('bookings', []);
+    return [bookings, bookings.findIndex(b => String(b.id) === String(id))];
+  }
+
+  // ładne formatowanie daty/godziny do maila
+  function fmtDate(d){ try{ return new Date(d).toLocaleDateString('pl-PL', { dateStyle: 'medium' }); }catch{return d||'-';} }
+  function fmtTime(t){
+    // jeśli masz HH:MM – zostaw; jeśli przechowujesz slot.when (ISO), wyciągniemy czas:
+    if (/^\d{2}:\d{2}$/.test(t||'')) return t;
+    try { return new Date(t).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'}); } catch { return t||'-'; }
+  }
+
+  // budowa treści maila do klienta (HTML)
+  function buildClientMail(b){
+    const fullDate = b.date && b.time ? `${b.date} ${b.time}` : (b.when || '');
+    const d = b.date ? fmtDate(b.date) : (fullDate ? fmtDate(fullDate) : '-');
+    const tm = b.time ? fmtTime(b.time) : (fullDate ? fmtTime(fullDate) : '-');
+
+    const subject = `Potwierdzenie rezerwacji #${b.id} — ${b.service || 'Usługa'}`;
+
+    const html = `
+      <div style="font:14px/1.5 system-ui,-apple-system,'Segoe UI',Roboto;color:#111">
+        <h2 style="margin:0 0 12px">Twoja wizyta została <span style="color:#2e7d32">potwierdzona</span></h2>
+        <table cellpadding="0" cellspacing="0" style="border-collapse:collapse">
+          <tr><td style="padding:6px 12px;color:#666">Nr rezerwacji</td><td style="padding:6px 12px"><b>${b.id}</b></td></tr>
+          <tr><td style="padding:6px 12px;color:#666">Usługa</td><td style="padding:6px 12px">${b.service || '-'}</td></tr>
+          <tr><td style="padding:6px 12px;color:#666">Data i godzina</td><td style="padding:6px 12px">${d} ${tm}</td></tr>
+          <tr><td style="padding:6px 12px;color:#666">Miejsce</td><td style="padding:6px 12px">u klienta: ${b.client?.address || '-'}</td></tr>
+          <tr><td style="padding:6px 12px;color:#666">Uwagi</td><td style="padding:6px 12px">${(b.notes||'-')}</td></tr>
+        </table>
+        <p style="margin:16px 0 0">Do zobaczenia!<br>Massage & SPA</p>
+      </div>
+    `;
+    return { subject, html };
+  }
+
+  // wysyłka maila do klienta -> korzysta z Twojej funkcji netlify
+  async function sendClientEmail(b){
+    const to = b.client?.email;
+    if(!to) throw new Error('Brak e-maila klienta');
+    const { subject, html } = buildClientMail(b);
+
+    const res = await fetch('/.netlify/functions/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({ to, subject, html })
+    });
+
+    if(!res.ok){
+      const txt = await res.text().catch(()=>String(res.status));
+      throw new Error(`Send failed: ${res.status} ${txt}`);
+    }
+    return true;
+  }
+
+  // delegacja klików
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-action="confirm"]');
+    if(!btn) return;
+
+    const id = btn.dataset.id;
+    const [bookings, idx] = findBooking(id);
+    if(idx === -1){
+      alert('Nie znaleziono rezerwacji.');  // zostanie pokazane jako baner
+      return;
+    }
+
+    // 1) zmień status, zapisz
+    const b = bookings[idx];
+    b.status = 'Potwierdzona';
+    b.confirmedAt = new Date().toISOString();
+    bookings[idx] = b;
+    set('bookings', bookings);
+
+    // 2) (opcjonalnie) przenieś do „Potwierdzone rezerwacje”
+    try {
+      const conf = get('confirmedBookings', []);
+      conf.push(b);
+      set('confirmedBookings', conf);
+
+      // jeśli chcesz – usuń z listy „oczekujące”
+      const left = bookings.filter(x => String(x.id) !== String(id));
+      set('bookings', left);
+    } catch(_) {}
+
+    // 3) wyślij e-mail do klienta
+    try{
+      await sendClientEmail(b);
+      // pokaż baner (korzysta z Twojego przechwycenia alert())
+      alert('Potwierdzono i wysłano e-mail do klienta.');
+    }catch(err){
+      alert('Błąd wysyłki do klienta: ' + err.message);
+    }
+
+    // 4) odśwież listy w UI jeżeli masz funkcje renderujące
+    if (window.renderBookings) window.renderBookings();
+    if (window.renderConfirmed) window.renderConfirmed();
+  });
+})();
+</script>
+<script>
+// --- helpery ---
+function loadBookings(){ try{ return JSON.parse(localStorage.getItem('bookings')||'[]'); }catch{ return []; } }
+function saveBookings(a){ localStorage.setItem('bookings', JSON.stringify(a)); }
+
+// --- render potwierdzonych ---
+function renderConfirmed(){
+  const box = document.getElementById('confirmed');
+  if (!box) return;
+
+  const items = loadBookings()
+    .filter(b => String(b?.status||'').toLowerCase().startsWith('potwierdz') || String(b?.status||'').toLowerCase()==='confirmed')
+    .filter(b => b?.date && b?.time)
+    .sort((a,b) => (`${a.date}T${a.time}`).localeCompare(`${b.date}T${b.time}`));
+
+  box.innerHTML = items.map(b => {
+    const pretty = new Date(`${b.date}T${b.time}:00`).toLocaleString('pl-PL',{dateStyle:'medium', timeStyle:'short'});
+    return `
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+          <div>
+            <div><strong>${pretty}</strong></div>
+            <div>${b.service || 'Zabieg'}</div>
+            <div>${b.client?.name || ''} ${b.client?.phone ? '— ' + b.client.phone : ''}</div>
+            <div>${b.client?.email || ''}</div>
+            <div>${b.client?.address || ''}</div>
+            ${b.notes ? `<div style="opacity:.85"><em>${b.notes}</em></div>` : ''}
+          </div>
+          <span class="badge" style="background:#0a7a2f;color:#fff;border-radius:10px;padding:4px 8px">Potwierdzona</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// --- inicjalizacja i odświeżanie ---
+document.addEventListener('DOMContentLoaded', renderConfirmed);
+window.addEventListener('storage', (e)=> { if (e.key === 'bookings') renderConfirmed(); });
+
+// --- jeżeli Twój istniejący kod zmienia status na Potwierdzona, dopisz po zapisie:
+window._confirmHook = function(){
+  // wywołaj to zaraz po saveBookings([...]) w swoim handlerze "Potwierdź"
+  renderConfirmed();
+  // jeśli masz własne renderowanie "Rezerwacje" (oczekujące), odśwież też je:
+  if (window.renderPendingBookings) window.renderPendingBookings();
+};
+</script>
 </body>
 </html>
