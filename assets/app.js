@@ -77,7 +77,6 @@ function handleSubmit(e){
     `Do zobaczenia!`
   ].join('\n');
 
-  alert(msg);
   // optional mailto
   const subject = encodeURIComponent('Potwierdzenie rezerwacji — Massage & SPA');
   const body = encodeURIComponent(msg);
