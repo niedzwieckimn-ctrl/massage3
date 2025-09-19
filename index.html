@@ -191,20 +191,7 @@
 @keyframes fadein { from { opacity:0; transform: translateX(-50%) translateY(6px);} to { opacity:1; transform: translateX(-50%) translateY(0);} }
 </style>
 <div id="bookingThanks">Dziękujemy za dokonanie rezerwacji, poczekaj na jej potwierdzenie!</div>
-<script>  (function(){    const form = document.querySelector('form');
-    function getTextOfSelect(sel){      const el = document.querySelector(sel);      if (!el) return '';      if (el.tagName === 'SELECT') {        const opt = el.options[el.selectedIndex];        return (opt && opt.text || '').trim();      }      return (el.value || '').trim();    }
-    form.addEventListener('submit', async (e) => {      e.preventDefault();
-      // pobierz wartości z formularza      const serviceText = getTextOfSelect('#service');      const date = (document.querySelector('#date')?.value || '').trim();      const time = (document.querySelector('#time')?.value || '').trim();      const notes = (document.querySelector('#notes')?.value || '').trim();
-      const name = (document.querySelector('#name')?.value || '').trim();      const email = (document.querySelector('#email')?.value || '').trim();      const phone = (document.querySelector('#phone')?.value || '').trim();      const address = (document.querySelector('#address')?.value || '').trim();
-      if (!serviceText || !date || !time || !name || !email || !phone) {        alert('Uzupełnij wymagane pola.');        return;      }
-      // prosty 4-cyfrowy numer rezerwacji      const id = String(Math.floor(1000 + Math.random()*9000));
-      // obiekt w kształcie, którego oczekuje panel admin      const booking = {        id,        service: serviceText,        date,        time,        when: `${date}T${time}:00`,        client: { name, email, phone, address },        notes,        status: 'Oczekująca',        createdAt: new Date().toISOString()      };
-      // zapisz do localStorage.bookings (DODAJ do istniejących)      const all = (() => {        try { return JSON.parse(localStorage.getItem('bookings') || '[]'); }        catch { return []; }      })();      all.push(booking);      localStorage.setItem('bookings', JSON.stringify(all));
-      // WYŚLIJ mail do masażystki – zostawiam Twoje endpointy bez zmian      try {        const res = await fetch('/.netlify/functions/send-email', {          method: 'POST',          headers: { 'Content-Type': 'application/json' },          body: JSON.stringify({            to: booking.client.email, // jeśli Twój endpoint ma wymuszonego odbiorcę, możesz tu zostawić tylko subject/html            subject: `NOWA REZERWACJA #${id} — ${serviceText}`,            html: `              <h2>Nowa rezerwacja</h2>              <p><b>Nr rezerwacji:</b> ${id}</p>              <p><b>Imię i nazwisko:</b> ${name}</p>              <p><b>Adres:</b> ${address || '-'}</p>              <p><b>Nr telefonu:</b> ${phone}</p>              <p><b>Email klienta:</b> ${email}</p>              <p><b>Nazwa zabiegu:</b> ${serviceText}</p>              <p><b>Data i godzina:</b> ${date} ${time}</p>              ${notes ? `<p><b>Uwagi:</b> ${notes}</p>` : `<p><b>Uwagi:</b> -</p>`}            `          })        });
-        // pokaż baner "dziękujemy" jeśli istnieje w Twoim HTML        const thanks = document.getElementById('bookingThanks');        if (thanks) { thanks.classList.add('show'); setTimeout(() => thanks.classList.remove('show'), 2800); }
-        if (!res.ok) {          const txt = await res.text().catch(()=> '');          alert('Uwaga: rezerwacja zapisana, ale e-mail nie został wysłany.' + (txt ? `\n\n${txt}` : ''));        }      } catch (err) {        const thanks = document.getElementById('bookingThanks');        if (thanks) { thanks.classList.add('show'); setTimeout(() => thanks.classList.remove('show'), 2800); }        // nie blokujemy użytkownika – rezerwacja i tak jest w adminie      }
-      // ewentualne wyczyszczenie formularza      form.reset();
-      // powiadom admin (jeśli zakładka jest otwarta), że są nowe dane      if (window.onSlotsChanged) window.onSlotsChanged();    });  })();</script><!-- Toast / Banner -->
+<!-- Toast / Banner -->
 <div id="toast" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%) scale(0.98);opacity:0;z-index:9999;min-width:280px;max-width:90vw;padding:14px 18px;border-radius:12px;font:500 14px/1.4 system-ui,-apple-system,'Segoe UI',Roboto; box-shadow:0 8px 30px rgba(0,0,0,.22); transition:opacity .18s ease, transform .18s ease; pointer-events:none;">
   <span id="toast-text"></span>
 </div>
@@ -269,6 +256,134 @@
     }
   };
 })();
+</script><script>
+(function () {
+  const $ = (s, r=document) => r.querySelector(s);
+
+  // --- helpers: localStorage JSON
+  function load(key, fb){ try{ return JSON.parse(localStorage.getItem(key)||'') ?? fb; }catch{ return fb; } }
+  function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+
+  // zdejmij termin z wolnych (obsługa starych i nowych kluczy)
+  function removeFromFreeSlots(date, time){
+    // ms_slots_v6 (mapa) + FREE_SLOTS / FREE_SLOTS_V2 (tablice [{date,time}])
+    const mapStr = localStorage.getItem('ms_slots_v6');
+    if (mapStr){
+      try{
+        const map = JSON.parse(mapStr) || {};
+        if (map[date]) {
+          map[date] = map[date].filter(t => String(t).slice(0,5) !== String(time).slice(0,5));
+          if (!map[date].length) delete map[date];
+          save('ms_slots_v6', map);
+        }
+      }catch{}
+    }
+    ['FREE_SLOTS','FREE_SLOTS_V2'].forEach(k=>{
+      const arr = load(k, []);
+      const arr2 = Array.isArray(arr) ? arr.filter(s => !(s?.date===date && s?.time===time)) : [];
+      save(k, arr2);
+    });
+    // poinformuj inne karty jeśli nasłuchują
+    if (window.onSlotsChanged) window.onSlotsChanged();
+  }
+
+  // prosty 4-cyfrowy ID
+  const genId = () => String(Math.floor(1000 + Math.random()*9000));
+
+  const form = $('form');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    // --- zbiór pól
+    const name    = $('#name')?.value.trim()    || '';
+    const email   = $('#email')?.value.trim()   || '';
+    const phone   = $('#phone')?.value.trim()   || '';
+    const address = $('#address')?.value.trim() || '';
+    const notes   = $('#notes')?.value.trim()   || '';
+
+    // tekst wybranej usługi (z <select id="service">)
+    const svcSel = $('#service');
+    const service = (svcSel && svcSel.options && svcSel.selectedIndex >= 0)
+      ? (svcSel.options[svcSel.selectedIndex].text || '').trim()
+      : ($('#service')?.value || '').trim();
+
+    const date = $('#date')?.value || '';   // RRRR-MM-DD
+    const time = $('#time')?.value || '';   // GG:MM
+
+    if (!name || !email || !phone || !service || !date || !time) {
+      alert('Uzupełnij wszystkie wymagane pola (imię, e-mail, telefon, zabieg, data, godzina).');
+      return;
+    }
+
+    // --- obiekt rezerwacji (format zgodny z panelem admin)
+    const reservation = {
+      id: genId(),
+      status: 'Oczekująca',
+      service,
+      date,
+      time,
+      when: `${date}T${time}:00`,
+      client: { name, email, phone, address },
+      notes,
+      createdAt: new Date().toISOString()
+    };
+
+    // (opcjonalnie) gotowy HTML „Szczegóły” do modala w adminie
+    reservation.detailsHtml = `
+      <div style="font:14px/1.5 system-ui,-apple-system,'Segoe UI',Roboto;color:#111">
+        <table cellpadding="0" cellspacing="0" style="border-collapse:collapse">
+          <tr><td style="padding:6px 12px;color:#666">Nr rezerwacji</td><td style="padding:6px 12px"><b>${reservation.id}</b></td></tr>
+          <tr><td style="padding:6px 12px;color:#666">Usługa</td><td style="padding:6px 12px">${reservation.service || '-'}</td></tr>
+          <tr><td style="padding:6px 12px;color:#666">Data i godzina</td><td style="padding:6px 12px">${reservation.date} ${reservation.time}</td></tr>
+          <tr><td style="padding:6px 12px;color:#666">Klient</td><td style="padding:6px 12px">${reservation.client.name}</td></tr>
+          <tr><td style="padding:6px 12px;color:#666">E-mail</td><td style="padding:6px 12px">${reservation.client.email}</td></tr>
+          <tr><td style="padding:6px 12px;color:#666">Telefon</td><td style="padding:6px 12px">${reservation.client.phone}</td></tr>
+          <tr><td style="padding:6px 12px;color:#666">Adres</td><td style="padding:6px 12px">${reservation.client.address || '-'}</td></tr>
+          ${reservation.notes ? `<tr><td style="padding:6px 12px;color:#666">Uwagi</td><td style="padding:6px 12px">${reservation.notes}</td></tr>` : ''}
+        </table>
+      </div>
+    `.trim();
+
+    // --- zapis do localStorage.bookings (DODAJ)
+    const bookings = load('bookings', []);
+    bookings.push(reservation);
+    save('bookings', bookings);
+
+    // --- zdejmij termin z wolnych (żeby zniknął z kalendarza)
+    removeFromFreeSlots(date, time);
+
+    // --- wyślij mail do masażystki (Netlify function przyjmująca { reservation })
+    let mailOk = false;
+    try {
+      const res = await fetch('/.netlify/functions/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ reservation })
+      });
+      mailOk = res.ok;
+      // ewentualnie: const txt = await res.text(); console.log('send-email', res.status, txt);
+    } catch (err) {
+      console.error('send-email error:', err);
+    }
+
+    // --- baner „Dziękujemy”
+    const thx = $('#bookingThanks');
+    if (thx) {
+      thx.classList.add('show');
+      setTimeout(() => thx.classList.remove('show'), 3500);
+    } else {
+      alert(mailOk ? 'Dziękujemy! Rezerwacja została przyjęta.'
+                   : 'Rezerwacja zapisana. (Uwaga: e-mail do masażystki mógł nie zostać wysłany)');
+    }
+
+    // --- reset formularza i odświeżenie godzin (jeśli masz)
+    form.reset();
+    if (window.renderTimeOptions) window.renderTimeOptions();
+  });
+})();
 </script>
+
 </body>
 </html>
