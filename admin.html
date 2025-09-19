@@ -34,6 +34,101 @@
     .modal td:first-child{color:#666;width:42%}
     .show{display:flex}
   </style>
+  <!-- Services -->
+      <div class="card tabpane" data-pane="services" style="display:none">
+        <h2>Usługi & Cennik</h2>
+        <div style="margin:10px 0"><button id="addService" class="btn">Dodaj usługę</button></div>
+        <table class="table">
+          <thead><tr><th>Usługa</th><th>Czas</th><th>Cena</th><th>Akcje</th></tr></thead>
+          <tbody id="servicesBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Clients -->
+      <div class="card tabpane" data-pane="clients" style="display:none">
+        <h2>Klienci</h2>
+        <div id="clientsList" class="grid"></div>
+      </div>
+
+      <!-- Settings -->
+      <div class="card tabpane" data-pane="settings" style="display:none">
+        <h2>Ustawienia</h2>
+        <div class="grid two">
+          <div>
+            <label>Email kontaktowy</label>
+            <input id="setEmail" class="input" type="email"/>
+          </div>
+          <div>
+            <label>Telefon kontaktowy</label>
+            <input id="setTel" class="input" type="tel"/>
+          </div>
+          <div style="grid-column:1/-1">
+            <label>Treść zgody RODO</label>
+            <textarea id="setRodo" class="input" rows="3"></textarea>
+          </div>
+          <div>
+            <label>PIN do panelu</label>
+            <input id="setPIN" class="input" type="text"/>
+          </div>
+          <div style="grid-column:1/-1">
+            <button id="saveSettingsBtn" class="btn">Zapisz ustawienia</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">© Massage &amp; SPA</div>
+  </div>
+
+  <!-- Client modal -->
+  <div id="clientModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);padding:30px;overflow:auto">
+    <div class="card" style="max-width:900px;margin:40px auto">
+      <div class="inline" style="justify-content:space-between">
+        <h2 id="clientName">Klient</h2>
+        <div class="inline">
+          <button id="saveClientBtn" class="btn success">Zapisz</button>
+          <button id="closeClientBtn" class="btn danger">Zamknij</button>
+        </div>
+      </div>
+      <div class="grid two">
+        <div>
+          <label>Email</label><input id="cEmail" class="input" type="email"/>
+        </div>
+        <div>
+          <label>Telefon</label><input id="cPhone" class="input" type="tel"/>
+        </div>
+        <div style="grid-column:1/-1">
+          <label>Adres</label><input id="cAddress" class="input"/>
+        </div>
+        <div style="grid-column:1/-1">
+          <label>Notatka ogólna</label>
+          <textarea id="cNotes" class="input" rows="3"></textarea>
+        </div>
+        <div>
+          <label>Uczulenia</label><input id="cPrefAll" class="input"/>
+        </div>
+        <div>
+          <label>Preferencje masażu</label><input id="cPrefMassage" class="input"/>
+        </div>
+        <div>
+          <label>Stan zdrowia</label><input id="cPrefHealth" class="input"/>
+        </div>
+        <div>
+          <label>Stan psychiczny</label><input id="cPrefMental" class="input"/>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Sugestie terapeutyczne</h2>
+        <div id="clientSuggestion" class="small"></div>
+      </div>
+      <div class="card">
+        <h2>Historia zabiegów</h2>
+        <table class="table">
+          <thead><tr><th>Data</th><th>Zabieg</th><th>Notatka</th><th>Status</th></tr></thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </head>
 <body>
   <div class="wrap">
