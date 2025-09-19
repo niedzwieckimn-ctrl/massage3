@@ -31,6 +31,7 @@ function logout(){ Session.logout(); requireAuth(); }
 
 function renderAll(){
   renderUpcoming();
+  renderConfirmed();
   renderSlots();
   renderServices();
   renderClients();
@@ -54,14 +55,20 @@ function renderUpcoming(){
   for(const it of items){
     const card = document.createElement('div');
     card.className='listItem';
-    card.innerHTML = `<div class='inline' style='justify-content:space-between'>
-      <div><b>${fmtDate(it.when)}</b> • ${it.serviceName} <span class='meta'>(${it.clientName})</span></div>
-      <div class='inline'>
-        <span class='badge ${it.status==='Potwierdzona'?'green':'red'}'>${it.status}</span>
-        <button class='btn success' data-act='confirm' data-id='${it.id}'>Potwierdź</button>
-        <button class='btn danger' data-act='delBooking' data-id='${it.id}'>Usuń</button>
-      </div>
-    </div>`;
+   card.innerHTML = `
+  <div class="inline" style="justify-content:space-between">
+    <div>
+      <strong>${whenStr}</strong> — ${client.name || '—'}
+    </div>
+    <div>
+      <span class="badge">${b.status || 'Oczekująca'}</span>
+      <button class="btn small ghost" data-act="details" data-id="${b.id}">Szczegóły</button>
+      <button class="btn small success" data-act="confirm" data-id="${b.id}">Potwierdź</button>
+      <button class="btn small danger" data-act="delete" data-id="${b.id}">Usuń</button>
+    </div>
+  </div>
+`;
+
     wrap.appendChild(card);
   }
   wrap.onclick = (e)=>{
@@ -80,6 +87,41 @@ function renderUpcoming(){
       renderAll();
     }
   };
+}
+function renderConfirmed() {
+  const bookings = Store.get('bookings', [])
+    .filter(b => b.status === 'Potwierdzona')
+    .sort((a, b) => new Date(a.when) - new Date(b.when));
+
+  const slots = Store.get('slots', []);
+  const services = Store.get('services', []);
+  const clients = Store.get('clients', []);
+
+  const wrap = el('#confirmed');
+  wrap.innerHTML = bookings.length ? '' : '<div class="notice">Brak potwierdzonych rezerwacji.</div>';
+
+  for (const b of bookings) {
+    const slot = slots.find(s => s.id === b.slotId);
+    const service = services.find(s => s.id === b.serviceId) || {};
+    const client = clients.find(c => c.id === b.clientId) || {};
+
+    const whenStr = slot ? new Date(slot.when).toLocaleString('pl-PL') : '—';
+
+    const card = document.createElement('div');
+    card.className = 'listItem';
+    card.innerHTML = `
+      <div class="inline" style="justify-content:space-between">
+        <div>
+          <strong>${whenStr}</strong> — ${client.name || '—'}
+        </div>
+        <div>
+          <span class="badge success">Potwierdzona</span>
+          <button class="btn small ghost" data-act="details" data-id="${b.id}">Szczegóły</button>
+        </div>
+      </div>
+    `;
+    wrap.appendChild(card);
+  }
 }
 
 function renderSlots(){
