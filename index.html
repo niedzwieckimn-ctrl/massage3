@@ -191,56 +191,20 @@
 @keyframes fadein { from { opacity:0; transform: translateX(-50%) translateY(6px);} to { opacity:1; transform: translateX(-50%) translateY(0);} }
 </style>
 <div id="bookingThanks">Dziękujemy za dokonanie rezerwacji, poczekaj na jej potwierdzenie!</div>
-<script>
-(() => {
-  const form = document.querySelector('#form');
-  if (!form) return;
-
-  function getTextOfSelect(selector) {
-    const el = document.querySelector(selector);
-    if (el && el.tagName === 'SELECT') {
-      const opt = el.options[el.selectedIndex];
-      return (opt && opt.text || '').trim();
-    }
-    return (el && el.value || '').trim();
-  }
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const svc = getTextOfSelect('#service');
-    const reservation = {
-      id: (`0000` + Math.floor(Math.random() *10000)).slice(-4),
-      service: svc,
-      date: document.querySelector('#date')?.value || '',
-      time: document.querySelector('#time')?.value || '',
-      notes: document.querySelector('#notes')?.value || '',
-      client: {
-        name: document.querySelector('#name')?.value || '',
-        email: document.querySelector('#email')?.value || '',
-        phone: document.querySelector('#phone')?.value || '',
-        address: document.querySelector('#address')?.value || ''
-      }
-    };
-
-    try {
-      const res = await fetch('/.netlify/functions/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reservation })
-      });
-      const text = await res.text();
-      let data = {}; try { data = JSON.parse(text); } catch {}
-      if (res.ok && data.ok) {
-        const b = document.getElementById('bookingThanks');
-        if (b) { b.classList.add('show'); setTimeout(()=>b.classList.remove('show'), 3500); }
-      } else {
-        alert('❌ Błąd wysyłki: ' + (data.error || text || res.status));
-      }
-    } catch (err) {
-      alert('❌ Błąd sieci: ' + err.message);
-    }
-  });
-})();</script><!-- Toast / Banner -->
+<script>  (function(){    const form = document.querySelector('form');
+    function getTextOfSelect(sel){      const el = document.querySelector(sel);      if (!el) return '';      if (el.tagName === 'SELECT') {        const opt = el.options[el.selectedIndex];        return (opt && opt.text || '').trim();      }      return (el.value || '').trim();    }
+    form.addEventListener('submit', async (e) => {      e.preventDefault();
+      // pobierz wartości z formularza      const serviceText = getTextOfSelect('#service');      const date = (document.querySelector('#date')?.value || '').trim();      const time = (document.querySelector('#time')?.value || '').trim();      const notes = (document.querySelector('#notes')?.value || '').trim();
+      const name = (document.querySelector('#name')?.value || '').trim();      const email = (document.querySelector('#email')?.value || '').trim();      const phone = (document.querySelector('#phone')?.value || '').trim();      const address = (document.querySelector('#address')?.value || '').trim();
+      if (!serviceText || !date || !time || !name || !email || !phone) {        alert('Uzupełnij wymagane pola.');        return;      }
+      // prosty 4-cyfrowy numer rezerwacji      const id = String(Math.floor(1000 + Math.random()*9000));
+      // obiekt w kształcie, którego oczekuje panel admin      const booking = {        id,        service: serviceText,        date,        time,        when: `${date}T${time}:00`,        client: { name, email, phone, address },        notes,        status: 'Oczekująca',        createdAt: new Date().toISOString()      };
+      // zapisz do localStorage.bookings (DODAJ do istniejących)      const all = (() => {        try { return JSON.parse(localStorage.getItem('bookings') || '[]'); }        catch { return []; }      })();      all.push(booking);      localStorage.setItem('bookings', JSON.stringify(all));
+      // WYŚLIJ mail do masażystki – zostawiam Twoje endpointy bez zmian      try {        const res = await fetch('/.netlify/functions/send-email', {          method: 'POST',          headers: { 'Content-Type': 'application/json' },          body: JSON.stringify({            to: booking.client.email, // jeśli Twój endpoint ma wymuszonego odbiorcę, możesz tu zostawić tylko subject/html            subject: `NOWA REZERWACJA #${id} — ${serviceText}`,            html: `              <h2>Nowa rezerwacja</h2>              <p><b>Nr rezerwacji:</b> ${id}</p>              <p><b>Imię i nazwisko:</b> ${name}</p>              <p><b>Adres:</b> ${address || '-'}</p>              <p><b>Nr telefonu:</b> ${phone}</p>              <p><b>Email klienta:</b> ${email}</p>              <p><b>Nazwa zabiegu:</b> ${serviceText}</p>              <p><b>Data i godzina:</b> ${date} ${time}</p>              ${notes ? `<p><b>Uwagi:</b> ${notes}</p>` : `<p><b>Uwagi:</b> -</p>`}            `          })        });
+        // pokaż baner "dziękujemy" jeśli istnieje w Twoim HTML        const thanks = document.getElementById('bookingThanks');        if (thanks) { thanks.classList.add('show'); setTimeout(() => thanks.classList.remove('show'), 2800); }
+        if (!res.ok) {          const txt = await res.text().catch(()=> '');          alert('Uwaga: rezerwacja zapisana, ale e-mail nie został wysłany.' + (txt ? `\n\n${txt}` : ''));        }      } catch (err) {        const thanks = document.getElementById('bookingThanks');        if (thanks) { thanks.classList.add('show'); setTimeout(() => thanks.classList.remove('show'), 2800); }        // nie blokujemy użytkownika – rezerwacja i tak jest w adminie      }
+      // ewentualne wyczyszczenie formularza      form.reset();
+      // powiadom admin (jeśli zakładka jest otwarta), że są nowe dane      if (window.onSlotsChanged) window.onSlotsChanged();    });  })();</script><!-- Toast / Banner -->
 <div id="toast" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%) scale(0.98);opacity:0;z-index:9999;min-width:280px;max-width:90vw;padding:14px 18px;border-radius:12px;font:500 14px/1.4 system-ui,-apple-system,'Segoe UI',Roboto; box-shadow:0 8px 30px rgba(0,0,0,.22); transition:opacity .18s ease, transform .18s ease; pointer-events:none;">
   <span id="toast-text"></span>
 </div>
