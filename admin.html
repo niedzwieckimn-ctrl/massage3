@@ -1,78 +1,63 @@
-
 <!doctype html>
 <html lang="pl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Massage & SPA — Panel Admin</title>
-  <link rel="stylesheet" href="assets/style.css"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Massage & SPA — Admin</title>
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; margin:0; padding:24px; background:#fafafa; color:#111; }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+    h1,h2 { margin: 0 0 12px; }
+    .card { background:#fff; border:1px solid #e5e5e5; border-radius:12px; padding:16px; margin-bottom:16px; }
+    .row  { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 0; border-bottom:1px dashed #eee; }
+    .row:last-child { border-bottom:0; }
+    .badge{ display:inline-block; padding:4px 8px; border-radius:10px; font-size:12px; color:#fff; background:#666; }
+    .badge.ok{ background:#0a7a2f; }
+    button{ padding:8px 12px; border:0; border-radius:10px; cursor:pointer; }
+    .btn { background:#111; color:#fff; }
+    .btn-danger{ background:#b00020; }
+    .btn-success{ background:#0a7a2f; }
+    .muted{ opacity:.75 }
+    .grid2{ display:grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 800px){ .grid2{ grid-template-columns: 1fr; } }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="brand">
-        <img src="assets/logo.svg" alt="logo"/>
-        <h1>Panel admin</h1>
-      </div>
-      <div class="inline">
-        <span class="kbd">Dostęp chroniony PIN</span>
-        <button id="logoutBtn" class="btn secondary">Wyloguj</button>
-      </div>
-    </div>
+  <div class="wrap">
+    <h1>Panel administracyjny</h1>
 
-    <!-- Login -->
-    <div id="loginView" class="card" style="display:none;max-width:520px;margin:40px auto">
-      <h2>Wejście do panelu</h2>
-      <div class="grid two">
-        <div style="grid-column:1/-1">
-          <label>PIN</label>
-          <input id="pin" class="input" type="password" placeholder="np. 2505"/>
+    <!-- WOLNE TERMINY (zostaw swoje jeśli już masz) -->
+    <section class="card">
+      <h2>Wolne terminy</h2>
+      <div class="grid2">
+        <div>
+          <label for="slotDate" class="muted">Data</label>
+          <input id="slotDate" type="date" />
         </div>
-        <div style="grid-column:1/-1">
-          <button id="loginBtn" class="btn">Zaloguj</button>
+        <div>
+          <label for="slotTime" class="muted">Godzina</label>
+          <input id="slotTime" type="time" />
         </div>
       </div>
-    </div>
-
-    <!-- App -->
-    <div id="appView" style="display:none">
-      <div class="tabbar">
-        <div class="tab active" data-tab="dashboard">Rezerwacje</div>
-        <div class="tab" data-tab="slots">Wolne Terminy</div>
-        <div class="tab" data-tab="services">Usługi & Cennik</div>
-        <div class="tab" data-tab="clients">Klienci</div>
-        <div class="tab" data-tab="settings">Ustawienia</div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button id="addSlot" class="btn">Dodaj termin</button>
       </div>
+      <div id="slotsList" style="margin-top:12px"></div>
+    </section>
 
-      <!-- Dashboard -->
-      <div class="card tabpane" data-pane="dashboard">
-        <h2>Nie potwierdzone Rezerwacje</h2>
-        <div id="upcoming" class="grid"></div>
-      </div><h2>Potwierdzone rezerwacje</h2>
-<div id="confirmed"></div>
+    <!-- REZERWACJE OCZEKUJĄCE -->
+    <section class="card">
+      <h2>Rezerwacje</h2>
+      <div id="upcoming"></div>
+    </section>
 
-
-      <!-- Slots -->
-      <div class="card tabpane" data-pane="slots" style="display:none">
-        <h2>Wolne Terminy</h2>
-        <div class="grid two">
-          <div>
-            <label>Data</label>
-            <input id="slotDate" type="date" class="input"/>
-          </div>
-          <div>
-            <label>Godzina</label>
-            <input id="slotTime" type="time" class="input"/>
-          </div>
-          <div style="grid-column:1/-1">
-            <button id="addSlot" class="btn">Dodaj termin</button>
-          </div>
-        </div>
-        <hr class="sep"/>
-        <div id="slotsList" class="grid"></div>
-      </div>
-
-      <!-- Services -->
+    <!-- REZERWACJE POTWIERDZONE -->
+    <section class="card">
+      <h2>Potwierdzone rezerwacje</h2>
+      <div id="confirmed"></div>
+    </section>
+  </div>
+<!-- Services -->
       <div class="card tabpane" data-pane="services" style="display:none">
         <h2>Usługi & Cennik</h2>
         <div style="margin:10px 0"><button id="addService" class="btn">Dodaj usługę</button></div>
@@ -171,255 +156,128 @@
   <script src="assets/store.js"></script>
   <script src="assets/admin.js"></script>
   <script>
-    // tab switching
-    const tabs = document.querySelectorAll('.tabbar .tab');
-    const panes = document.querySelectorAll('.tabpane');
-    tabs.forEach(t=> t.addEventListener('click', ()=>{
-      tabs.forEach(x=>x.classList.remove('active'));
-      t.classList.add('active');
-      const id = t.dataset.tab;
-      panes.forEach(p=> p.style.display = (p.dataset.pane===id)?'block':'none');
-    }));
-  </script><script>
-(function(){
-  const dateEl = document.getElementById('slotDate')   || document.getElementById('adminDate');
-  const timeEl = document.getElementById('slotTime')   || document.getElementById('adminTime');
-  const addBtn = document.getElementById('addSlot')    || document.getElementById('addSlotBtn');
-  const listEl = document.getElementById('slotsList');
-  if(!dateEl || !timeEl || !addBtn || !listEl) return;
+  // === STORAGE ============================================================
+  function lsGet(k, fb){ try{ return JSON.parse(localStorage.getItem(k) ?? JSON.stringify(fb)); }catch{ return fb; } }
+  function lsSet(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
+  const loadBookings = () => lsGet('bookings', []);
+  const saveBookings = (a) => lsSet('bookings', Array.isArray(a)?a:[]);
 
-  function load(){
-    try{ return JSON.parse(localStorage.getItem('slots')||'[]'); }
-    catch(e){ return []; }
-  }
+  // === WOLNE TERMINY (slots) — obsługa mapy i starego formatu ============
+  function loadSlotsMap(){
+    // preferowany: ms_slots_v6 = { 'YYYY-MM-DD': ['HH:MM', ...] }
+    const m = lsGet('ms_slots_v6', null);
+    if (m && typeof m === 'object') return m;
 
-  function saveMirror(arr){
-    const j = JSON.stringify(arr);
-    localStorage.setItem('slots', j);
-    localStorage.setItem('FREE_SLOTS', j);
-    localStorage.setItem('FREE_SLOTS_V2', j);
-    localStorage.setItem('freeSlotsISO', JSON.stringify(arr.map(s => `${s.date} ${s.time}`)));
-
-    // DODANE: mapa dat -> listy godzin (dla index.html)
+    // fallback: FREE_SLOTS_V2 = [{date,time}, ...] -> konwersja na mapę
+    const arr = lsGet('FREE_SLOTS_V2', []);
     const map = {};
-    arr.forEach(s => { (map[s.date] ||= []).push(s.time); });
-    localStorage.setItem('ms_slots_v61', JSON.stringify(map));
+    arr.forEach(s => { if(s?.date && s?.time){ (map[s.date]??=[]).push(s.time); } });
+    return map;
+  }
+  function saveSlotsMap(map){
+    if (!map || typeof map !== 'object') return;
+    // zapis w nowym formacie:
+    lsSet('ms_slots_v6', map);
+    // (opcjonalny) równoległy zapis w starym:
+    const flat = [];
+    Object.keys(map).forEach(d => map[d].forEach(t => flat.push({date:d,time:t})));
+    lsSet('FREE_SLOTS_V2', flat);
+  }
+  function removeSlot(date, time){
+    const map = loadSlotsMap();
+    if (!map[date]) return false;
+    map[date] = (map[date] || []).filter(t => String(t).slice(0,5) !== String(time).slice(0,5));
+    if (map[date].length === 0) delete map[date];
+    saveSlotsMap(map);
+    // poinformuj index (jeśli otwarty w innej karcie)
+    try{ window.dispatchEvent(new StorageEvent('storage', { key:'ms_slots_v6' })); }catch{}
+    return true;
   }
 
-  function render(){
-    const arr = load().sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-    listEl.innerHTML = '';
-    if(!arr.length){
-      const empty = document.createElement('div');
-      empty.className = 'row';
-      empty.textContent = 'Brak dodanych terminów';
-      listEl.appendChild(empty);
-      return;
-    }
-    arr.forEach((s,i)=>{
-      const row = document.createElement('div');
-      row.className = 'row';
-      const dt = new Date(`${s.date}T${s.time}:00`);
-      const label = isNaN(dt)
-        ? `${s.date} • ${s.time}`
-        : dt.toLocaleString('pl-PL',{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'}).replace('.','');
-      const span = document.createElement('span'); span.textContent = label;
-      const del = document.createElement('button');
-      del.className = 'btn danger';
-      del.textContent = 'Usuń';
-      del.addEventListener('click', ()=>{
-        const a = load(); a.splice(i,1); saveMirror(a); render();
-      });
-      row.appendChild(span); row.appendChild(del);
-      listEl.appendChild(row);
-    });
+  // === RENDER: SLOTY ======================================================
+  function renderSlots(){
+    const list = document.getElementById('slotsList');
+    if (!list) return;
+    const map = loadSlotsMap();
+    const rows = Object.keys(map).flatMap(d => (map[d]||[]).map(t => ({date:d, time:t})))
+                 .sort((a,b) => (`${a.date}T${a.time}`).localeCompare(`${b.date}T${b.time}`));
+    list.innerHTML = rows.map(s=>{
+      const pretty = new Date(`${s.date}T${s.time}:00`).toLocaleString('pl-PL',{dateStyle:'medium', timeStyle:'short'});
+      return `<div class="row">
+        <div><strong>${pretty}</strong></div>
+        <div><button class="btn btn-danger" data-del="${s.date}|${s.time}">Usuń</button></div>
+      </div>`;
+    }).join('') || '<div class="muted">Brak wolnych terminów.</div>';
   }
 
-  addBtn.addEventListener('click', ()=>{
-    const d = (dateEl.value||'').trim();          // YYYY-MM-DD
-    const t = (timeEl.value||'').trim().slice(0,5); // HH:MM
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(d) || !/^\d{2}:\d{2}$/.test(t)){
-      alert('Podaj poprawną datę i godzinę.');
-      return;
-    }
-    const arr = load();
-    if(arr.some(s => s.date===d && s.time===t)){
-      alert('Taki termin już istnieje!');
-      return;
-    }
-    arr.push({date:d, time:t});
-    arr.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-    saveMirror(arr);
-    render();
-    dateEl.value=''; timeEl.value='';
-  });
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', render, { once:true });
-  } else {
-    render();
-  }
-})();
-</script>
-<script>
-// --- POMOCNICZE: normalizacja tekstu PL
-function norm(s){ return (s||"").toLowerCase().trim()
-  .replaceAll('\u00A0',' ').replace(/\s+/g,' '); }
-
-// --- mapowanie nagłówków na klucze
-const HEAD_MAP = {
-  "imię i nazwisko":"name", "imię":"name", "nazwisko":"name", "klient":"name",
-  "email":"email", "e-mail":"email",
-  "telefon":"phone", "tel":"phone",
-  "zabieg":"service", "usługa":"service", "rodzaj masażu":"service",
-  "data":"date", "termin":"date",
-  "godzina":"time", "godz":"time"
-};
-
-// znajdź tekst przycisku
-function isConfirmBtn(el){
-  return el && /potwierdź/i.test(el.textContent||"");
-
-// DODAJ:
-if (window._confirmHook) window._confirmHook();
-
-async function notifyConfirmToAdminAndClient(booking) {  // booking powinien zawierać: email klienta, nazwę usługi, datę/godzinę itd.  const subject = `Potwierdzenie: ${booking.serviceName} / ${booking.date} ${booking.time}`;  const htmlForClient = `    <h2>Potwierdzenie wizyty</h2>    <p>Twoja rezerwacja została potwierdzona.</p>    <p><b>Usługa:</b> ${booking.serviceName}</p>    <p><b>Data:</b> ${booking.date} ${booking.time}</p>    <p>Do zobaczenia!</p>  `;
-  try {    await fetch('/.netlify/functions/send-email', {      method: 'POST',      headers: { 'Content-Type': 'application/json' },      body: JSON.stringify({        mode: 'both', // <<< do Ciebie i do klienta        to: booking.email, // mail klienta        subject: subject,        html: htmlForClient      })    });  } catch (e) {    alert('Uwaga: nie udało się wysłać maili z potwierdzeniem (sprawdź konsolę).');    console.error('Mail (potwierdź) nie poszedł:', e);  }}
-// PRZYKŁAD użycia po zapisaniu statusu „potwierdzona”:async function handleConfirmSuccess(booking) {  // ...tu Twój kod: odśwież listę, badge „Potwierdzona” itd....  await notifyConfirmToAdminAndClient(booking);}
-
-// pobierz dane z WIERZA TABELI (wg nagłówków)
-function extractFromRow(tr){
-  const table = tr.closest('table');
-  if(!table) return null;
-  const ths = Array.from(table.querySelectorAll('thead th, thead td'));
-  const cols = ths.map(th => HEAD_MAP[norm(th.textContent)] || null);
-  const tds = Array.from(tr.children);
-  const rec = {};
-  tds.forEach((td,i)=>{
-    const key = cols[i];
-    if(!key) return;
-    rec[key] = (td.querySelector('[data-value]')?.dataset.value) || td.textContent.trim();
-  });
-  // podstawowe uzupełnienia
-  if(!rec.name)   rec.name   = tr.querySelector('[data-name]')?.dataset.name   || "";
-  if(!rec.email)  rec.email  = tr.querySelector('[data-email]')?.dataset.email || "";
-  if(!rec.phone)  rec.phone  = tr.querySelector('[data-phone]')?.dataset.phone || "";
-  if(!rec.service)rec.service= tr.querySelector('[data-service]')?.dataset.service || "";
-  if(!rec.date)   rec.date   = tr.querySelector('[data-date]')?.dataset.date   || "";
-  if(!rec.time)   rec.time   = tr.querySelector('[data-time]')?.dataset.time   || "";
-  return rec;
-}
-
-// alternatywa: “karta” zamiast tabeli (szuka etykiet po tekście)
-function extractFromCard(card){
-  function pick(label){
-    const el = Array.from(card.querySelectorAll('*'))
-      .find(e => /\:/.test(e.textContent||"") && norm(e.textContent).startsWith(norm(label)));
-    if(!el) return "";
-    const txt = el.textContent.split(':').slice(1).join(':').trim();
-    return txt;
-  }
-  return {
-    name:   pick('klient')   || pick('imię') || "",
-    email:  pick('email')    || "",
-    phone:  pick('telefon')  || "",
-    service:pick('zabieg')   || pick('usługa') || "",
-    date:   pick('data')     || pick('termin') || "",
-    time:   pick('godzina')  || pick('godz')   || ""
-  };
-}
-
-// WYŚLIJ MAILA (Netlify Function + Resend)
-async function sendConfirm(rec){
-  const booking = {
-    name:   rec.name||"",
-    email:  (rec.email||"").trim(),
-    phone:  rec.phone||"",
-    address: rec.address||"",
-    serviceName: rec.service||"",
-    price:  rec.price||"",
-    date:   rec.date||"",
-    time:   rec.time||"",
-    notes:  rec.notes||""
-  };
-  if(!booking.email){
-    alert("Brak adresu e-mail klienta – nie można wysłać potwierdzenia.");
-    return;
-  }
-  const res = await fetch("/.netlify/functions/send-email",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({ type:"confirm", booking })
-  });
-  if(!res.ok) throw new Error(await res.text());
-}
-
-// GLOBALNY nasłuch kliknięć
-document.addEventListener('click', async (e)=>{
-  const btn = e.target.closest('button, a, input[type=button], input[type=submit]');
-  if(!btn || !isConfirmBtn(btn)) return;
-
-  // spróbuj z wiersza tabeli
-  let rec = null;
-  const row = btn.closest('tr');
-  if(row) rec = extractFromRow(row);
-
-  // jeśli brak — spróbuj z “karty”
-  if(!rec){
-    const card = btn.closest('.card, .reservation, .tile, .box, .panel, .item');
-    if(card) rec = extractFromCard(card);
+  // === RENDER: REZERWACJE =================================================
+  function renderUpcoming(){
+    const box = document.getElementById('upcoming');
+    if (!box) return;
+    const arr = loadBookings()
+      .filter(b => String(b?.status||'').toLowerCase() !== 'potwierdzona' && String(b?.status||'').toLowerCase() !== 'confirmed')
+      .sort((a,b)=>(`${a.date}T${a.time}`).localeCompare(`${b.date}T${b.time}`));
+    box.innerHTML = arr.map(b=>{
+      const pretty = (b.date && b.time)
+        ? new Date(`${b.date}T${b.time}:00`).toLocaleString('pl-PL',{dateStyle:'medium', timeStyle:'short'})
+        : 'Invalid Date';
+      return `<div class="row" data-id="${b.id}">
+        <div>
+          <div><strong>${pretty}</strong> — ${b.service || 'Zabieg'}</div>
+          <div class="muted">${b.client?.name || ''} ${b.client?.phone ? '• '+b.client.phone : ''} ${b.client?.email ? '• '+b.client.email : ''}</div>
+          ${b.client?.address ? `<div class="muted">${b.client.address}</div>` : ''}
+          ${b.notes ? `<div class="muted"><em>${b.notes}</em></div>` : ''}
+        </div>
+        <div style="display:flex; gap:8px">
+          <span class="badge">${b.status || 'Oczekująca'}</span>
+          <button class="btn btn-success" data-action="confirm" data-id="${b.id}">Potwierdź</button>
+          <button class="btn btn-danger"  data-action="delete"  data-id="${b.id}">Usuń</button>
+        </div>
+      </div>`;
+    }).join('') || '<div class="muted">Brak rezerwacji do potwierdzenia.</div>';
   }
 
-  if(!rec){ alert("Nie udało się odczytać danych rezerwacji."); return; }
-
-  try{
-    await sendConfirm(rec);
-    alert("📩 Potwierdzenie wysłane do klienta i masażystki.");
-  }catch(err){
-    console.error(err);
-    alert("❌ Błąd wysyłki potwierdzenia.");
-  }
-});
-</script><script>// funkcja wspólna do wysyłania mailiasync function sendMail(to, subject, html) {  try {    const res = await fetch('/.netlify/functions/send-email', {      method: 'POST',      headers: { 'Content-Type': 'application/json' },      body: JSON.stringify({ to, subject, html })    });    const data = await res.json();    console.log("Email response:", data);  } catch (err) {    console.error("Błąd wysyłki maila:", err);  }}
-// przykładowa logika po kliknięciu "Potwierdź"async function notifyConfirm(booking) {  const subject = `Rezerwacja potwierdzona: ${booking.service} / ${booking.date} ${booking.time}`;  const html = `    <h2>Twoja rezerwacja została potwierdzona</h2>    <p>Usługa: <b>${booking.service}</b></p>    <p>Termin: ${booking.date} ${booking.time}</p>    <p>Dane klienta: ${booking.name}, ${booking.email}, ${booking.phone}</p>  `;  // mail do klienta  await sendMail(booking.email, subject, html);  // kopia do Ciebie  await sendMail("niedzwiecki.mn@gmail.com", subject, html);}
-// nasłuch na kliknięcie "Potwierdź"document.addEventListener("click", e => {  if (e.target && e.target.textContent.toLowerCase().includes("potwierdź")) {    const row = e.target.closest("tr");    if (!row) return;    const booking = {      name: row.querySelector("[data-name]")?.dataset.value || "",      email: row.querySelector("[data-email]")?.dataset.value || "",      phone: row.querySelector("[data-phone]")?.dataset.value || "",      service: row.querySelector("[data-service]")?.dataset.value || "",      date: row.querySelector("[data-date]")?.dataset.value || "",      time: row.querySelector("[data-time]")?.dataset.value || ""    };    notifyConfirm(booking);  }});</script>
-<script>
-(function(){
-  // --- helpers do storage ---
-  function get(key, fallback){ try{ return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback)); }catch{ return fallback; } }
-  function set(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
-
-  // znajdź rezerwację po id
-  function findBooking(id){
-    const bookings = get('bookings', []);
-    return [bookings, bookings.findIndex(b => String(b.id) === String(id))];
-  }
-
-  // ładne formatowanie daty/godziny do maila
-  function fmtDate(d){ try{ return new Date(d).toLocaleDateString('pl-PL', { dateStyle: 'medium' }); }catch{return d||'-';} }
-  function fmtTime(t){
-    // jeśli masz HH:MM – zostaw; jeśli przechowujesz slot.when (ISO), wyciągniemy czas:
-    if (/^\d{2}:\d{2}$/.test(t||'')) return t;
-    try { return new Date(t).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'}); } catch { return t||'-'; }
+  function renderConfirmed(){
+    const box = document.getElementById('confirmed');
+    if (!box) return;
+    const arr = loadBookings()
+      .filter(b => ['potwierdzona','confirmed'].includes(String(b?.status||'').toLowerCase()))
+      .sort((a,b)=>(`${a.date}T${a.time}`).localeCompare(`${b.date}T${b.time}`));
+    box.innerHTML = arr.map(b=>{
+      const pretty = (b.date && b.time)
+        ? new Date(`${b.date}T${b.time}:00`).toLocaleString('pl-PL',{dateStyle:'medium', timeStyle:'short'})
+        : 'Invalid Date';
+      return `<div class="row" data-id="${b.id}">
+        <div>
+          <div><strong>${pretty}</strong></div>
+          <div>${b.service || 'Zabieg'}</div>
+          <div class="muted">${b.client?.name || ''} ${b.client?.phone ? '• '+b.client.phone : ''}</div>
+          <div class="muted">${b.client?.email || ''}</div>
+          <div class="muted">${b.client?.address || ''}</div>
+          ${b.notes ? `<div class="muted"><em>${b.notes}</em></div>` : ''}
+        </div>
+        <span class="badge ok">Potwierdzona</span>
+      </div>`;
+    }).join('') || '<div class="muted">Brak potwierdzonych rezerwacji.</div>';
   }
 
-  // budowa treści maila do klienta (HTML)
+  function renderAll(){ renderSlots(); renderUpcoming(); renderConfirmed(); }
+
+  // === MAIL: wysyłka potwierdzenia do klienta ============================
   function buildClientMail(b){
-    const fullDate = b.date && b.time ? `${b.date} ${b.time}` : (b.when || '');
-    const d = b.date ? fmtDate(b.date) : (fullDate ? fmtDate(fullDate) : '-');
-    const tm = b.time ? fmtTime(b.time) : (fullDate ? fmtTime(fullDate) : '-');
-
+    const pretty = (b.date && b.time)
+      ? new Date(`${b.date}T${b.time}:00`).toLocaleString('pl-PL',{dateStyle:'medium', timeStyle:'short'})
+      : `${b.date||''} ${b.time||''}`;
     const subject = `Potwierdzenie rezerwacji #${b.id} — ${b.service || 'Usługa'}`;
-
     const html = `
       <div style="font:14px/1.5 system-ui,-apple-system,'Segoe UI',Roboto;color:#111">
         <h2 style="margin:0 0 12px">Twoja wizyta została <span style="color:#2e7d32">potwierdzona</span></h2>
         <table cellpadding="0" cellspacing="0" style="border-collapse:collapse">
           <tr><td style="padding:6px 12px;color:#666">Nr rezerwacji</td><td style="padding:6px 12px"><b>${b.id}</b></td></tr>
           <tr><td style="padding:6px 12px;color:#666">Usługa</td><td style="padding:6px 12px">${b.service || '-'}</td></tr>
-          <tr><td style="padding:6px 12px;color:#666">Data i godzina</td><td style="padding:6px 12px">${d} ${tm}</td></tr>
-          <tr><td style="padding:6px 12px;color:#666">Miejsce</td><td style="padding:6px 12px">u klienta: ${b.client?.address || '-'}</td></tr>
-          <tr><td style="padding:6px 12px;color:#666">Uwagi</td><td style="padding:6px 12px">${(b.notes||'-')}</td></tr>
+          <tr><td style="padding:6px 12px;color:#666">Data i godzina</td><td style="padding:6px 12px">${pretty}</td></tr>
+          <tr><td style="padding:6px 12px;color:#666">Miejsce</td><td style="padding:6px 12px">${b.client?.address ? ('u klienta: '+b.client.address) : '-'}</td></tr>
+          ${b.notes ? `<tr><td style="padding:6px 12px;color:#666">Uwagi</td><td style="padding:6px 12px">${b.notes}</td></tr>` : ''}
         </table>
         <p style="margin:16px 0 0">Do zobaczenia!<br>Massage & SPA</p>
       </div>
@@ -427,116 +285,101 @@ document.addEventListener('click', async (e)=>{
     return { subject, html };
   }
 
-  // wysyłka maila do klienta -> korzysta z Twojej funkcji netlify
-  async function sendClientEmail(b){
-    const to = b.client?.email;
-    if(!to) throw new Error('Brak e-maila klienta');
+  async function sendConfirmEmail(b){
+    const email = b?.client?.email;
+    if (!email) return; // brak maila – nic nie wysyłamy
     const { subject, html } = buildClientMail(b);
 
-    const res = await fetch('/.netlify/functions/send-email', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json' },
-      body: JSON.stringify({ to, subject, html })
-    });
+    // 1) spróbuj prosty tryb: { to, subject, html }
+    try{
+      const r = await fetch('/.netlify/functions/send-email', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ to: email, subject, html })
+      });
+      if (r.ok) return true;
+    }catch{}
 
-    if(!res.ok){
-      const txt = await res.text().catch(()=>String(res.status));
-      throw new Error(`Send failed: ${res.status} ${txt}`);
-    }
-    return true;
+    // 2) fallback: { reservation, sendToClient:true } — jeśli backend tak obsługuje
+    try{
+      const r2 = await fetch('/.netlify/functions/send-email', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ reservation: b, sendToClient: true })
+      });
+      if (r2.ok) return true;
+    }catch{}
+
+    return false;
   }
 
-  // delegacja klików
+  // === ZDARZENIA (kliknięcia) ============================================
   document.addEventListener('click', async (e) => {
-    const btn = e.target.closest('[data-action="confirm"]');
-    if(!btn) return;
-
-    const id = btn.dataset.id;
-    const [bookings, idx] = findBooking(id);
-    if(idx === -1){
-      alert('Nie znaleziono rezerwacji.');  // zostanie pokazane jako baner
+    const delBtn = e.target.closest('[data-del]');
+    if (delBtn) {
+      const [d,t] = String(delBtn.dataset.del||'|').split('|');
+      if (d && t) { removeSlot(d,t); renderSlots(); }
       return;
     }
 
-    // 1) zmień status, zapisz
-    const b = bookings[idx];
-    b.status = 'Potwierdzona';
-    b.confirmedAt = new Date().toISOString();
-    bookings[idx] = b;
-    set('bookings', bookings);
+    const actBtn = e.target.closest('[data-action]');
+    if (!actBtn) return;
+    const id = actBtn.dataset.id;
 
-    // 2) (opcjonalnie) przenieś do „Potwierdzone rezerwacje”
-    try {
-      const conf = get('confirmedBookings', []);
-      conf.push(b);
-      set('confirmedBookings', conf);
+    // Załaduj aktualny stan rezerwacji
+    const all = loadBookings();
+    const i = all.findIndex(b => String(b.id) === String(id));
+    if (i === -1) return;
 
-      // jeśli chcesz – usuń z listy „oczekujące”
-      const left = bookings.filter(x => String(x.id) !== String(id));
-      set('bookings', left);
-    } catch(_) {}
-
-    // 3) wyślij e-mail do klienta
-    try{
-      await sendClientEmail(b);
-      // pokaż baner (korzysta z Twojego przechwycenia alert())
-      alert('Potwierdzono i wysłano e-mail do klienta.');
-    }catch(err){
-      alert('Błąd wysyłki do klienta: ' + err.message);
+    if (actBtn.dataset.action === 'delete') {
+      all.splice(i,1);
+      saveBookings(all);
+      renderAll();
+      return;
     }
 
-    // 4) odśwież listy w UI jeżeli masz funkcje renderujące
-    if (window.renderBookings) window.renderBookings();
-    if (window.renderConfirmed) window.renderConfirmed();
+    if (actBtn.dataset.action === 'confirm') {
+      const b = all[i];
+      b.status = 'Potwierdzona';
+      b.confirmedAt = new Date().toISOString();
+      all[i] = b;
+      saveBookings(all);
+
+      // zdejmij slot z wolnych terminów (żeby zniknął z kalendarza index)
+      if (b.date && b.time) removeSlot(b.date, b.time);
+
+      // mail do klienta
+      const ok = await sendConfirmEmail(b);
+      if (ok) {
+        (window.showSuccess || alert)('Potwierdzono i wysłano e-mail do klienta.');
+      } else {
+        (window.showWarn || alert)('Potwierdzono. Wysyłka e-mail do klienta nie powiodła się.');
+      }
+
+      renderAll();
+      return;
+    }
   });
-})();
-</script>
-<script>
-// --- helpery ---
-function loadBookings(){ try{ return JSON.parse(localStorage.getItem('bookings')||'[]'); }catch{ return []; } }
-function saveBookings(a){ localStorage.setItem('bookings', JSON.stringify(a)); }
 
-// --- render potwierdzonych ---
-function renderConfirmed(){
-  const box = document.getElementById('confirmed');
-  if (!box) return;
+  // === DODAWANIE SLOTÓW ===================================================
+  document.getElementById('addSlot')?.addEventListener('click', () => {
+    const d = (document.getElementById('slotDate')?.value || '').trim();
+    const t = (document.getElementById('slotTime')?.value || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !/^\d{2}:\d{2}$/.test(t)) {
+      (window.showError || alert)('Podaj poprawną datę (RRRR-MM-DD) i godzinę (GG:MM).');
+      return;
+    }
+    const map = loadSlotsMap();
+    map[d] = Array.from(new Set([...(map[d]||[]), t])).sort();
+    saveSlotsMap(map);
+    renderSlots();
+    // powiadom index (inna karta)
+    try{ window.dispatchEvent(new StorageEvent('storage', { key:'ms_slots_v6' })); }catch{}
+  });
 
-  const items = loadBookings()
-    .filter(b => String(b?.status||'').toLowerCase().startsWith('potwierdz') || String(b?.status||'').toLowerCase()==='confirmed')
-    .filter(b => b?.date && b?.time)
-    .sort((a,b) => (`${a.date}T${a.time}`).localeCompare(`${b.date}T${b.time}`));
-
-  box.innerHTML = items.map(b => {
-    const pretty = new Date(`${b.date}T${b.time}:00`).toLocaleString('pl-PL',{dateStyle:'medium', timeStyle:'short'});
-    return `
-      <div class="card" style="margin-bottom:12px">
-        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
-          <div>
-            <div><strong>${pretty}</strong></div>
-            <div>${b.service || 'Zabieg'}</div>
-            <div>${b.client?.name || ''} ${b.client?.phone ? '— ' + b.client.phone : ''}</div>
-            <div>${b.client?.email || ''}</div>
-            <div>${b.client?.address || ''}</div>
-            ${b.notes ? `<div style="opacity:.85"><em>${b.notes}</em></div>` : ''}
-          </div>
-          <span class="badge" style="background:#0a7a2f;color:#fff;border-radius:10px;padding:4px 8px">Potwierdzona</span>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-// --- inicjalizacja i odświeżanie ---
-document.addEventListener('DOMContentLoaded', renderConfirmed);
-window.addEventListener('storage', (e)=> { if (e.key === 'bookings') renderConfirmed(); });
-
-// --- jeżeli Twój istniejący kod zmienia status na Potwierdzona, dopisz po zapisie:
-window._confirmHook = function(){
-  // wywołaj to zaraz po saveBookings([...]) w swoim handlerze "Potwierdź"
-  renderConfirmed();
-  // jeśli masz własne renderowanie "Rezerwacje" (oczekujące), odśwież też je:
-  if (window.renderPendingBookings) window.renderPendingBookings();
-};
-</script>
+  // === START ==============================================================
+  document.addEventListener('DOMContentLoaded', renderAll);
+  window.addEventListener('storage', (e)=> {
+    if (['bookings','ms_slots_v6','FREE_SLOTS_V2'].includes(e.key)) renderAll();
+  });
+  </script>
 </body>
 </html>
