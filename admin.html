@@ -1,40 +1,80 @@
+
 <!doctype html>
 <html lang="pl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Panel administracyjny</title>
-  <style>
-    :root{--bg:#0e1420;--panel:#141c2c;--text:#eaf1ff;--muted:#a6b1c3;--ok:#2aa84a;--warn:#e29f24;--bad:#e35d6a;--chip:#22304a}
-    html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial}
-    .wrap{max-width:960px;margin:32px auto;padding:0 16px}
-    h1{margin:0 0 20px;font-size:32px}
-    .card{background:var(--panel);border-radius:14px;padding:18px 16px;margin:16px 0;box-shadow:0 8px 28px rgba(0,0,0,.25)}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    label{font-weight:600;color:var(--muted)}
-    select,input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #293449;background:#0d1424;color:var(--text)}
-    .btn{border:0;border-radius:999px;padding:8px 14px;background:#2b3d61;color:#fff;cursor:pointer}
-    .btn:hover{opacity:.95}
-    .btn-danger{background:var(--bad)}
-    .btn-success{background:var(--ok)}
-    .btn-ghost{background:transparent;border:1px solid #34405a}
-    .slot-row,.res-row{display:flex;align-items:center;justify-content:space-between;padding:12px 10px;border-radius:12px;background:#0d1424;margin:8px 0}
-    .chip{background:var(--chip);color:#cfe0ff;border-radius:999px;padding:6px 10px;font-size:12px}
-    .muted{color:var(--muted)}
-    .list-empty{color:var(--muted);padding:6px 2px}
-    .section-title{font-size:20px;font-weight:700;margin:4px 0 12px}
-    /* modal */
-    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:9999}
-    .modal{background:#fff;color:#111;width:min(540px,calc(100% - 32px));border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.35)}
-    .modal header{padding:14px 16px;border-bottom:1px solid #eee;font-weight:700}
-    .modal .content{padding:16px}
-    .modal .actions{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid #eee}
-    .modal table{border-collapse:collapse;width:100%}
-    .modal td{padding:6px 8px;vertical-align:top}
-    .modal td:first-child{color:#666;width:42%}
-    .show{display:flex}
-  </style>
-  <!-- Services -->
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Massage & SPA — Panel Admin</title>
+  <link rel="stylesheet" href="assets/style.css"/>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">
+        <img src="assets/logo.svg" alt="logo"/>
+        <h1>Panel admin</h1>
+      </div>
+      <div class="inline">
+        <span class="kbd">Dostęp chroniony PIN</span>
+        <button id="logoutBtn" class="btn secondary">Wyloguj</button>
+      </div>
+    </div>
+
+    <!-- Login -->
+    <div id="loginView" class="card" style="display:none;max-width:520px;margin:40px auto">
+      <h2>Wejście do panelu</h2>
+      <div class="grid two">
+        <div style="grid-column:1/-1">
+          <label>PIN</label>
+          <input id="pin" class="input" type="password" placeholder="np. 2505"/>
+        </div>
+        <div style="grid-column:1/-1">
+          <button id="loginBtn" class="btn">Zaloguj</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- App -->
+    <div id="appView" style="display:none">
+      <div class="tabbar">
+        <div class="tab active" data-tab="dashboard">Rezerwacje</div>
+        <div class="tab" data-tab="slots">Wolne Terminy</div>
+        <div class="tab" data-tab="services">Usługi & Cennik</div>
+        <div class="tab" data-tab="clients">Klienci</div>
+        <div class="tab" data-tab="settings">Ustawienia</div>
+      </div>
+
+      <!-- Dashboard -->
+      <div class="card tabpane" data-pane="dashboard">
+        <h2>Nie potwierdzone Rezerwacje</h2>
+        <div id="upcoming" class="grid"></div>
+		<hr class="sep"/>
+		<h2>Potwierdzone rezerwacje</h2>
+		<div id="confirmed">
+	</div>
+
+
+      <!-- Slots -->
+      <div class="card tabpane" data-pane="slots" style="display:none">
+        <h2>Wolne Terminy</h2>
+        <div class="grid two">
+          <div>
+            <label>Data</label>
+            <input id="slotDate" type="date" class="input"/>
+          </div>
+          <div>
+            <label>Godzina</label>
+            <input id="slotTime" type="time" class="input"/>
+          </div>
+          <div style="grid-column:1/-1">
+            <button id="addSlot" class="btn">Dodaj termin</button>
+          </div>
+        </div>
+        <hr class="sep"/>
+        <div id="slotsList" class="grid"></div>
+      </div>
+
+      <!-- Services -->
       <div class="card tabpane" data-pane="services" style="display:none">
         <h2>Usługi & Cennik</h2>
         <div style="margin:10px 0"><button id="addService" class="btn">Dodaj usługę</button></div>
@@ -129,324 +169,518 @@
       </div>
     </div>
   </div>
-</head>
-<body>
-  <div class="wrap">
-    <h1>Panel administracyjny</h1>
 
-    <!-- Wolne terminy -->
-    <div class="card" id="secSlots">
-      <div class="section-title">Wolne terminy</div>
-      <div class="grid" style="align-items:end">
-        <div>
-          <label for="slotDate">Data</label>
-          <select id="slotDate"></select>
-        </div>
-        <div>
-          <label for="slotTime">Godzina</label>
-          <select id="slotTime"></select>
-        </div>
+  <script src="assets/store.js"></script>
+  <script src="assets/admin.js"></script>
+  <script>
+/* --- ADMIN PATCH (bez zmian stylów/układu) --------------------------------- */
+
+/* 0) Porządek po starych wersjach */
+try { localStorage.removeItem('FREE_SLOTS_V2'); } catch {}
+
+/* 1) Pomocnicy LS (nie kolidują z Twoim admin.js) */
+const LS = {
+  get:(k,def)=>{ try{const v=localStorage.getItem(k);return v?JSON.parse(v):def;}catch{return def;} },
+  set:(k,v)=>{ try{localStorage.setItem(k,JSON.stringify(v));}catch{} },
+};
+const KEY_BOOK='bookings';
+const KEY_SLOTS_ARR='FREE_SLOTS';
+const KEY_SLOTS_MAP='ms_slots_v6';
+
+/* 2) Normalizacja rezerwacji: jeśli kiedyś zapisano tylko `when`,
+      uzupełnij `date` i `time`, żeby nie było "Invalid Date" */
+function normalizeBookings(arr){
+  let changed = false;
+  for (const b of arr){
+    if ((!b.date || !b.time) && b.when){
+      const d = new Date(b.when);
+      if (!Number.isNaN(d.getTime())){
+        b.date = d.toISOString().slice(0,10);
+        b.time = d.toTimeString().slice(0,5);
+        changed = true;
+      }
+    }
+  }
+  if (changed) LS.set(KEY_BOOK, arr);
+  return arr;
+}
+
+/* 3) Ładowanie/zapisywanie slotów jako tablica + mapa (zachowujemy Twój format) */
+function loadSlotsArr(){
+  const map=LS.get(KEY_SLOTS_MAP,null);
+  if(map && typeof map==='object'){
+    const out=[]; Object.keys(map).forEach(d => (map[d]||[]).forEach(t=>out.push({date:d,time:t})));
+    return out;
+  }
+  return LS.get(KEY_SLOTS_ARR,[]);
+}
+function saveSlotsFromArr(arr){
+  LS.set(KEY_SLOTS_ARR,arr);
+  const map={}; arr.forEach(s=>{ if(s?.date && s?.time){ (map[s.date] ||= []).push(s.time); }});
+  Object.keys(map).forEach(d=>map[d].sort());
+  LS.set(KEY_SLOTS_MAP,map);
+}
+function removeSlot(date,time){
+  const arr = loadSlotsArr().filter(s=>!(s.date===date && s.time===time));
+  saveSlotsFromArr(arr);
+}
+
+/* 4) Format „ładnej” daty */
+function pretty(b){
+  if(b.date && b.time){
+    const d=new Date(`${b.date}T${b.time}:00`);
+    if(!Number.isNaN(d.getTime())) return d.toLocaleString('pl-PL',{dateStyle:'medium',timeStyle:'short'});
+  }
+  if(b.when){
+    const d=new Date(b.when);
+    if(!Number.isNaN(d.getTime())) return d.toLocaleString('pl-PL',{dateStyle:'medium',timeStyle:'short'});
+  }
+  return '—';
+}
+
+/* 5) Modal szczegółów (lekki, nie koliduje z Twoim clientModal) */
+function showDetails(b){
+  const root = document.createElement('div');
+  root.className='modal-backdrop show';
+  root.innerHTML = `
+    <div class="modal" style="background:#fff;color:#111;width:min(540px,calc(100% - 32px));border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.35)">
+      <header style="padding:14px 16px;border-bottom:1px solid #eee;font-weight:700">Szczegóły rezerwacji</header>
+      <div class="content" style="padding:16px">
+        <table style="border-collapse:collapse;width:100%">
+          <tr><td style="color:#666;width:42%">Nr rezerwacji</td><td><b>${b.id??'-'}</b></td></tr>
+          <tr><td style="color:#666">Status</td><td>${b.status||'Oczekująca'}</td></tr>
+          <tr><td style="color:#666">Usługa</td><td>${b.service||'-'}</td></tr>
+          <tr><td style="color:#666">Data i godzina</td><td>${pretty(b)}</td></tr>
+          <tr><td style="color:#666">Klient</td><td>${b.client?.name||'-'}</td></tr>
+          <tr><td style="color:#666">E-mail</td><td>${b.client?.email||'-'}</td></tr>
+          <tr><td style="color:#666">Telefon</td><td>${b.client?.phone||'-'}</td></tr>
+          <tr><td style="color:#666">Adres</td><td>${b.client?.address||'-'}</td></tr>
+          ${b.notes?`<tr><td style="color:#666">Uwagi</td><td>${b.notes}</td></tr>`:''}
+        </table>
       </div>
-      <div style="margin-top:12px">
-        <button id="addSlot" class="btn">Dodaj termin</button>
+      <div class="actions" style="display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid #eee">
+        <button data-close class="btn">Zamknij</button>
       </div>
-      <div id="slotsList" style="margin-top:10px"></div>
-    </div>
+    </div>`;
+  root.addEventListener('click', (e)=>{ if(e.target===root || e.target.closest('[data-close]')) root.remove(); });
+  document.body.appendChild(root);
+}
 
-    <!-- Rezerwacje (oczekujące) -->
-    <div class="card" id="secUpcoming">
-      <div class="section-title">Rezerwacje</div>
-      <div id="upcomingList"></div>
-    </div>
+/* 6) Render części „Potwierdzone rezerwacje” + sprzątanie slotów */
+function renderConfirmed(){
+  const box = document.getElementById('confirmed');
+  if(!box) return;
+  const all = normalizeBookings(LS.get(KEY_BOOK,[]));
+  const confirmed = all.filter(b => (b.status||'')==='Potwierdzona');
 
-    <!-- Potwierdzone -->
-    <div class="card" id="secConfirmed">
-      <div class="section-title">Potwierdzone rezerwacje</div>
-      <div id="confirmedList"></div>
-    </div>
-  </div>
+  // zdejmij sloty (idempotentnie – jeśli już zdjęty, nic się nie stanie)
+  confirmed.forEach(b => { if(b.date && b.time) removeSlot(b.date,b.time); });
 
-  <!-- Modal -->
-  <div id="modalRoot" class="modal-backdrop"></div>
+  if(!confirmed.length){
+    box.innerHTML = `<div class="muted">Brak potwierdzonych rezerwacji.</div>`;
+    return;
+  }
+  box.innerHTML = confirmed.map(b => `
+    <div class="row" style="display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:12px;background:#0d1424;margin:6px 0">
+      <div>
+        <div><strong>${pretty(b)}</strong> • ${b.service||'Zabieg'}</div>
+        <div class="muted">${b.client?.name||''}</div>
+      </div>
+      <div class="inline" style="gap:8px">
+        <span class="kbd">Potwierdzona</span>
+        <button class="btn secondary" data-det="${b.id}">Szczegóły</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* 7) Nasłuch kliknięcia przycisku „Potwierdź” z Twojej listy (po admin.js).
+      Po potwierdzeniu odświeżamy confirmed + zdejmujemy slot. */
+document.addEventListener('click', () => {
+  // daj szansę Twojemu handlerowi zapisać LS, a potem odśwież widok
+  setTimeout(renderConfirmed, 50);
+});
+
+/* 8) Szczegóły – delegacja */
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest('[data-det]');
+  if(!btn) return;
+  const id = String(btn.getAttribute('data-det'));
+  const b = (LS.get(KEY_BOOK,[])).find(x => String(x.id)===id);
+  if(b) showDetails(b);
+});
+
+/* Start */
+document.addEventListener('DOMContentLoaded', renderConfirmed);
+</script>
 
   <script>
-  // ---------------- LS helpers
-  const LS = {
-    get: (k, def) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } },
-    set: (k, v)     => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
-    del: (k)        => { try { localStorage.removeItem(k); } catch {} },
-  };
+    // tab switching
+    const tabs = document.querySelectorAll('.tabbar .tab');
+    const panes = document.querySelectorAll('.tabpane');
+    tabs.forEach(t=> t.addEventListener('click', ()=>{
+      tabs.forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      const id = t.dataset.tab;
+      panes.forEach(p=> p.style.display = (p.dataset.pane===id)?'block':'none');
+    }));
+  </script><script>
+(function(){
+  const dateEl = document.getElementById('slotDate')   || document.getElementById('adminDate');
+  const timeEl = document.getElementById('slotTime')   || document.getElementById('adminTime');
+  const addBtn = document.getElementById('addSlot')    || document.getElementById('addSlotBtn');
+  const listEl = document.getElementById('slotsList');
+  if(!dateEl || !timeEl || !addBtn || !listEl) return;
 
-  // klucze
-  const KEY_BOOKINGS = 'bookings';
-  const KEY_SLOTS_ARR = 'FREE_SLOTS';     // [{date,time}]
-  const KEY_SLOTS_MAP = 'ms_slots_v6';    // {"YYYY-MM-DD":["HH:MM",...]}
-
-  // pożegnanie starego formatu
-  LS.del('FREE_SLOTS_V2');
-
-  // ---------------- SLOTS: API
-  function loadSlotsArr(){
-    // preferuj mapę, ale zwróć w postaci tablicy obiektów
-    const map = LS.get(KEY_SLOTS_MAP, null);
-    if (map && typeof map === 'object') {
-      const out = [];
-      Object.keys(map).forEach(d => (map[d]||[]).forEach(t => out.push({date:d, time:t})));
-      return out;
-    }
-    return LS.get(KEY_SLOTS_ARR, []);
+  function load(){
+    try{ return JSON.parse(localStorage.getItem('slots')||'[]'); }
+    catch(e){ return []; }
   }
-  function saveSlotsFromArr(arr){
-    // zapisz oba współczesne formaty
-    LS.set(KEY_SLOTS_ARR, arr);
+
+  function saveMirror(arr){
+    const j = JSON.stringify(arr);
+    localStorage.setItem('slots', j);
+    localStorage.setItem('FREE_SLOTS', j);
+    localStorage.setItem('FREE_SLOTS_V2', j);
+    localStorage.setItem('freeSlotsISO', JSON.stringify(arr.map(s => `${s.date} ${s.time}`)));
+
+    // DODANE: mapa dat -> listy godzin (dla index.html)
     const map = {};
-    arr.forEach(s => {
-      if(!s?.date || !s?.time) return;
-      (map[s.date] ||= []).push(s.time);
-    });
-    Object.keys(map).forEach(d => map[d].sort());
-    LS.set(KEY_SLOTS_MAP, map);
-    // skasuj antyk
-    LS.del('FREE_SLOTS_V2');
-  }
-  function removeSlot(date, time){
-    const arr = loadSlotsArr().filter(s => !(s.date===date && s.time===time));
-    saveSlotsFromArr(arr);
+    arr.forEach(s => { (map[s.date] ||= []).push(s.time); });
+    localStorage.setItem('ms_slots_v61', JSON.stringify(map));
   }
 
-  // ---------------- BOOKINGS: API
-  function loadBookings(){ return LS.get(KEY_BOOKINGS, []); }
-  function saveBookings(arr){ LS.set(KEY_BOOKINGS, arr); }
-
-  // ---------------- UI refs
-  const elDate = document.getElementById('slotDate');
-  const elTime = document.getElementById('slotTime');
-  const btnAdd = document.getElementById('addSlot');
-  const listSlots = document.getElementById('slotsList');
-  const listUpcoming = document.getElementById('upcomingList');
-  const listConfirmed = document.getElementById('confirmedList');
-  const modalRoot = document.getElementById('modalRoot');
-
-  // ---------------- Render: wolne terminy
-  function renderSlotPickers(){
-    const arr = loadSlotsArr().sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
-    // unikalne daty
-    const dates = [...new Set(arr.map(s=>s.date))].sort();
-    elDate.innerHTML = dates.length ? dates.map(d=>`<option value="${d}">${new Date(d).toLocaleDateString('pl-PL',{dateStyle:'medium'})}</option>`).join('') : `<option value="">—</option>`;
-    const first = dates[0] || '';
-    // godziny dla pierwszej
-    const times = arr.filter(s=>s.date===first).map(s=>s.time);
-    elTime.innerHTML = times.length ? times.map(t=>`<option value="${t}">${t}</option>`).join('') : `<option value="">—</option>`;
-  }
-  function renderSlotsList(){
-    const arr = loadSlotsArr().sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
-    if (!arr.length){ listSlots.innerHTML = `<div class="list-empty">Brak wolnych terminów.</div>`; return; }
-    listSlots.innerHTML = arr.map(s=>{
-      const pretty = new Date(`${s.date}T${s.time}:00`).toLocaleString('pl-PL',{dateStyle:'medium', timeStyle:'short'});
-      return `<div class="slot-row">
-        <div><strong>${pretty}</strong></div>
-        <div><button class="btn btn-danger" data-act="remove-slot" data-date="${s.date}" data-time="${s.time}">Usuń</button></div>
-      </div>`;
-    }).join('');
-  }
-
-  // ---------------- Render: rezerwacje
-  function fmtPretty(b){
-    if (b.date && b.time){
-      const d = new Date(`${b.date}T${b.time}:00`);
-      if (!Number.isNaN(d.getTime())) return d.toLocaleString('pl-PL',{dateStyle:'medium', timeStyle:'short'});
-    }
-    if (b.when){
-      const d = new Date(b.when);
-      if(!Number.isNaN(d.getTime())) return d.toLocaleString('pl-PL',{dateStyle:'medium', timeStyle:'short'});
-    }
-    return '—';
-  }
-
-  function rowActions(b, inConfirmed){
-    if (inConfirmed){
-      return `
-        <span class="chip">Potwierdzona</span>
-        <button class="btn btn-ghost" data-action="details" data-id="${b.id}">Szczegóły</button>
-      `;
-    }
-    return `
-      <span class="chip">${b.status || 'Oczekująca'}</span>
-      <button class="btn btn-ghost" data-action="details" data-id="${b.id}">Szczegóły</button>
-      <button class="btn btn-success" data-action="confirm" data-id="${b.id}">Potwierdź</button>
-      <button class="btn btn-danger" data-action="delete" data-id="${b.id}">Usuń</button>
-    `;
-  }
-
-  function renderUpcoming(){
-    const all = loadBookings().filter(b => (b.status||'Oczekująca') !== 'Potwierdzona');
-    if (!all.length){ listUpcoming.innerHTML = `<div class="list-empty">Brak rezerwacji do potwierdzenia.</div>`; return; }
-    listUpcoming.innerHTML = all.map(b=>{
-      const left = `<div><div><strong>${fmtPretty(b)}</strong> • ${b.service||'Zabieg'}</div><div class="muted">${b.client?.name||''}</div></div>`;
-      const right = `<div style="display:flex;gap:8px;align-items:center">${rowActions(b,false)}</div>`;
-      return `<div class="res-row">${left}${right}</div>`;
-    }).join('');
-  }
-  function renderConfirmed(){
-    const all = loadBookings().filter(b => (b.status||'') === 'Potwierdzona');
-    if (!all.length){ listConfirmed.innerHTML = `<div class="list-empty">Brak potwierdzonych rezerwacji.</div>`; return; }
-    listConfirmed.innerHTML = all.map(b=>{
-      const left = `<div><div><strong>${fmtPretty(b)}</strong> • ${b.service||'Zabieg'}</div><div class="muted">${b.client?.name||''}</div></div>`;
-      const right = `<div style="display:flex;gap:8px;align-items:center">${rowActions(b,true)}</div>`;
-      return `<div class="res-row">${left}${right}</div>`;
-    }).join('');
-  }
-  function renderAll(){
-    renderSlotPickers();
-    renderSlotsList();
-    renderUpcoming();
-    renderConfirmed();
-  }
-
-  // ---------------- Modal: szczegóły
-  function showBookingDetails(b){
-    const pretty = fmtPretty(b);
-    const html = `
-      <div class="modal">
-        <header>Szczegóły rezerwacji</header>
-        <div class="content">
-          <table>
-            <tr><td>Nr rezerwacji</td><td><b>${b.id ?? '-'}</b></td></tr>
-            <tr><td>Status</td><td>${b.status || 'Oczekująca'}</td></tr>
-            <tr><td>Usługa</td><td>${b.service || '-'}</td></tr>
-            <tr><td>Data i godzina</td><td>${pretty}</td></tr>
-            <tr><td>Klient</td><td>${b.client?.name || '-'}</td></tr>
-            <tr><td>E-mail</td><td>${b.client?.email || '-'}</td></tr>
-            <tr><td>Telefon</td><td>${b.client?.phone || '-'}</td></tr>
-            <tr><td>Adres</td><td>${b.client?.address || '-'}</td></tr>
-            ${b.notes ? `<tr><td>Uwagi</td><td>${b.notes}</td></tr>` : ''}
-          </table>
-        </div>
-        <div class="actions">
-          <button class="btn" data-close>Zamknij</button>
-        </div>
-      </div>`;
-    modalRoot.innerHTML = html;
-    modalRoot.classList.add('show');
-  }
-  modalRoot.addEventListener('click', (e)=>{
-    if (e.target === modalRoot || e.target.closest('[data-close]')) {
-      modalRoot.classList.remove('show'); modalRoot.innerHTML = '';
-    }
-  });
-
-  // ---------------- Actions
-  // Dodawanie „wzorcowych” terminów (u Ciebie dodajesz je z innego miejsca – tu zostawiam
-  // przycisk, który NIC nie doda jeśli nie wybierzesz pary z listy powyżej).
-  btnAdd.addEventListener('click', ()=>{
-    const d = elDate.value, t = elTime.value;
-    if (!d || !t) { alert('Wybierz datę i godzinę.'); return; }
-    const arr = loadSlotsArr();
-    if (arr.some(s => s.date===d && s.time===t)) { alert('Taki termin już istnieje.'); return; }
-    arr.push({date:d, time:t});
-    saveSlotsFromArr(arr);
-    renderAll();
-  });
-
-  // Delegacja klików (usuń slot / confirm / delete / details)
-  document.addEventListener('click', async (e)=>{
-    const rm = e.target.closest('[data-act="remove-slot"]');
-    if (rm){
-      removeSlot(rm.dataset.date, rm.dataset.time);
-      renderAll();
+  function render(){
+    const arr = load().sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+    listEl.innerHTML = '';
+    if(!arr.length){
+      const empty = document.createElement('div');
+      empty.className = 'row';
+      empty.textContent = 'Brak dodanych terminów';
+      listEl.appendChild(empty);
       return;
     }
-    const act = e.target.closest('[data-action]');
-    if (!act) return;
-
-    const id = act.dataset.id;
-    const all = loadBookings();
-    const i = all.findIndex(b => String(b.id) === String(id));
-    if (i < 0) return;
-
-    if (act.dataset.action === 'details') {
-      showBookingDetails(all[i]);
-      return;
-    }
-
-    if (act.dataset.action === 'delete') {
-      if (!confirm('Usunąć rezerwację?')) return;
-      const b = all[i];
-      all.splice(i,1);
-      saveBookings(all);
-      // przywróć slot jeśli usuwamy niepotwierdzoną
-      if (b.status !== 'Potwierdzona' && b.date && b.time){
-        const arr = loadSlotsArr();
-        if (!arr.some(s=>s.date===b.date && s.time===b.time)){
-          arr.push({date:b.date, time:b.time});
-          saveSlotsFromArr(arr);
-        }
-      }
-      renderAll();
-      return;
-    }
-
-    if (act.dataset.action === 'confirm') {
-      const b = all[i];
-
-      // UZUPEŁNIJ DATĘ/GODZINĘ jeżeli brak
-      if (!b.date || !b.time) {
-        const cand = b.when || b.startDateTime || (b.slot && b.slot.when) || null;
-        if (cand) {
-          const d = new Date(cand);
-          if (!Number.isNaN(d.getTime())) {
-            b.date = d.toISOString().slice(0,10);
-            b.time = d.toTimeString().slice(0,5);
-          }
-        }
-      }
-
-      b.status = 'Potwierdzona';
-      b.confirmedAt = new Date().toISOString();
-      all[i] = b;
-      saveBookings(all);
-
-      // zdejmij wolny termin
-      if (b.date && b.time) removeSlot(b.date, b.time);
-
-      const ok = await sendConfirmEmail(b);
-      if (ok) alert('Potwierdzono i wysłano e-mail do klienta.');
-      else    alert('Potwierdzono. Wysyłka e-mail do klienta nie powiodła się.');
-
-      renderAll();
-      return;
-    }
-  });
-
-  // ---------------- Mail do klienta po potwierdzeniu
-  async function sendConfirmEmail(b){
-    try{
-      // jeśli Twój /send-email nie obsługuje wysyłki do klienta,
-      // ta funkcja zwróci false, ale potwierdzenie i tak zostanie zapisane.
-      const pretty = fmtPretty(b);
-      const html = `
-        <h2>Twoja wizyta została potwierdzona</h2>
-        <p><b>Usługa:</b> ${b.service||'-'}</p>
-        <p><b>Termin:</b> ${pretty}</p>
-        <p><b>Miejsce:</b> Massage &amp; SPA</p>
-        ${b.notes ? `<p><b>Uwagi:</b> ${b.notes}</p>` : ''}
-      `;
-      const payload = {
-        to: b.client?.email || '',           // jeśli Twój endpoint nie pozwala, zwróci błąd
-        subject: `Potwierdzenie wizyty — ${pretty}`,
-        html
-      };
-      const res = await fetch('/.netlify/functions/send-email', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(payload)
+    arr.forEach((s,i)=>{
+      const row = document.createElement('div');
+      row.className = 'row';
+      const dt = new Date(`${s.date}T${s.time}:00`);
+      const label = isNaN(dt)
+        ? `${s.date} • ${s.time}`
+        : dt.toLocaleString('pl-PL',{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'}).replace('.','');
+      const span = document.createElement('span'); span.textContent = label;
+      const del = document.createElement('button');
+      del.className = 'btn danger';
+      del.textContent = 'Usuń';
+      del.addEventListener('click', ()=>{
+        const a = load(); a.splice(i,1); saveMirror(a); render();
       });
-      return res.ok;
-    }catch(_){ return false; }
+      row.appendChild(span); row.appendChild(del);
+      listEl.appendChild(row);
+    });
   }
 
-  // ---------------- Start
-  renderAll();
-  </script>
+  addBtn.addEventListener('click', ()=>{
+    const d = (dateEl.value||'').trim();          // YYYY-MM-DD
+    const t = (timeEl.value||'').trim().slice(0,5); // HH:MM
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d) || !/^\d{2}:\d{2}$/.test(t)){
+      alert('Podaj poprawną datę i godzinę.');
+      return;
+    }
+    const arr = load();
+    if(arr.some(s => s.date===d && s.time===t)){
+      alert('Taki termin już istnieje!');
+      return;
+    }
+    arr.push({date:d, time:t});
+    arr.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+    saveMirror(arr);
+    render();
+    dateEl.value=''; timeEl.value='';
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', render, { once:true });
+  } else {
+    render();
+  }
+})();
+</script>
+<script>
+// --- POMOCNICZE: normalizacja tekstu PL
+function norm(s){ return (s||"").toLowerCase().trim()
+  .replaceAll('\u00A0',' ').replace(/\s+/g,' '); }
+
+// --- mapowanie nagłówków na klucze
+const HEAD_MAP = {
+  "imię i nazwisko":"name", "imię":"name", "nazwisko":"name", "klient":"name",
+  "email":"email", "e-mail":"email",
+  "telefon":"phone", "tel":"phone",
+  "zabieg":"service", "usługa":"service", "rodzaj masażu":"service",
+  "data":"date", "termin":"date",
+  "godzina":"time", "godz":"time"
+};
+
+// znajdź tekst przycisku
+function isConfirmBtn(el){
+  return el && /potwierdź/i.test(el.textContent||"");
+
+// DODAJ:
+if (window._confirmHook) window._confirmHook();
+
+async function notifyConfirmToAdminAndClient(booking) {  // booking powinien zawierać: email klienta, nazwę usługi, datę/godzinę itd.  const subject = `Potwierdzenie: ${booking.serviceName} / ${booking.date} ${booking.time}`;  const htmlForClient = `    <h2>Potwierdzenie wizyty</h2>    <p>Twoja rezerwacja została potwierdzona.</p>    <p><b>Usługa:</b> ${booking.serviceName}</p>    <p><b>Data:</b> ${booking.date} ${booking.time}</p>    <p>Do zobaczenia!</p>  `;
+  try {    await fetch('/.netlify/functions/send-email', {      method: 'POST',      headers: { 'Content-Type': 'application/json' },      body: JSON.stringify({        mode: 'both', // <<< do Ciebie i do klienta        to: booking.email, // mail klienta        subject: subject,        html: htmlForClient      })    });  } catch (e) {    alert('Uwaga: nie udało się wysłać maili z potwierdzeniem (sprawdź konsolę).');    console.error('Mail (potwierdź) nie poszedł:', e);  }}
+// PRZYKŁAD użycia po zapisaniu statusu „potwierdzona”:async function handleConfirmSuccess(booking) {  // ...tu Twój kod: odśwież listę, badge „Potwierdzona” itd....  await notifyConfirmToAdminAndClient(booking);}
+
+// pobierz dane z WIERZA TABELI (wg nagłówków)
+function extractFromRow(tr){
+  const table = tr.closest('table');
+  if(!table) return null;
+  const ths = Array.from(table.querySelectorAll('thead th, thead td'));
+  const cols = ths.map(th => HEAD_MAP[norm(th.textContent)] || null);
+  const tds = Array.from(tr.children);
+  const rec = {};
+  tds.forEach((td,i)=>{
+    const key = cols[i];
+    if(!key) return;
+    rec[key] = (td.querySelector('[data-value]')?.dataset.value) || td.textContent.trim();
+  });
+  // podstawowe uzupełnienia
+  if(!rec.name)   rec.name   = tr.querySelector('[data-name]')?.dataset.name   || "";
+  if(!rec.email)  rec.email  = tr.querySelector('[data-email]')?.dataset.email || "";
+  if(!rec.phone)  rec.phone  = tr.querySelector('[data-phone]')?.dataset.phone || "";
+  if(!rec.service)rec.service= tr.querySelector('[data-service]')?.dataset.service || "";
+  if(!rec.date)   rec.date   = tr.querySelector('[data-date]')?.dataset.date   || "";
+  if(!rec.time)   rec.time   = tr.querySelector('[data-time]')?.dataset.time   || "";
+  return rec;
+}
+
+// alternatywa: “karta” zamiast tabeli (szuka etykiet po tekście)
+function extractFromCard(card){
+  function pick(label){
+    const el = Array.from(card.querySelectorAll('*'))
+      .find(e => /\:/.test(e.textContent||"") && norm(e.textContent).startsWith(norm(label)));
+    if(!el) return "";
+    const txt = el.textContent.split(':').slice(1).join(':').trim();
+    return txt;
+  }
+  return {
+    name:   pick('klient')   || pick('imię') || "",
+    email:  pick('email')    || "",
+    phone:  pick('telefon')  || "",
+    service:pick('zabieg')   || pick('usługa') || "",
+    date:   pick('data')     || pick('termin') || "",
+    time:   pick('godzina')  || pick('godz')   || ""
+  };
+}
+
+// WYŚLIJ MAILA (Netlify Function + Resend)
+async function sendConfirm(rec){
+  const booking = {
+    name:   rec.name||"",
+    email:  (rec.email||"").trim(),
+    phone:  rec.phone||"",
+    address: rec.address||"",
+    serviceName: rec.service||"",
+    price:  rec.price||"",
+    date:   rec.date||"",
+    time:   rec.time||"",
+    notes:  rec.notes||""
+  };
+  if(!booking.email){
+    alert("Brak adresu e-mail klienta – nie można wysłać potwierdzenia.");
+    return;
+  }
+  const res = await fetch("/.netlify/functions/send-email",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ type:"confirm", booking })
+  });
+  if(!res.ok) throw new Error(await res.text());
+}
+
+// GLOBALNY nasłuch kliknięć
+document.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('button, a, input[type=button], input[type=submit]');
+  if(!btn || !isConfirmBtn(btn)) return;
+
+  // spróbuj z wiersza tabeli
+  let rec = null;
+  const row = btn.closest('tr');
+  if(row) rec = extractFromRow(row);
+
+  // jeśli brak — spróbuj z “karty”
+  if(!rec){
+    const card = btn.closest('.card, .reservation, .tile, .box, .panel, .item');
+    if(card) rec = extractFromCard(card);
+  }
+
+  if(!rec){ alert("Nie udało się odczytać danych rezerwacji."); return; }
+
+  try{
+    await sendConfirm(rec);
+    alert("📩 Potwierdzenie wysłane do klienta i masażystki.");
+  }catch(err){
+    console.error(err);
+    alert("❌ Błąd wysyłki potwierdzenia.");
+  }
+});
+</script><script>// funkcja wspólna do wysyłania mailiasync function sendMail(to, subject, html) {  try {    const res = await fetch('/.netlify/functions/send-email', {      method: 'POST',      headers: { 'Content-Type': 'application/json' },      body: JSON.stringify({ to, subject, html })    });    const data = await res.json();    console.log("Email response:", data);  } catch (err) {    console.error("Błąd wysyłki maila:", err);  }}
+// przykładowa logika po kliknięciu "Potwierdź"async function notifyConfirm(booking) {  const subject = `Rezerwacja potwierdzona: ${booking.service} / ${booking.date} ${booking.time}`;  const html = `    <h2>Twoja rezerwacja została potwierdzona</h2>    <p>Usługa: <b>${booking.service}</b></p>    <p>Termin: ${booking.date} ${booking.time}</p>    <p>Dane klienta: ${booking.name}, ${booking.email}, ${booking.phone}</p>  `;  // mail do klienta  await sendMail(booking.email, subject, html);  // kopia do Ciebie  await sendMail("niedzwiecki.mn@gmail.com", subject, html);}
+// nasłuch na kliknięcie "Potwierdź"document.addEventListener("click", e => {  if (e.target && e.target.textContent.toLowerCase().includes("potwierdź")) {    const row = e.target.closest("tr");    if (!row) return;    const booking = {      name: row.querySelector("[data-name]")?.dataset.value || "",      email: row.querySelector("[data-email]")?.dataset.value || "",      phone: row.querySelector("[data-phone]")?.dataset.value || "",      service: row.querySelector("[data-service]")?.dataset.value || "",      date: row.querySelector("[data-date]")?.dataset.value || "",      time: row.querySelector("[data-time]")?.dataset.value || ""    };    notifyConfirm(booking);  }});</script>
+<script>
+(function(){
+  // --- helpers do storage ---
+  function get(key, fallback){ try{ return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback)); }catch{ return fallback; } }
+  function set(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+
+  // znajdź rezerwację po id
+  function findBooking(id){
+    const bookings = get('bookings', []);
+    return [bookings, bookings.findIndex(b => String(b.id) === String(id))];
+  }
+
+  // ładne formatowanie daty/godziny do maila
+  function fmtDate(d){ try{ return new Date(d).toLocaleDateString('pl-PL', { dateStyle: 'medium' }); }catch{return d||'-';} }
+  function fmtTime(t){
+    // jeśli masz HH:MM – zostaw; jeśli przechowujesz slot.when (ISO), wyciągniemy czas:
+    if (/^\d{2}:\d{2}$/.test(t||'')) return t;
+    try { return new Date(t).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'}); } catch { return t||'-'; }
+  }
+
+  // budowa treści maila do klienta (HTML)
+  function buildClientMail(b){
+    const fullDate = b.date && b.time ? `${b.date} ${b.time}` : (b.when || '');
+    const d = b.date ? fmtDate(b.date) : (fullDate ? fmtDate(fullDate) : '-');
+    const tm = b.time ? fmtTime(b.time) : (fullDate ? fmtTime(fullDate) : '-');
+
+    const subject = `Potwierdzenie rezerwacji #${b.id} — ${b.service || 'Usługa'}`;
+
+    const html = `
+      <div style="font:14px/1.5 system-ui,-apple-system,'Segoe UI',Roboto;color:#111">
+        <h2 style="margin:0 0 12px">Twoja wizyta została <span style="color:#2e7d32">potwierdzona</span></h2>
+        <table cellpadding="0" cellspacing="0" style="border-collapse:collapse">
+          <tr><td style="padding:6px 12px;color:#666">Nr rezerwacji</td><td style="padding:6px 12px"><b>${b.id}</b></td></tr>
+          <tr><td style="padding:6px 12px;color:#666">Usługa</td><td style="padding:6px 12px">${b.service || '-'}</td></tr>
+          <tr><td style="padding:6px 12px;color:#666">Data i godzina</td><td style="padding:6px 12px">${d} ${tm}</td></tr>
+          <tr><td style="padding:6px 12px;color:#666">Miejsce</td><td style="padding:6px 12px">u klienta: ${b.client?.address || '-'}</td></tr>
+          <tr><td style="padding:6px 12px;color:#666">Uwagi</td><td style="padding:6px 12px">${(b.notes||'-')}</td></tr>
+        </table>
+        <p style="margin:16px 0 0">Do zobaczenia!<br>Massage & SPA</p>
+      </div>
+    `;
+    return { subject, html };
+  }
+
+  // wysyłka maila do klienta -> korzysta z Twojej funkcji netlify
+  async function sendClientEmail(b){
+    const to = b.client?.email;
+    if(!to) throw new Error('Brak e-maila klienta');
+    const { subject, html } = buildClientMail(b);
+
+    const res = await fetch('/.netlify/functions/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({ to, subject, html })
+    });
+
+    if(!res.ok){
+      const txt = await res.text().catch(()=>String(res.status));
+      throw new Error(`Send failed: ${res.status} ${txt}`);
+    }
+    return true;
+  }
+
+  // delegacja klików
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-action="confirm"]');
+    if(!btn) return;
+
+    const id = btn.dataset.id;
+    const [bookings, idx] = findBooking(id);
+    if(idx === -1){
+      alert('Nie znaleziono rezerwacji.');  // zostanie pokazane jako baner
+      return;
+    }
+
+    // 1) zmień status, zapisz
+    const b = bookings[idx];
+    b.status = 'Potwierdzona';
+    b.confirmedAt = new Date().toISOString();
+    bookings[idx] = b;
+    set('bookings', bookings);
+
+    // 2) (opcjonalnie) przenieś do „Potwierdzone rezerwacje”
+    try {
+      const conf = get('confirmedBookings', []);
+      conf.push(b);
+      set('confirmedBookings', conf);
+
+      // jeśli chcesz – usuń z listy „oczekujące”
+      const left = bookings.filter(x => String(x.id) !== String(id));
+      set('bookings', left);
+    } catch(_) {}
+
+    // 3) wyślij e-mail do klienta
+    try{
+      await sendClientEmail(b);
+      // pokaż baner (korzysta z Twojego przechwycenia alert())
+      alert('Potwierdzono i wysłano e-mail do klienta.');
+    }catch(err){
+      alert('Błąd wysyłki do klienta: ' + err.message);
+    }
+
+    // 4) odśwież listy w UI jeżeli masz funkcje renderujące
+    if (window.renderBookings) window.renderBookings();
+    if (window.renderConfirmed) window.renderConfirmed();
+  });
+})();
+</script>
+<script>
+// --- helpery ---
+function loadBookings(){ try{ return JSON.parse(localStorage.getItem('bookings')||'[]'); }catch{ return []; } }
+function saveBookings(a){ localStorage.setItem('bookings', JSON.stringify(a)); }
+
+// --- render potwierdzonych ---
+function renderConfirmed(){
+  const box = document.getElementById('confirmed');
+  if (!box) return;
+
+  const items = loadBookings()
+    .filter(b => String(b?.status||'').toLowerCase().startsWith('potwierdz') || String(b?.status||'').toLowerCase()==='confirmed')
+    .filter(b => b?.date && b?.time)
+    .sort((a,b) => (`${a.date}T${a.time}`).localeCompare(`${b.date}T${b.time}`));
+
+  box.innerHTML = items.map(b => {
+    const pretty = new Date(`${b.date}T${b.time}:00`).toLocaleString('pl-PL',{dateStyle:'medium', timeStyle:'short'});
+    return `
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+          <div>
+            <div><strong>${pretty}</strong></div>
+            <div>${b.service || 'Zabieg'}</div>
+            <div>${b.client?.name || ''} ${b.client?.phone ? '— ' + b.client.phone : ''}</div>
+            <div>${b.client?.email || ''}</div>
+            <div>${b.client?.address || ''}</div>
+            ${b.notes ? `<div style="opacity:.85"><em>${b.notes}</em></div>` : ''}
+          </div>
+          <span class="badge" style="background:#0a7a2f;color:#fff;border-radius:10px;padding:4px 8px">Potwierdzona</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// --- inicjalizacja i odświeżanie ---
+document.addEventListener('DOMContentLoaded', renderConfirmed);
+window.addEventListener('storage', (e)=> { if (e.key === 'bookings') renderConfirmed(); });
+
+// --- jeżeli Twój istniejący kod zmienia status na Potwierdzona, dopisz po zapisie:
+window._confirmHook = function(){
+  // wywołaj to zaraz po saveBookings([...]) w swoim handlerze "Potwierdź"
+  renderConfirmed();
+  // jeśli masz własne renderowanie "Rezerwacje" (oczekujące), odśwież też je:
+  if (window.renderPendingBookings) window.renderPendingBookings();
+};
+</script>
 </body>
 </html>
