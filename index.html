@@ -67,7 +67,7 @@
 <div class="footer">© Massage &amp; SPA • <span id="contact"></span></div>
 </div>
 <script src="assets/store.js"></script>
-<script src="assets/app.js"></script><script defer="" src="calendar-patch.js"></script><script>(function(){  var DATE_SELECTORS=['#date','#bookingDate','#dateInput','input[name="date"]'];  var TIME_SELECTORS=['#time','#bookingTime','#timeSelect','select[name="time"]'];  function $(list){for(var i=0;i<list.length;i++){var el=document.querySelector(list[i]);if(el)return el}return null}  function injectCSS(css){var s=document.createElement('style');s.textContent=css;document.head.appendChild(s)}  function loadScript(src,cb){var s=document.createElement('script');s.src=src;s.onload=cb;document.head.appendChild(s)}  function loadCSS(href){var l=document.createElement('link');l.rel='stylesheet';l.href=href;document.head.appendChild(l)}  function parseSlots(){    var out=[];function add(d,t){if(!d||!t)return;if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return;if(!/^\d{2}:\d{2}$/.test(t))return;out.push({date:d,time:t})}    for(var i=0;i<localStorage.length;i++){      var k=localStorage.key(i),v=null;try{v=JSON.parse(localStorage.getItem(k))}catch(e){v=null} if(!v)continue;      if(Array.isArray(v)&&v.length){        if(typeof v[0]==='object'&&'date'in v[0]&&'time'in v[0]){v.forEach(function(x){add(x.date,x.time)});continue}        if(typeof v[0]==='string'){v.forEach(function(s){var m=s.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})$/);if(m)add(m[1],m[2])});continue}      }      if(v&&typeof v==='object'){        if(Array.isArray(v.slots)){v.slots.forEach(function(x){add(x.date,x.time)});continue}        var keys=Object.keys(v),used=false;        for(var j=0;j<keys.length;j++){var key=keys[j];if(/^\d{4}-\d{2}-\d{2}$/.test(key)&&Array.isArray(v[key])){v[key].forEach(function(t){add(key,String(t).slice(0,5))});used=true}}        if(used)continue;      }    }    return out;  }  function init(){    var dateEl=$(DATE_SELECTORS),timeEl=$(TIME_SELECTORS); if(!dateEl||!timeEl)return;    var slots=parseSlots(),days={}; slots.forEach(function(s){(days[s.date]||(days[s.date]=[])).includes(s.time)||days[s.date].push(s.time)});    var enabledDates=Object.keys(days);    if(typeof flatpickr!=='function'){console.warn('flatpickr not loaded');return}    flatpickr(dateEl,{      dateFormat:'Y-m-d',disableMobile:true,enable:enabledDates,      onDayCreate:function(_1,_2,_3,dayElem){        var y=dayElem.dateObj.getFullYear(),m=('0'+(dayElem.dateObj.getMonth()+1)).slice(-2),d=('0'+dayElem.dateObj.getDate()).slice(-2);        var key=y+'-'+m+'-'+d; if(days[key]) dayElem.classList.add('fp-has-slots');      },      onChange:function(selected){var sel=selected&&selected[0]; if(!sel)return;        var y=sel.getFullYear(),m=('0'+(sel.getMonth()+1)).slice(-2),d=('0'+sel.getDate()).slice(-2); var key=y+'-'+m+'-'+d;        while(timeEl.firstChild) timeEl.removeChild(timeEl.firstChild);        var times=(days[key]||[]).slice().sort();        if(!times.length){var o=document.createElement('option');o.value='';o.textContent='Brak wolnych godzin';o.disabled=true;o.selected=true;timeEl.appendChild(o);timeEl.disabled=true;return}        var ph=document.createElement('option');ph.value='';ph.textContent='Wybierz godzinę…';timeEl.appendChild(ph);        times.forEach(function(t){var o=document.createElement('option');o.value=t;o.textContent=t;timeEl.appendChild(o)}); timeEl.disabled=false;      }    });    injectCSS('.flatpickr-day.fp-has-slots{box-shadow:inset 0 0 0 2px rgba(72,222,151,.9);border-radius:8px}.flatpickr-day.fp-has-slots:hover{background:rgba(72,222,151,.15)}');  }  function boot(){    if(typeof flatpickr==='function'){init()}    else{loadCSS('https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css');loadScript('https://cdn.jsdelivr.net/npm/flatpickr',init)}  }  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();})();</script>
+<script src="assets/app.js"></script><script>(function(){  var DATE_SELECTORS=['#date','#bookingDate','#dateInput','input[name="date"]'];  var TIME_SELECTORS=['#time','#bookingTime','#timeSelect','select[name="time"]'];  function $(list){for(var i=0;i<list.length;i++){var el=document.querySelector(list[i]);if(el)return el}return null}  function injectCSS(css){var s=document.createElement('style');s.textContent=css;document.head.appendChild(s)}  function loadScript(src,cb){var s=document.createElement('script');s.src=src;s.onload=cb;document.head.appendChild(s)}  function loadCSS(href){var l=document.createElement('link');l.rel='stylesheet';l.href=href;document.head.appendChild(l)}  function parseSlots(){    var out=[];function add(d,t){if(!d||!t)return;if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return;if(!/^\d{2}:\d{2}$/.test(t))return;out.push({date:d,time:t})}    for(var i=0;i<localStorage.length;i++){      var k=localStorage.key(i),v=null;try{v=JSON.parse(localStorage.getItem(k))}catch(e){v=null} if(!v)continue;      if(Array.isArray(v)&&v.length){        if(typeof v[0]==='object'&&'date'in v[0]&&'time'in v[0]){v.forEach(function(x){add(x.date,x.time)});continue}        if(typeof v[0]==='string'){v.forEach(function(s){var m=s.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})$/);if(m)add(m[1],m[2])});continue}      }      if(v&&typeof v==='object'){        if(Array.isArray(v.slots)){v.slots.forEach(function(x){add(x.date,x.time)});continue}        var keys=Object.keys(v),used=false;        for(var j=0;j<keys.length;j++){var key=keys[j];if(/^\d{4}-\d{2}-\d{2}$/.test(key)&&Array.isArray(v[key])){v[key].forEach(function(t){add(key,String(t).slice(0,5))});used=true}}        if(used)continue;      }    }    return out;  }  function init(){    var dateEl=$(DATE_SELECTORS),timeEl=$(TIME_SELECTORS); if(!dateEl||!timeEl)return;    var slots=parseSlots(),days={}; slots.forEach(function(s){(days[s.date]||(days[s.date]=[])).includes(s.time)||days[s.date].push(s.time)});    var enabledDates=Object.keys(days);    if(typeof flatpickr!=='function'){console.warn('flatpickr not loaded');return}    flatpickr(dateEl,{      dateFormat:'Y-m-d',disableMobile:true,enable:enabledDates,      onDayCreate:function(_1,_2,_3,dayElem){        var y=dayElem.dateObj.getFullYear(),m=('0'+(dayElem.dateObj.getMonth()+1)).slice(-2),d=('0'+dayElem.dateObj.getDate()).slice(-2);        var key=y+'-'+m+'-'+d; if(days[key]) dayElem.classList.add('fp-has-slots');      },      onChange:function(selected){var sel=selected&&selected[0]; if(!sel)return;        var y=sel.getFullYear(),m=('0'+(sel.getMonth()+1)).slice(-2),d=('0'+sel.getDate()).slice(-2); var key=y+'-'+m+'-'+d;        while(timeEl.firstChild) timeEl.removeChild(timeEl.firstChild);        var times=(days[key]||[]).slice().sort();        if(!times.length){var o=document.createElement('option');o.value='';o.textContent='Brak wolnych godzin';o.disabled=true;o.selected=true;timeEl.appendChild(o);timeEl.disabled=true;return}        var ph=document.createElement('option');ph.value='';ph.textContent='Wybierz godzinę…';timeEl.appendChild(ph);        times.forEach(function(t){var o=document.createElement('option');o.value=t;o.textContent=t;timeEl.appendChild(o)}); timeEl.disabled=false;      }    });    injectCSS('.flatpickr-day.fp-has-slots{box-shadow:inset 0 0 0 2px rgba(72,222,151,.9);border-radius:8px}.flatpickr-day.fp-has-slots:hover{background:rgba(72,222,151,.15)}');  }  function boot(){    if(typeof flatpickr==='function'){init()}    else{loadCSS('https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css');loadScript('https://cdn.jsdelivr.net/npm/flatpickr',init)}  }  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();})();</script>
 <script>
 (function(){
   // --- 0) Mały pasek diagnostyczny (zobaczysz co się dzieje) ---
@@ -291,139 +291,6 @@ window.addEventListener('storage', (e) => {
       nativeAlert(msg);
     }
   };
-})();
-</script><script>
-(function () {
-  const $ = (s, r=document) => r.querySelector(s);
-
-  // --- helpers: localStorage JSON
-  function load(key, fb){ try{ return JSON.parse(localStorage.getItem(key)||'') ?? fb; }catch{ return fb; } }
-  function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
-
-  // zdejmij termin z wolnych (obsługa starych i nowych kluczy)
-  function removeFromFreeSlots(date, time){
-    // ms_slots_v6 (mapa) + FREE_SLOTS / FREE_SLOTS_V2 (tablice [{date,time}])
-    const mapStr = localStorage.getItem('ms_slots_v6');
-    if (mapStr){
-      try{
-        const map = JSON.parse(mapStr) || {};
-        if (map[date]) {
-          map[date] = map[date].filter(t => String(t).slice(0,5) !== String(time).slice(0,5));
-          if (!map[date].length) delete map[date];
-          save('ms_slots_v6', map);
-        }
-      }catch{}
-    }
-    ['FREE_SLOTS','FREE_SLOTS_V2'].forEach(k=>{
-      const arr = load(k, []);
-      const arr2 = Array.isArray(arr) ? arr.filter(s => !(s?.date===date && s?.time===time)) : [];
-      save(k, arr2);
-    });
-    // poinformuj inne karty jeśli nasłuchują
-    if (window.onSlotsChanged) window.onSlotsChanged();
-  }
-
-  // prosty 4-cyfrowy ID
-  const genId = () => String(Math.floor(1000 + Math.random()*9000));
-
-  const form = $('form');
-  if (!form) return;
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    // --- zbiór pól
-    const name    = $('#name')?.value.trim()    || '';
-    const email   = $('#email')?.value.trim()   || '';
-    const phone   = $('#phone')?.value.trim()   || '';
-    const address = $('#address')?.value.trim() || '';
-    const notes   = $('#notes')?.value.trim()   || '';
-
-    // tekst wybranej usługi (z <select id="service">)
-    const svcSel = $('#service');
-    const service = (svcSel && svcSel.options && svcSel.selectedIndex >= 0)
-      ? (svcSel.options[svcSel.selectedIndex].text || '').trim()
-      : ($('#service')?.value || '').trim();
-
-    const date = $('#date')?.value || '';   // RRRR-MM-DD
-    const time = $('#time')?.value || '';   // GG:MM
-
-    if (!name || !email || !phone || !service || !date || !time) {
-      alert('Uzupełnij wszystkie wymagane pola (imię, e-mail, telefon, zabieg, data, godzina).');
-      return;
-    }
-
-    // --- obiekt rezerwacji (format zgodny z panelem admin)
-    const reservation = {
-      id: genId(),
-      status: 'Oczekująca',
-      service,
-      date,
-      time,
-      when: `${date}T${time}:00`,
-      client: { name, email, phone, address },
-      notes,
-      createdAt: new Date().toISOString()
-    };
-
-    // (opcjonalnie) gotowy HTML „Szczegóły” do modala w adminie
-    reservation.detailsHtml = `
-      <div style="font:14px/1.5 system-ui,-apple-system,'Segoe UI',Roboto;color:#111">
-        <table cellpadding="0" cellspacing="0" style="border-collapse:collapse">
-          <tr><td style="padding:6px 12px;color:#666">Nr rezerwacji</td><td style="padding:6px 12px"><b>${reservation.id}</b></td></tr>
-          <tr><td style="padding:6px 12px;color:#666">Usługa</td><td style="padding:6px 12px">${reservation.service || '-'}</td></tr>
-          <tr><td style="padding:6px 12px;color:#666">Data i godzina</td><td style="padding:6px 12px">${reservation.date} ${reservation.time}</td></tr>
-          <tr><td style="padding:6px 12px;color:#666">Klient</td><td style="padding:6px 12px">${reservation.client.name}</td></tr>
-          <tr><td style="padding:6px 12px;color:#666">E-mail</td><td style="padding:6px 12px">${reservation.client.email}</td></tr>
-          <tr><td style="padding:6px 12px;color:#666">Telefon</td><td style="padding:6px 12px">${reservation.client.phone}</td></tr>
-          <tr><td style="padding:6px 12px;color:#666">Adres</td><td style="padding:6px 12px">${reservation.client.address || '-'}</td></tr>
-          ${reservation.notes ? `<tr><td style="padding:6px 12px;color:#666">Uwagi</td><td style="padding:6px 12px">${reservation.notes}</td></tr>` : ''}
-        </table>
-      </div>
-    `.trim();
-
-    // --- zapis do localStorage.bookings (DODAJ)
-    const bookings = load('bookings', []);
-    bookings.push(reservation);
-    save('bookings', bookings);
-	
-function saveReservation(reservation) {
-    let reservations = JSON.parse(localStorage.getItem("reservations")) || [];
-    reservations.push(reservation);
-    localStorage.setItem("reservations", JSON.stringify(reservations));
-}
-
-    // --- zdejmij termin z wolnych (żeby zniknął z kalendarza)
-    removeFromFreeSlots(date, time);
-
-    // --- wyślij mail do masażystki (Netlify function przyjmująca { reservation })
-    let mailOk = false;
-    try {
-      const res = await fetch('/.netlify/functions/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ reservation })
-      });
-      mailOk = res.ok;
-      // ewentualnie: const txt = await res.text(); console.log('send-email', res.status, txt);
-    } catch (err) {
-      console.error('send-email error:', err);
-    }
-
-    // --- baner „Dziękujemy”
-    const thx = $('#bookingThanks');
-    if (thx) {
-      thx.classList.add('show');
-      setTimeout(() => thx.classList.remove('show'), 3500);
-    } else {
-      alert(mailOk ? 'Dziękujemy! Rezerwacja została przyjęta.'
-                   : 'Rezerwacja zapisana. (Uwaga: e-mail do masażystki mógł nie zostać wysłany)');
-    }
-
-    // --- reset formularza i odświeżenie godzin (jeśli masz)
-    form.reset();
-    if (window.renderTimeOptions) window.renderTimeOptions();
-  });
 })();
 </script>
 
