@@ -220,6 +220,16 @@
   window.__SLOTS_KEY__ = 'slots';
 })();
 </script>
+<script>
+window.addEventListener('storage', (e) => {
+  if (e.key === 'slots') {
+    // tu wywołaj swoją funkcję, która przebudowuje mapę dat/godzin
+    // np. rebuildCalendarFromSlots();
+    // i ewentualnie przeładuj flatpickr:
+    if (window.fp && typeof window.fp.redraw === 'function') window.fp.redraw();
+  }
+});
+</script>
 
 <script>
 (function(){
@@ -376,6 +386,12 @@
     const bookings = load('bookings', []);
     bookings.push(reservation);
     save('bookings', bookings);
+	
+function saveReservation(reservation) {
+    let reservations = JSON.parse(localStorage.getItem("reservations")) || [];
+    reservations.push(reservation);
+    localStorage.setItem("reservations", JSON.stringify(reservations));
+}
 
     // --- zdejmij termin z wolnych (żeby zniknął z kalendarza)
     removeFromFreeSlots(date, time);
