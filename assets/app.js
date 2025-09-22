@@ -14,12 +14,17 @@ function renderServices(){
   select.innerHTML = services.map(s=>`<option value="${s.id}">${s.name} — ${fmtMoney(s.price)}</option>`).join('');
 }
 
-function availableTimesFor(dateISO){
-  const slots=Store.get('slots',[]);
-  const bookings=Store.get('bookings',[]);
+function availableTimesFor(dateStr){
+  const dateKey = String(dateStr).slice(0,10); // "YYYY-MM-DD"
+  const slots = Store.get('slots',[]);
+  const bookings = Store.get('bookings',[]);
   const taken = new Set(bookings.map(b=>b.slotId));
-  return slots.filter(s=> sameDate(s.when,dateISO) && !taken.has(s.id));
+  return slots.filter(s=>{
+    const slotKey = new Date(s.when).toISOString().slice(0,10);
+    return slotKey === dateKey && !taken.has(s.id);
+  });
 }
+
 
 function renderTimeOptions(){
   const dateVal=el('#date').value;
@@ -78,6 +83,12 @@ function handleSubmit(e){
   ].join('\n');
 
   alert(msg);
+  const thanks = document.getElementById('bookingThanks');
+if (thanks) {
+  thanks.classList.add('show');
+  setTimeout(()=>thanks.classList.remove('show'), 2600);
+}
+
   // optional mailto
   const subject = encodeURIComponent('Potwierdzenie rezerwacji — Massage & SPA');
   const body = encodeURIComponent(msg);
