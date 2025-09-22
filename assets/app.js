@@ -152,10 +152,12 @@ function handleSubmit(e){
   const services = getServices();
   const service  = services.find(s => s.id === serviceId) || { name:'(brak)' };
   const thanks = document.getElementById('bookingThanks');
-  if (thanks) {
-    thanks.textContent = `Rezerwacja zapisana. Nr ${bookingNo}. ${service.name} — ${whenStr}.`;
-    thanks.classList.add('show');
-    setTimeout(()=>thanks.classList.remove('show'), 5000);
+if (thanks){
+  thanks.textContent = `Dziękujemy! Nr ${bookingNo}. ${service.name} — ${whenStr}.`;
+  thanks.classList.add('show');
+  setTimeout(()=>thanks.classList.remove('show'), 5000); // czas wyświetlania
+}
+
   }
 
   // e-mail do masażystki (backend i tak wysyła tylko do THERAPIST_EMAIL)
