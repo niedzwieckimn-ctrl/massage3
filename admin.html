@@ -203,8 +203,16 @@
 
     // DODANE: mapa dat -> listy godzin (dla index.html)
     const map = {};
-    arr.forEach(s => { (map[s.date] ||= []).push(s.time); });
-    localStorage.setItem('ms_slots_v6', JSON.stringify(map));
+   arr.forEach(s => { (map[s.date] ||= []).push(s.time); });
+localStorage.setItem('ms_slots_v6', JSON.stringify(map));
+
+// dodatkowo: normalizacja do formatu z id/when
+const normalized = arr.map(s=>{
+  const iso = new Date(`${s.date}T${s.time}:00`).toISOString();
+  return { id: Math.random().toString(36).slice(2)+Date.now().toString(36), when: iso };
+});
+localStorage.setItem('slots', JSON.stringify(normalized));
+
   }
 
   function render(){
