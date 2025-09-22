@@ -127,14 +127,22 @@ function handleSubmit(e){
   Store.set('clients', clients);
 
   // zapis rezerwacji
-  const booking = {
-    id: Store.uid(),
-    clientId: client.id,
-    serviceId,
-    slotId,
-    notes,
-    createdAt: new Date().toISOString(),
-    status: 'Oczekująca'
+  const slot = (Store.get('slots',[])||[]).find(s => s.id === slotId);
+const whenStr = slot ? new Date(slot.when).toLocaleString('pl-PL',
+  { dateStyle:'full', timeStyle:'short' }) : '(brak)';
+
+const booking = {
+  id: Store.uid(),
+  clientId: client.id,
+  serviceId,
+  slotId,
+  notes,
+  createdAt: new Date().toISOString(),
+  status: 'Oczekująca',
+  bookingNo: bookingNo,   // ← 5-cyfrowy numer
+  when: whenStr           // ← termin rezerwacji
+};
+
 	
   };
   bookings.push(booking);
