@@ -4,6 +4,16 @@ function fmtDate(d){return new Date(d).toLocaleString('pl-PL',{dateStyle:'medium
 
 const services = Store.get('services',[]);
 const settings = Store.get('settings',{});
+// --- e-mail (Netlify Function)
+const SEND_ENDPOINT = '/.netlify/functions/send-email';
+async function sendEmail({to, subject, html}) {
+  const r = await fetch(SEND_ENDPOINT, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({to, subject, html})
+  });
+  if (!r.ok) throw new Error('Email HTTP ' + r.status);
+}
 
 // --- usługi
 function renderServices(){
@@ -83,6 +93,31 @@ function handleSubmit(e){
     client.name=name; client.phone=phone; client.address=address;
   }
   Store.set('clients',clients);
+// e-mail do masażystki (po przyjęciu rezerwacji)
+try {
+  const srv  = services.find(s=>s.id===serviceId) || {};
+  const slot = (Store.get('slots',[])||[]).find(s=>s.id===slotId) || {};
+  const whenStr = slot.when ? new Date(slot.when).toLocaleString('pl-PL') : '(brak)';
+  const to = (settings && settings.contactEmail) || 'massage.n.spa@gmail.com';
+
+  const html = `
+    <h2>Nowa rezerwacja</h2>
+    <p><b>Termin:</b> ${whenStr}</p>
+    <p><b>Usługa:</b> ${srv.name || '-'}</p>
+    <p><b>Klient:</b> ${name} &lt;${email}&gt;, tel. ${phone}</p>
+    ${address ? `<p><b>Adres:</b> ${address}</p>` : ''}
+    ${notes ? `<p><b>Uwagi klienta:</b> ${notes}</p>` : ''}
+  `;
+
+  await sendEmail({
+    to,
+    subject: `Nowa rezerwacja — ${whenStr}`,
+    html
+  });
+} catch(e) {
+  // nie przerywaj procesu; tylko informacja w konsoli
+  console.warn('Nie wysłano e-maila do masażystki:', e);
+}
 
   // zapis rezerwacji
   const booking = { id:Store.uid(), clientId:client.id, serviceId, slotId, notes, createdAt:new Date().toISOString(), status:'Oczekująca' };
