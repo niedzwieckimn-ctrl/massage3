@@ -1,20 +1,21 @@
-export async function handler(event, context) {
+// netlify/functions/send-email.js  — tylko do masażystki (Resend, bez dodatkowych paczek)
+export async function handler(event) {
   try {
-    const { to, subject, html } = JSON.parse(event.body || '{}');
+    const { subject, html } = JSON.parse(event.body || '{}');
 
-    if (!to || !subject || !html) {
+    if (!subject || !html) {
       return { statusCode: 400, body: 'Missing fields' };
     }
 
-    const r = await fetch("https://api.resend.com/emails", {
-      method: "POST",
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
       headers: {
-        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json"
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.FROM_EMAIL,
-        to: [to, process.env.THERAPIST_EMAIL],
+        from: process.env.FROM_EMAIL,          // nadawca z Twojej zweryfikowanej domeny
+        to: process.env.THERAPIST_EMAIL,       // <-- tylko masażystka
         subject,
         html
       })
@@ -24,7 +25,6 @@ export async function handler(event, context) {
       const text = await r.text();
       return { statusCode: r.status, body: text };
     }
-
     const data = await r.json();
     return { statusCode: 200, body: JSON.stringify(data) };
   } catch (err) {

@@ -166,7 +166,7 @@ function handleSubmit(e){
         ${address ? `<p><b>Adres:</b> ${address}</p>` : ''}
         ${notes ? `<p><b>Uwagi klienta:</b> ${notes}</p>` : ''}
       `;
-      await sendEmail({ to, subject:`Nowa rezerwacja — ${whenStr}`, html });
+      await sendEmail({ subject:`Nowa rezerwacja — ${whenStr}`, html });
     }catch(err){
       console.warn('Nie wysłano e-maila do masażystki:', err);
     }
