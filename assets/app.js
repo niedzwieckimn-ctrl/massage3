@@ -127,22 +127,14 @@ function handleSubmit(e){
   Store.set('clients', clients);
 
   // zapis rezerwacji
-  const slot = (Store.get('slots',[])||[]).find(s => s.id === slotId);
-const whenStr = slot ? new Date(slot.when).toLocaleString('pl-PL',
-  { dateStyle:'full', timeStyle:'short' }) : '(brak)';
-
-const booking = {
-  id: Store.uid(),
-  clientId: client.id,
-  serviceId,
-  slotId,
-  notes,
-  createdAt: new Date().toISOString(),
-  status: 'Oczekująca',
-  bookingNo: bookingNo,   // ← 5-cyfrowy numer
-  when: whenStr           // ← termin rezerwacji
-};
-
+  const booking = {
+    id: Store.uid(),
+    clientId: client.id,
+    serviceId,
+    slotId,
+    notes,
+    createdAt: new Date().toISOString(),
+    status: 'Oczekująca'
 	
   };
   bookings.push(booking);
@@ -169,7 +161,7 @@ const booking = {
       const html = `
   <h2>Nowa rezerwacja</h2>
   <p><b>Nr rezerwacji:</b> ${bookingNo}</p>
-  <p><b>Termin:</b> ${whenStr}</p>
+  <p><b>Termin:</b> ${whenStr
   <p><b>Zabieg:</b> ${service.name}</p>
   <p><b>Klient:</b> ${name}</p>
   <p><b>Adres / kontakt:</b><br>
