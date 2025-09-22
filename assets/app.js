@@ -136,6 +136,8 @@ function handleSubmit(e){
     notes,
     createdAt: new Date().toISOString(),
     status: 'Oczekująca'
+	bookingNo: bookingNo,  // nasz 5-cyfrowy numer
+
   };
   bookings.push(booking);
   Store.set('bookings', bookings);

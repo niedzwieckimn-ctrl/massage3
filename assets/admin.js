@@ -76,7 +76,7 @@ function renderUpcoming(){
     card.className='listItem';
     card.innerHTML = `
       <div class="inline" style="justify-content:space-between">
-        <div><strong>${whenStr}</strong> — ${it.clientName || '—'}</div>
+        <div><strong>${whenStr}</strong> — ${it.clientName || '—'} (Nr: ${it.bookingNo||''})</div>
         <div>
           <span class="badge">${it.status || 'Oczekująca'}</span>
           <button class="btn small ghost"   data-act="details" data-id="${it.id}">Szczegóły</button>
