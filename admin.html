@@ -372,6 +372,56 @@ document.addEventListener('click', async (e)=>{
     alert("❌ Błąd wysyłki potwierdzenia.");
   }
 });
+</script><script>// funkcja wspólna do wysyłania mailiasync function sendMail(to, subject, html) {  try {    const res = await fetch('/.netlify/functions/send-email', {      method: 'POST',      headers: { 'Content-Type': 'application/json' },      body: JSON.stringify({ to, subject, html })    });    const data = await res.json();    console.log("Email response:", data);  } catch (err) {    console.error("Błąd wysyłki maila:", err);  }}
+// przykładowa logika po kliknięciu "Potwierdź"async function notifyConfirm(booking) {  const subject = `Rezerwacja potwierdzona: ${booking.service} / ${booking.date} ${booking.time}`;  const html = `    <h2>Twoja rezerwacja została potwierdzona</h2>    <p>Usługa: <b>${booking.service}</b></p>    <p>Termin: ${booking.date} ${booking.time}</p>    <p>Dane klienta: ${booking.name}, ${booking.email}, ${booking.phone}</p>  `;  // mail do klienta  await sendMail(booking.email, subject, html);  // kopia do Ciebie  await sendMail("niedzwiecki.mn@gmail.com", subject, html);}
+// nasłuch na kliknięcie "Potwierdź"document.addEventListener("click", e => {  if (e.target && e.target.textContent.toLowerCase().includes("potwierdź")) {    const row = e.target.closest("tr");    if (!row) return;    const booking = {      name: row.querySelector("[data-name]")?.dataset.value || "",      email: row.querySelector("[data-email]")?.dataset.value || "",      phone: row.querySelector("[data-phone]")?.dataset.value || "",      service: row.querySelector("[data-service]")?.dataset.value || "",      date: row.querySelector("[data-date]")?.dataset.value || "",      time: row.querySelector("[data-time]")?.dataset.value || ""    };    notifyConfirm(booking);  }});</script>
+
+<script>
+// --- helpery ---
+function loadBookings(){ try{ return JSON.parse(localStorage.getItem('bookings')||'[]'); }catch{ return []; } }
+function saveBookings(a){ localStorage.setItem('bookings', JSON.stringify(a)); }
+
+// --- render potwierdzonych ---
+function renderConfirmed(){
+  const box = document.getElementById('confirmed');
+  if (!box) return;
+
+  const items = loadBookings()
+    .filter(b => String(b?.status||'').toLowerCase().startsWith('potwierdz') || String(b?.status||'').toLowerCase()==='confirmed')
+    .filter(b => b?.date && b?.time)
+    .sort((a,b) => (`${a.date}T${a.time}`).localeCompare(`${b.date}T${b.time}`));
+
+  box.innerHTML = items.map(b => {
+    const pretty = new Date(`${b.date}T${b.time}:00`).toLocaleString('pl-PL',{dateStyle:'medium', timeStyle:'short'});
+    return `
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+          <div>
+            <div><strong>${pretty}</strong></div>
+            <div>${b.service || 'Zabieg'}</div>
+            <div>${b.client?.name || ''} ${b.client?.phone ? '— ' + b.client.phone : ''}</div>
+            <div>${b.client?.email || ''}</div>
+            <div>${b.client?.address || ''}</div>
+            ${b.notes ? `<div style="opacity:.85"><em>${b.notes}</em></div>` : ''}
+          </div>
+          <span class="badge" style="background:#0a7a2f;color:#fff;border-radius:10px;padding:4px 8px">Potwierdzona</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// --- inicjalizacja i odświeżanie ---
+document.addEventListener('DOMContentLoaded', renderConfirmed);
+window.addEventListener('storage', (e)=> { if (e.key === 'bookings') renderConfirmed(); });
+
+// --- jeżeli Twój istniejący kod zmienia status na Potwierdzona, dopisz po zapisie:
+window._confirmHook = function(){
+  // wywołaj to zaraz po saveBookings([...]) w swoim handlerze "Potwierdź"
+  renderConfirmed();
+  // jeśli masz własne renderowanie "Rezerwacje" (oczekujące), odśwież też je:
+  if (window.renderPendingBookings) window.renderPendingBookings();
+};
 </script>
 </body>
 </html>
