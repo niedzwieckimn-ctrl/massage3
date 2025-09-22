@@ -255,13 +255,29 @@ function openClient(id){
     histWrap.appendChild(tr);
   }
   // Sugestie
-  const suggest=[]; if(c?.preferences?.massage) suggest.push('Preferencje: '+c.preferences.massage);
-  if(c?.preferences?.health) suggest.push('Stan zdrowia: '+c.preferences.health);
-  const last = bookings[0]?.notes; if(last) suggest.push('Ostatnia notatka: '+last);
-  const rec='Na kolejnym spotkaniu skoncentrować się na obszarach napięciowych.';
-  el('#clientSuggestion').textContent=(suggest.concat([rec])).join(' \n• ');
-  el('#clientModal').style.display='block'; el('#clientModal').dataset.id=id;
+ function generateTherapySuggestion(client){
+  const prefs = client.preferences || {};
+  const notes = client.notesGeneral || '';
+  const history = Store.get('bookings',[]).filter(b=>b.clientId===client.id);
+
+  let sug = "Zalecenia terapeutyczne:\n";
+
+  if (prefs.massage?.includes('mocny')) {
+    sug += "- Preferencja intensywnego masażu – wskazane techniki głębokie.\n";
+  }
+  if (prefs.health?.toLowerCase().includes('kręgosłup')) {
+    sug += "- Problemy kręgosłupa – uwaga na odcinek lędźwiowy, praca na prostownikach grzbietu.\n";
+  }
+  if (notes.toLowerCase().includes('kark')) {
+    sug += "- Napięcie karku – praca na m. trapezius, levator scapulae.\n";
+  }
+  if (prefs.allergies) {
+    sug += "- Uczulenia: " + prefs.allergies + " – stosować oleje hipoalergiczne.\n";
+  }
+
+  return sug;
 }
+
 function saveClient(){
   const id=el('#clientModal').dataset.id;
   let list=Store.get('clients',[]);
@@ -318,22 +334,20 @@ async function sendConfirmEmail(b){
     const whenStr = slot ? new Date(slot.when).toLocaleString('pl-PL',
                      { dateStyle:'full', timeStyle:'short' }) : '';
 
-    const html = `
-      <h2>Potwierdzenie rezerwacji</h2>
-      <p><b>Nr rezerwacji:</b> ${b.bookingNo || ''}</p>
-      <p><b>Usługa:</b> ${service.name || '-'}</p>
+      const html = `<h2>Wizyta została potwierdzona </h2>
+      <p><b>Usługa:</b> ${service.name||'-'}</p>
       <p><b>Termin:</b> ${whenStr}</p>
-      ${b.notes ? `<p><b>Uwagi klienta:</b> ${b.notes}</p>` : ''}
-      <hr>
-      <p><b>Aby wizyta była jak najbardziej komfortowa:</b></p>
-      <ul>
-        <li>Zadbaj o świeżą higienę osobistą.</li>
-        <li>Nie jedz obficie tuż przed masażem.</li>
-        <li>Nie używaj kremów tuż przed wizytą.</li>
-        <li>Poinformuj nas o ewentualnych alergiach.</li>
-      </ul>
-      <p>Do zobaczenia w Massage & SPA!</p>
-    `;
+      ${b.notes ? `<p><b>Uwagi:</b> ${b.notes}</p>` : ''}
+	  <hr>
+<p><b>Aby wizyta była dla Ciebie jak najbardziej komfortowa i efektywna, prosimy o przygotowanie się według poniższych wskazówek:</b></p>
+<ul style="margin-top:8px; margin-bottom:8px;">
+  <li>Zadbaj o świeżą higienę osobistą, aby czuć się swobodnie i zrelaksowanie.</li>
+  <li>Unikaj obfitych posiłków bezpośrednio przed masażem – dzięki temu ciało lepiej się odpręży.</li>
+  <li>Nie stosuj balsamów ani kremów tuż przed wizytą, by olejki i techniki masażu działały w pełni.</li>
+  <li>Poinformuj nas o ewentualnych alergiach, dolegliwościach lub szczególnych potrzebach – to pomoże nam zadbać o Twoje bezpieczeństwo.</li>
+</ul>
+<p>Dziękujemy za zaufanie i do zobaczenia w <b>Massage & SPA</b> 🌿</p>
+`;
 
     const r = await fetch('/.netlify/functions/send-email', {
       method:'POST',
