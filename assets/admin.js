@@ -313,10 +313,20 @@ async function sendConfirmEmail(b){
     const service = services.find(s=>s.id===b.serviceId) || {};
     if(!client.email) return false;
     const whenStr = slot ? new Date(slot.when).toLocaleString('pl-PL') : '';
-    const html = `<h2>Twoja wizyta została potwierdzona</h2>
+    const html = `<h2>Wizyta została potwierdzona </h2>
       <p><b>Usługa:</b> ${service.name||'-'}</p>
       <p><b>Termin:</b> ${whenStr}</p>
-      ${b.notes ? `<p><b>Uwagi:</b> ${b.notes}</p>` : ''}`;
+      ${b.notes ? `<p><b>Uwagi:</b> ${b.notes}</p>` : ''}
+	  <hr>
+<p><b>Aby wizyta była dla Ciebie jak najbardziej komfortowa i efektywna, prosimy o przygotowanie się według poniższych wskazówek:</b></p>
+<ul style="margin-top:8px; margin-bottom:8px;">
+  <li>Zadbaj o świeżą higienę osobistą, aby czuć się swobodnie i zrelaksowanie.</li>
+  <li>Unikaj obfitych posiłków bezpośrednio przed masażem – dzięki temu ciało lepiej się odpręży.</li>
+  <li>Nie stosuj balsamów ani kremów tuż przed wizytą, by olejki i techniki masażu działały w pełni.</li>
+  <li>Poinformuj nas o ewentualnych alergiach, dolegliwościach lub szczególnych potrzebach – to pomoże nam zadbać o Twoje bezpieczeństwo.</li>
+</ul>
+<p>Dziękujemy za zaufanie i do zobaczenia w <b>Massage & SPA</b> 🌿</p>
+`;
     const r = await fetch('/.netlify/functions/send-email', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ to: client.email, subject: `Potwierdzenie wizyty — ${whenStr}`, html })
