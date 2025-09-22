@@ -133,15 +133,21 @@ function renderSlots(){
     row.className='listItem inline';
     row.style.justifyContent='space-between';
     row.innerHTML = `<div><b>${fmtDate(s.when)}</b></div>
-      <div class='inline'><button class='btn danger' data-id='${s.id}'>Usuń</button></div>`;
+  <div class='inline'><button class='btn danger' data-id='${s.id||''}' data-when='${s.when}'>Usuń</button></div>`;
+
     list.appendChild(row);
   }
   list.onclick = (e)=>{
-    const id=e.target.dataset.id; if(!id) return;
-    let slots = Store.get('slots',[]).filter(s=>s.id!==id);
-    Store.set('slots',slots);
-    renderSlots();
-  }
+  const btn = e.target.closest('button[data-when]');
+  if(!btn) return;
+  const id = btn.dataset.id;
+  const when = btn.dataset.when;
+  let slots = Store.get('slots',[]);
+  slots = id ? slots.filter(s=>s.id!==id) : slots.filter(s=>s.when!==when);
+  Store.set('slots', slots);
+  renderSlots();
+};
+
 
   el('#addSlot').onclick = ()=>{
     const d = el('#slotDate').value;
