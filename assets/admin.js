@@ -254,8 +254,7 @@ function openClient(id){
     tr.innerHTML=`<td>${fmtDate(b.createdAt)}</td><td>${srv.name}</td><td>${b.notes||''}</td><td>${b.status||''}</td>`;
     histWrap.appendChild(tr);
   }
-  // Sugestie
- function generateTherapySuggestion(client){
+  function generateTherapySuggestion(client){
   const prefs = client.preferences || {};
   const notes = client.notesGeneral || '';
   const history = Store.get('bookings',[]).filter(b=>b.clientId===client.id);
@@ -278,6 +277,14 @@ function openClient(id){
   return sug;
 }
 
+  // Sugestie
+  const suggest=[]; if(c?.preferences?.massage) suggest.push('Preferencje: '+c.preferences.massage);
+  if(c?.preferences?.health) suggest.push('Stan zdrowia: '+c.preferences.health);
+  const last = bookings[0]?.notes; if(last) suggest.push('Ostatnia notatka: '+last);
+  const rec='Na kolejnym spotkaniu skoncentrować się na obszarach napięciowych.';
+  el('#clientSuggestion').textContent=(suggest.concat([rec])).join(' \n• ');
+  el('#clientModal').style.display='block'; el('#clientModal').dataset.id=id;
+}
 function saveClient(){
   const id=el('#clientModal').dataset.id;
   let list=Store.get('clients',[]);
