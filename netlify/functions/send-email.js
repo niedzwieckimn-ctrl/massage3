@@ -1,18 +1,13 @@
 export async function handler(event) {
   try {
     const { to, subject, html } = JSON.parse(event.body || '{}');
-    if (!subject || !html) {
-      return { statusCode: 400, body: 'Missing fields' };
-    }
+    if (!subject || !html) return { statusCode: 400, body: 'Missing fields' };
 
-    // pozwól podać 1 adres lub tablicę oraz specjalny znacznik 'THERAPIST'
-    const input = Array.isArray(to) ? to : [to];
-    const recipients = (input.filter(Boolean).map(a =>
-      a === 'THERAPIST' ? process.env.THERAPIST_EMAIL : a
-    )).filter(Boolean);
-
-    // awaryjnie – jeśli nie podano 'to', wyślij przynajmniej do terapeuty
-    if (!recipients.length) recipients.push(process.env.THERAPIST_EMAIL);
+    // przyjmij 1 adres lub tablicę; 'THERAPIST' zamień na env
+    const input = Array.isArray(to) ? to : [to].filter(Boolean);
+    const recipients = (input.length ? input : ['THERAPIST'])
+      .map(a => a === 'THERAPIST' ? process.env.THERAPIST_EMAIL : a)
+      .filter(Boolean);
 
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -27,11 +22,7 @@ export async function handler(event) {
         html
       })
     });
-
-    if (!r.ok) {
-      const text = await r.text();
-      return { statusCode: r.status, body: text };
-    }
+    if (!r.ok) return { statusCode: r.status, body: await r.text() };
     return { statusCode: 200, body: 'OK' };
   } catch (err) {
     return { statusCode: 500, body: 'Server error: ' + err.message };

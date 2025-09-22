@@ -277,14 +277,6 @@ function openClient(id){
   return sug;
 }
 
-  // Sugestie
-  const suggest=[]; if(c?.preferences?.massage) suggest.push('Preferencje: '+c.preferences.massage);
-  if(c?.preferences?.health) suggest.push('Stan zdrowia: '+c.preferences.health);
-  const last = bookings[0]?.notes; if(last) suggest.push('Ostatnia notatka: '+last);
-  const rec='Na kolejnym spotkaniu skoncentrować się na obszarach napięciowych.';
-  el('#clientSuggestion').textContent=(suggest.concat([rec])).join(' \n• ');
-  el('#clientModal').style.display='block'; el('#clientModal').dataset.id=id;
-}
 function saveClient(){
   const id=el('#clientModal').dataset.id;
   let list=Store.get('clients',[]);
