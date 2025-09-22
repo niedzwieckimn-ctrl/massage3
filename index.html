@@ -70,115 +70,77 @@
 <script src="assets/app.js"></script><script>(function(){  var DATE_SELECTORS=['#date','#bookingDate','#dateInput','input[name="date"]'];  var TIME_SELECTORS=['#time','#bookingTime','#timeSelect','select[name="time"]'];  function $(list){for(var i=0;i<list.length;i++){var el=document.querySelector(list[i]);if(el)return el}return null}  function injectCSS(css){var s=document.createElement('style');s.textContent=css;document.head.appendChild(s)}  function loadScript(src,cb){var s=document.createElement('script');s.src=src;s.onload=cb;document.head.appendChild(s)}  function loadCSS(href){var l=document.createElement('link');l.rel='stylesheet';l.href=href;document.head.appendChild(l)}  function parseSlots(){    var out=[];function add(d,t){if(!d||!t)return;if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return;if(!/^\d{2}:\d{2}$/.test(t))return;out.push({date:d,time:t})}    for(var i=0;i<localStorage.length;i++){      var k=localStorage.key(i),v=null;try{v=JSON.parse(localStorage.getItem(k))}catch(e){v=null} if(!v)continue;      if(Array.isArray(v)&&v.length){        if(typeof v[0]==='object'&&'date'in v[0]&&'time'in v[0]){v.forEach(function(x){add(x.date,x.time)});continue}        if(typeof v[0]==='string'){v.forEach(function(s){var m=s.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})$/);if(m)add(m[1],m[2])});continue}      }      if(v&&typeof v==='object'){        if(Array.isArray(v.slots)){v.slots.forEach(function(x){add(x.date,x.time)});continue}        var keys=Object.keys(v),used=false;        for(var j=0;j<keys.length;j++){var key=keys[j];if(/^\d{4}-\d{2}-\d{2}$/.test(key)&&Array.isArray(v[key])){v[key].forEach(function(t){add(key,String(t).slice(0,5))});used=true}}        if(used)continue;      }    }    return out;  }  function init(){    var dateEl=$(DATE_SELECTORS),timeEl=$(TIME_SELECTORS); if(!dateEl||!timeEl)return;    var slots=parseSlots(),days={}; slots.forEach(function(s){(days[s.date]||(days[s.date]=[])).includes(s.time)||days[s.date].push(s.time)});    var enabledDates=Object.keys(days);    if(typeof flatpickr!=='function'){console.warn('flatpickr not loaded');return}    flatpickr(dateEl,{      dateFormat:'Y-m-d',disableMobile:true,enable:enabledDates,      onDayCreate:function(_1,_2,_3,dayElem){        var y=dayElem.dateObj.getFullYear(),m=('0'+(dayElem.dateObj.getMonth()+1)).slice(-2),d=('0'+dayElem.dateObj.getDate()).slice(-2);        var key=y+'-'+m+'-'+d; if(days[key]) dayElem.classList.add('fp-has-slots');      },      onChange:function(selected){var sel=selected&&selected[0]; if(!sel)return;        var y=sel.getFullYear(),m=('0'+(sel.getMonth()+1)).slice(-2),d=('0'+sel.getDate()).slice(-2); var key=y+'-'+m+'-'+d;        while(timeEl.firstChild) timeEl.removeChild(timeEl.firstChild);        var times=(days[key]||[]).slice().sort();        if(!times.length){var o=document.createElement('option');o.value='';o.textContent='Brak wolnych godzin';o.disabled=true;o.selected=true;timeEl.appendChild(o);timeEl.disabled=true;return}        var ph=document.createElement('option');ph.value='';ph.textContent='Wybierz godzinę…';timeEl.appendChild(ph);        times.forEach(function(t){var o=document.createElement('option');o.value=t;o.textContent=t;timeEl.appendChild(o)}); timeEl.disabled=false;      }    });    injectCSS('.flatpickr-day.fp-has-slots{box-shadow:inset 0 0 0 2px rgba(72,222,151,.9);border-radius:8px}.flatpickr-day.fp-has-slots:hover{background:rgba(72,222,151,.15)}');  }  function boot(){    if(typeof flatpickr==='function'){init()}    else{loadCSS('https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css');loadScript('https://cdn.jsdelivr.net/npm/flatpickr',init)}  }  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();})();</script>
 <script>
 (function(){
-  // --- 0) Mały pasek diagnostyczny (zobaczysz co się dzieje) ---
-  function banner(msg){
-    var b=document.getElementById('diagBanner');
-    if(!b){ b=document.createElement('div'); b.id='diagBanner';
-      b.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;background:#0f1726;color:#cbe7ff;border:1px solid #2a3b5f;padding:8px 10px;border-radius:10px;font:12px/1.4 system-ui,Arial;z-index:9999';
-      document.body.appendChild(b);
-    }
-    b.textContent=msg;
-  }
+  const dateEl = document.getElementById('date');
+  const timeEl = document.getElementById('time');
+  if(!dateEl || !timeEl) return;
 
-  // --- 1) Znajdź pola (próbujemy kilka wariantów ID/nazw) ---
-  function pick(selArr){ for(var i=0;i<selArr.length;i++){ var el=document.querySelector(selArr[i]); if(el) return el; } }
-  var dateEl = pick(['#date','#bookingDate','#dateInput','input[name="date"]','input[type="date"]']);
-  var timeEl = pick(['#time','#bookingTime','#timeSelect','select[name="time"]','select']);
-  if(!dateEl || !timeEl){ banner('Brak pól daty/godziny – sprawdź ID'); return; }
+  function buildMap(){
+    const slots    = Store.get('slots',[]) || [];
+    const bookings = Store.get('bookings',[]) || [];
+    const taken = new Set(bookings.map(b=>b.slotId));
+    const free = slots.filter(s=>!taken.has(s.id));
 
-  // --- 2) Wczytaj wolne terminy z różnych kluczy i ujednolić ---
-  var CANDIDATE_KEYS = ['FREE_SLOTS_V2','FREE_SLOTS','slots','freeSlotsISO'];
-  function loadSlotsAny(){
-    var best=[], bestKey='';
-    CANDIDATE_KEYS.forEach(function(k){
-      try{
-        var raw = localStorage.getItem(k); if(!raw) return;
-        var arr = JSON.parse(raw); if(!Array.isArray(arr)) return;
-        var norm=[];
-        arr.forEach(function(x){
-          if(!x) return;
-          if(typeof x==='string'){ // "YYYY-MM-DD HH:MM"
-            var m=x.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})$/);
-            if(m) norm.push({date:m[1], time:m[2]});
-          } else if (x.date && x.time){ // {date,time}
-            norm.push({date:String(x.date), time:String(x.time).slice(0,5)});
-          }
-        });
-        if(norm.length>best.length){ best=norm; bestKey=k; }
-      }catch(e){}
+    const map = {};
+    free.forEach(s=>{
+      const d=new Date(s.when); if(isNaN(d)) return;
+      const key=d.toISOString().slice(0,10);
+      (map[key] ||= []).push(s);
     });
-    // sort
-    best.sort(function(a,b){return (a.date+a.time).localeCompare(b.date+b.time)});
-    return {slots:best, key:bestKey||'(brak)'};
+    Object.keys(map).forEach(k=> map[k].sort((a,b)=> new Date(a.when)-new Date(b.when)));
+    return map;
   }
 
-  var res = loadSlotsAny();
-  var SLOTS = res.slots;
-  banner('Znaleziono sloty: '+SLOTS.length+' (klucz: '+res.key+')');
-
-  // zbuduj mapę: "YYYY-MM-DD" -> ["HH:MM",...]
-  var map={};
-  SLOTS.forEach(function(s){ (map[s.date]||(map[s.date]=[])).push(s.time); });
-  Object.keys(map).forEach(function(d){ map[d]=Array.from(new Set(map[d])).sort(); });
-
-  // helper do wypełniania godzin
-  function fillTimes(dateStr){
+  function fillTimes(dateStr,map){
     timeEl.innerHTML='';
-    var times = map[dateStr]||[];
-    if(!times.length){
-      var o=document.createElement('option'); o.text='Brak wolnych godzin'; o.value=''; o.disabled=true; o.selected=true;
+    const arr = map[dateStr]||[];
+    if(!arr.length){
+      const o=document.createElement('option'); o.value=''; o.text='Brak wolnych godzin'; o.disabled=true; o.selected=true;
       timeEl.appendChild(o); timeEl.disabled=true; return;
     }
-    var ph=document.createElement('option'); ph.text='Wybierz godzinę…'; ph.value=''; ph.disabled=true; ph.selected=true;
+    const ph=document.createElement('option'); ph.value=''; ph.text='Wybierz godzinę…'; ph.disabled=true; ph.selected=true;
     timeEl.appendChild(ph);
-    times.forEach(function(t){ var o=document.createElement('option'); o.value=t; o.text=t; timeEl.appendChild(o); });
+    arr.forEach(s=>{
+      const o=document.createElement('option');
+      o.value=s.id; // WAŻNE: id slota
+      o.textContent=new Date(s.when).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
+      timeEl.appendChild(o);
+    });
     timeEl.disabled=false;
   }
-  // placeholder na start
-  (function(){ timeEl.innerHTML=''; var o=document.createElement('option'); o.text='Najpierw wybierz datę…'; o.value=''; o.disabled=true; o.selected=true; timeEl.appendChild(o); timeEl.disabled=true; })();
 
-  // --- 3) Flatpickr jeśli jest/jeśli nie – natywny fallback ---
-  function fmt(d){var z=n=>('0'+n).slice(-2); return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());}
-  var enabledDays = Object.keys(map); // ["YYYY-MM-DD",...]
+  function fmt(d){const z=n=>('0'+n).slice(-2); return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());}
 
-  function attachNative(){
-    // walidacja po wyborze (akceptuj tylko dni z mapy)
-    dateEl.addEventListener('change', function(){
-      var val = dateEl.value;
-      if(!map[val]){ alert('Brak wolnych terminów w tym dniu. Wybierz inny.'); dateEl.value=''; timeEl.innerHTML=''; var o=document.createElement('option'); o.text='Najpierw wybierz datę…'; o.value=''; o.disabled=true; o.selected=true; timeEl.appendChild(o); timeEl.disabled=true; return; }
-      fillTimes(val);
-    });
-   
+  function init(){
+    const map=buildMap();
+    if(typeof flatpickr==='function'){
+      window.fp=flatpickr(dateEl,{
+        dateFormat:'Y-m-d',
+        disableMobile:true,
+        enable:Object.keys(map),
+        onChange:(_,str)=>{ if(str) fillTimes(str,map); },
+        onDayCreate:(_,__,___,dayElem)=>{
+          const d=fmt(dayElem.dateObj); if(map[d]) dayElem.classList.add('has-slot');
+        }
+      });
+      const days=Object.keys(map);
+      if(days.length){ window.fp.setDate(days[0],true); fillTimes(days[0],map); }
+      const s=document.createElement('style');
+      s.textContent='.flatpickr-day.has-slot{box-shadow:inset 0 0 0 2px rgba(99,255,185,.9);border-radius:8px}';
+      document.head.appendChild(s);
+    } else {
+      dateEl.addEventListener('change',()=>fillTimes(dateEl.value,map));
+    }
   }
 
-  function attachFlatpickr(){
-    var fp = flatpickr(dateEl, {
-      dateFormat:'Y-m-d',
-      disableMobile:true,
-      enable: function(date){ return !!map[fmt(date)]; },
-      onChange: function(dates, str){ if(str) fillTimes(str); },
-      onDayCreate: function(_,__,___,dayElem){
-        var d = fmt(dayElem.dateObj);
-        if(map[d]) dayElem.classList.add('has-slot');
-      }
-    });
-    // auto-set pierwszego dostępnego dnia
-    if(enabledDays.length){ fp.setDate(enabledDays[0], true); fillTimes(enabledDays[0]); }
-    // delikatny styl
-    var css='.flatpickr-day.has-slot{box-shadow:inset 0 0 0 2px rgba(99,255,185,.9);border-radius:8px}';
-    var s=document.createElement('style'); s.textContent=css; document.head.appendChild(s);
-    banner('Tryb: flatpickr (dni z dostępnością podświetlone)');
-  }
+  function refresh(){ init(); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',refresh); else refresh();
 
-  function boot(){
-    if(SLOTS.length===0){ banner('Brak wolnych terminów!'); attachNative(); return; }
-    if(typeof flatpickr==='function'){ attachFlatpickr(); }
-    else { attachNative(); }
-  }
-
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  window.addEventListener('storage',(e)=>{
+    if(e.key==='slots' || e.key==='bookings') refresh();
+  });
 })();
 </script>
+
 <!-- Poprawny baner "dziękujemy" (poza <script>) -->
 <style>
 #bookingThanks {
