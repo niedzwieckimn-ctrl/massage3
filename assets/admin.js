@@ -270,7 +270,7 @@ function saveClient(){
     email:el('#cEmail').value.trim(),
     phone:el('#cPhone').value.trim(),
     address:el('#cAddress').value.trim(),
-    notesGeneral:el('#cNotes').value.trim(),
+    notesGeneral:el('#cUwagi').value.trim(),
     preferences:{
       allergies:el('#cPrefAll').value.trim(),
       massage:el('#cPrefMassage').value.trim(),
