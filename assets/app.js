@@ -143,7 +143,10 @@ function handleSubmit(e){
   // podsumowanie dla klienta (alert + baner)
   const services = getServices();
   const service  = services.find(s=>s.id===serviceId) || {name:'Usługa', price:0};
-  const slot     = (Store.get('slots',[])||[]).find(s=>s.id===slotId);
+  const slot    = (Store.get('slots',[])||[]).find(s=>s.id===slotId);
+  const whenStr = slot ? new Date(slot.when).toLocaleString('pl-PL',
+  { dateStyle:'full', timeStyle:'short' }) : '(brak)';
+
   const msg = [
     `Dziękujemy za rezerwację w Massage & SPA!`,
     
@@ -161,6 +164,7 @@ function handleSubmit(e){
       const html = `
   <h2>Nowa rezerwacja</h2>
   <p><b>Nr rezerwacji:</b> ${bookingNo}</p>
+  <p><b>Termin:</b> ${whenStr}</p>
   <p><b>Zabieg:</b> ${service.name}</p>
   <p><b>Klient:</b> ${name}</p>
   <p><b>Adres / kontakt:</b><br>
