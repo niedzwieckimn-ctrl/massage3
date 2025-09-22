@@ -128,15 +128,18 @@ function handleSubmit(e){
   Store.set('clients', clients);
 
   // zapis rezerwacji
-  const booking = {
-    id: Store.uid(),
-    clientId: client.id,
-    serviceId,
-    slotId,
-    notes,
-    createdAt: new Date().toISOString(),
-    status: 'Oczekująca'
-	bookingNo: bookingNo,  // nasz 5-cyfrowy numer
+  const bookingNo = Math.floor(10000 + Math.random() * 90000); // np. 58392
+
+const booking = {
+  id: Store.uid(),
+  clientId: client.id,
+  serviceId,
+  slotId,
+  notes,
+  createdAt: new Date().toISOString(),
+  status: 'Oczekująca',
+  bookingNo: bookingNo   // ← dopisane
+};
 
   };
   bookings.push(booking);
@@ -148,14 +151,12 @@ function handleSubmit(e){
   const slot     = (Store.get('slots',[])||[]).find(s=>s.id===slotId);
   const msg = [
     `Dziękujemy za rezerwację w Massage & SPA!`,
-    `Termin: ${slot ? fmtDate(slot.when) : '—'}`,
-    `Usługa: ${service.name} — ${fmtMoney(service.price)}`,
-    ``,
+   
     `Po weryfikacji potwierdzimy termin e-mailem.`,
   ].join('\n');
   alert(msg);
   const thanks = document.getElementById('bookingThanks');
-  if (thanks) { thanks.classList.add('show'); setTimeout(()=>thanks.classList.remove('show'), 2600); }
+  if (thanks) { thanks.classList.add('show'); setTimeout(()=>thanks.classList.remove('show'), 4000); }
 
   // e-mail do masażystki (nie blokuje procesu przy błędzie)
   (async ()=>{
