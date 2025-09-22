@@ -151,7 +151,7 @@ function handleSubmit(e){
   ].join('\n');
   alert(msg);
   const thanks = document.getElementById('bookingThanks');
-  if (thanks) { thanks.classList.add('show'); setTimeout(()=>thanks.classList.remove('show'), 2600); }
+  if (thanks) { thanks.classList.add('show'); setTimeout(()=>thanks.classList.remove('show'), 4000); }
 
   // e-mail do masażystki (nie blokuje procesu przy błędzie)
   (async ()=>{
