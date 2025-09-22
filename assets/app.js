@@ -2,7 +2,7 @@ function el(sel,root=document){ return root.querySelector(sel); }
 function fmtMoney(v){return new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(v);}
 function fmtDate(d){return new Date(d).toLocaleString('pl-PL',{dateStyle:'medium', timeStyle:'short'});}
 
-const services = Store.get('services',[]);
+const getservices = () =>Store.get('services',[]);
 const settings = Store.get('settings',{});
 // --- e-mail (Netlify Function)
 const SEND_ENDPOINT = '/.netlify/functions/send-email';
@@ -19,8 +19,15 @@ async function sendEmail({to, subject, html}) {
 function renderServices(){
   const select = el('#service');
   if(!select) return;
+  const services = getServices();
+  if(!services.length){
+    select.innerHTML = '<option value="">Brak usług – dodaj w panelu</option>';
+    select.disabled = true; return;
+  }
+  select.disabled = false;
   select.innerHTML = services.map(s=>`<option value="${s.id}">${s.name} — ${fmtMoney(s.price)}</option>`).join('');
 }
+
 
 // --- wolne godziny dla dnia (spójne z Admin: slots = [{id,when}])
 function availableTimesFor(dateStr){
@@ -71,6 +78,8 @@ function handleSubmit(e){
   const serviceId = el('#service').value;
   const slotId    = el('#time').value;
   const notes  = el('#notes').value.trim();
+  const services = getServices();
+  const service = services.find(s=>s.id===serviceId) || {name:'Usługa', price:0};
 
   if(!rodo){ alert('Musisz wyrazić zgodę RODO.'); return; }
   if(!name || !email || !phone || !serviceId || !slotId){
