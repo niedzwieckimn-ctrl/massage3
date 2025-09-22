@@ -254,29 +254,15 @@ function openClient(id){
     tr.innerHTML=`<td>${fmtDate(b.createdAt)}</td><td>${srv.name}</td><td>${b.notes||''}</td><td>${b.status||''}</td>`;
     histWrap.appendChild(tr);
   }
-  function generateTherapySuggestion(client){
-  const prefs = client.preferences || {};
-  const notes = client.notesGeneral || '';
-  const history = Store.get('bookings',[]).filter(b=>b.clientId===client.id);
-
-  let sug = "Zalecenia terapeutyczne:\n";
-
-  if (prefs.massage?.includes('mocny')) {
-    sug += "- Preferencja intensywnego masażu – wskazane techniki głębokie.\n";
-  }
-  if (prefs.health?.toLowerCase().includes('kręgosłup')) {
-    sug += "- Problemy kręgosłupa – uwaga na odcinek lędźwiowy, praca na prostownikach grzbietu.\n";
-  }
-  if (notes.toLowerCase().includes('kark')) {
-    sug += "- Napięcie karku – praca na m. trapezius, levator scapulae.\n";
-  }
-  if (prefs.allergies) {
-    sug += "- Uczulenia: " + prefs.allergies + " – stosować oleje hipoalergiczne.\n";
-  }
-
-  return sug;
+  
+  // Sugestie
+  const suggest=[]; if(c?.preferences?.massage) suggest.push('Preferencje: '+c.preferences.massage);
+  if(c?.preferences?.health) suggest.push('Stan zdrowia: '+c.preferences.health);
+  const last = bookings[0]?.notes; if(last) suggest.push('Ostatnia notatka: '+last);
+  const rec='Na kolejnym spotkaniu skoncentrować się na obszarach napięciowych.';
+  el('#clientSuggestion').textContent=(suggest.concat([rec])).join(' \n• ');
+  el('#clientModal').style.display='block'; el('#clientModal').dataset.id=id;
 }
-
 function saveClient(){
   const id=el('#clientModal').dataset.id;
   let list=Store.get('clients',[]);
