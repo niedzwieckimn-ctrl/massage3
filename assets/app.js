@@ -90,6 +90,8 @@ async function sendEmail({to, subject, html}) {
 // --- submit rezerwacji
 function handleSubmit(e){
   e.preventDefault();
+  const bookingNo = Math.floor(10000 + Math.random() * 90000); // np. 48392
+
 
   const rodo    = el('#rodo').checked;
   const name    = el('#name').value.trim();
@@ -159,13 +161,18 @@ function handleSubmit(e){
       const to = (Store.get('settings',{}).contactEmail) || 'massage.n.spa@gmail.com';
       const whenStr = slot ? new Date(slot.when).toLocaleString('pl-PL') : '(brak)';
       const html = `
-        <h2>Nowa rezerwacja</h2>
-        <p><b>Termin:</b> ${whenStr}</p>
-        <p><b>Usługa:</b> ${service.name}</p>
-        <p><b>Klient:</b> ${name} &lt;${email}&gt;, tel. ${phone}</p>
-        ${address ? `<p><b>Adres:</b> ${address}</p>` : ''}
-        ${notes ? `<p><b>Uwagi klienta:</b> ${notes}</p>` : ''}
-      `;
+  <h2>Nowa rezerwacja</h2>
+  <p><b>Nr rezerwacji:</b> ${bookingNo}</p>
+  <p><b>Zabieg:</b> ${service.name}</p>
+  <p><b>Klient:</b> ${name}</p>
+  <p><b>Adres / kontakt:</b><br>
+     ${address}<br>
+     Tel: ${phone}<br>
+     Email: ${email}
+  </p>
+  ${notes ? `<p><b>Uwagi:</b> ${notes}</p>` : ''}
+`;
+
       await sendEmail({ subject:`Nowa rezerwacja — ${whenStr}`, html });
     }catch(err){
       console.warn('Nie wysłano e-maila do masażystki:', err);
