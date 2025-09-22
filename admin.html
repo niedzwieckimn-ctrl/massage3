@@ -48,7 +48,7 @@
       <div class="card tabpane" data-pane="dashboard">
         <h2>Nie potwierdzone Rezerwacje</h2>
         <div id="upcoming" class="grid"></div>
-	  <div class="card tabpane" data-pane="dashboard">
+      <div class="card tabpane" data-pane="dashboard">
         </div><h2>Potwierdzone rezerwacje</h2>
         <div id="confirmed"></div>
 
@@ -172,6 +172,16 @@
   <script src="assets/store.js"></script>
   <script src="assets/admin.js"></script>
   <script>
+    // tab switching
+    const tabs = document.querySelectorAll('.tabbar .tab');
+    const panes = document.querySelectorAll('.tabpane');
+    tabs.forEach(t=> t.addEventListener('click', ()=>{
+      tabs.forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      const id = t.dataset.tab;
+      panes.forEach(p=> p.style.display = (p.dataset.pane===id)?'block':'none');
+    }));
+  </script><script>
 (function(){
   const dateEl = document.getElementById('slotDate')   || document.getElementById('adminDate');
   const timeEl = document.getElementById('slotTime')   || document.getElementById('adminTime');
