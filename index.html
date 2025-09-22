@@ -171,7 +171,7 @@
   }
 
   function boot(){
-    if(SLOTS.length===0){ banner('Brak zapisanych terminów. Dodaj w panelu admin na tej samej domenie.'); attachNative(); return; }
+    if(SLOTS.length===0){ banner('Brak wolnych terminów!'); attachNative(); return; }
     if(typeof flatpickr==='function'){ attachFlatpickr(); }
     else { attachNative(); }
   }

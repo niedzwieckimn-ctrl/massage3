@@ -55,19 +55,20 @@ function renderUpcoming(){
   for(const it of items){
     const card = document.createElement('div');
     card.className='listItem';
-   card.innerHTML = `
+    const whenStr = new Date(it.when).toLocaleString('pl-PL');
+    card.innerHTML = `
   <div class="inline" style="justify-content:space-between">
     <div>
-      <strong>${whenStr}</strong> — ${client.name || '—'}
+      <strong>${whenStr}</strong> — ${it.clientName || '—'}
     </div>
     <div>
-      <span class="badge">${b.status || 'Oczekująca'}</span>
-      <button class="btn small ghost" data-act="details" data-id="${b.id}">Szczegóły</button>
-      <button class="btn small success" data-act="confirm" data-id="${b.id}">Potwierdź</button>
-      <button class="btn small danger" data-act="delete" data-id="${b.id}">Usuń</button>
+      <span class="badge">${it.status || 'Oczekująca'}</span>
+      <button class="btn small ghost" data-act="details" data-id="${it.id}">Szczegóły</button>
+      <button class="btn small success" data-act="confirm" data-id="${it.id}">Potwierdź</button>
+      <button class="btn small danger" data-act="delete" data-id="${it.id}">Usuń</button>
     </div>
-  </div>
-`;
+  </div>`;
+
 
     wrap.appendChild(card);
   }
@@ -76,7 +77,7 @@ function renderUpcoming(){
     const act = e.target.dataset.act;
     if(!id) return;
     let bookings = Store.get('bookings',[]);
-    if(act==='delBooking'){
+    if(act==='delete'){
       bookings = bookings.filter(b=>b.id!==id);
       Store.set('bookings',bookings);
       renderAll();
@@ -88,41 +89,40 @@ function renderUpcoming(){
     }
   };
 }
-function renderConfirmed() {
-  const bookings = Store.get('bookings', [])
-    .filter(b => b.status === 'Potwierdzona')
-    .sort((a, b) => new Date(a.when) - new Date(b.when));
+function renderConfirmed(){
+  const bookings = Store.get('bookings',[]);
+  const slots     = Store.get('slots',[]);
+  const services  = Store.get('services',[]);
+  const clients   = Store.get('clients',[]);
 
-  const slots = Store.get('slots', []);
-  const services = Store.get('services', []);
-  const clients = Store.get('clients', []);
+  const items = bookings
+    .filter(b => (b.status || '').toLowerCase().includes('potwierdz'))
+    .map(b => {
+      const slot = slots.find(s=>s.id===b.slotId) || {};
+      const service = services.find(s=>s.id===b.serviceId) || {};
+      const client = clients.find(c=>c.id===b.clientId) || {};
+      return {...b, when: slot.when, serviceName: service.name, clientName: client.name};
+    })
+    .filter(it => !!it.when)
+    .sort((a,b)=> new Date(a.when) - new Date(b.when));
 
   const wrap = el('#confirmed');
-  wrap.innerHTML = bookings.length ? '' : '<div class="notice">Brak potwierdzonych rezerwacji.</div>';
+  wrap.innerHTML = items.length ? '' : '<div class="notice">Brak potwierdzonych rezerwacji.</div>';
 
-  for (const b of bookings) {
-    const slot = slots.find(s => s.id === b.slotId);
-    const service = services.find(s => s.id === b.serviceId) || {};
-    const client = clients.find(c => c.id === b.clientId) || {};
-
-    const whenStr = slot ? new Date(slot.when).toLocaleString('pl-PL') : '—';
-
+  for(const it of items){
+    const whenStr = new Date(it.when).toLocaleString('pl-PL');
     const card = document.createElement('div');
-    card.className = 'listItem';
+    card.className='listItem';
     card.innerHTML = `
       <div class="inline" style="justify-content:space-between">
-        <div>
-          <strong>${whenStr}</strong> — ${client.name || '—'}
-        </div>
-        <div>
-          <span class="badge success">Potwierdzona</span>
-          <button class="btn small ghost" data-act="details" data-id="${b.id}">Szczegóły</button>
-        </div>
-      </div>
-    `;
+        <div><strong>${whenStr}</strong> — ${it.clientName || '—'}</div>
+        <div><span class="badge success">Potwierdzona</span>
+             <button class="btn small ghost" data-act="details" data-id="${it.id}">Szczegóły</button></div>
+      </div>`;
     wrap.appendChild(card);
   }
 }
+
 
 function renderSlots(){
   const list = el('#slotsList');
@@ -299,138 +299,4 @@ document.addEventListener('DOMContentLoaded', ()=>{
   requireAuth();
 });
 
-    const inner = (typeof b.detailsHtml === 'string' && b.detailsHtml.trim()) ? b.detailsHtml : fallback;
-
-    root.innerHTML = `
-      <div class="adm-modal" role="dialog" aria-modal="true">
-        <header>Szczegóły rezerwacji</header>
-        <div class="content">${inner}</div>
-        <div class="actions"><button class="btn" data-close>Zamknij</button></div>
-      </div>`;
-    root.style.display = 'flex';
-    const onClick = (e)=>{
-      if (e.target === root || e.target.closest('[data-close]')) {
-        root.style.display = 'none'; root.innerHTML = ''; root.removeEventListener('click', onClick);
-      }
-    };
-    root.addEventListener('click', onClick);
-  }
-
-  // ------ Wysyłka maila do klienta po potwierdzeniu
-  async function sendConfirmEmail(b){
-    try{
-      const pretty = prettyDate(b);
-      const html = b.detailsHtml || `
-        <h2>Twoja wizyta została potwierdzona</h2>
-        <p><b>Usługa:</b> ${b.service||'-'}</p>
-        <p><b>Termin:</b> ${pretty}</p>
-        ${b.notes ? `<p><b>Uwagi:</b> ${b.notes}</p>` : ''}
-      `;
-      const payload = { to: b.client?.email || '', subject: `Potwierdzenie wizyty — ${pretty}`, html };
-      const r = await fetch('/.netlify/functions/send-email', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(payload)
-      });
-      return r.ok;
-    }catch(_){ return false; }
-  }
-
-  // ------ Delegacja klików
-  document.addEventListener('click', async (e)=>{
-    // usuwanie slotu (Wolne terminy)
-    const rm = e.target.closest('[data-act="remove-slot"]');
-    if (rm){
-      removeSlot(rm.dataset.date, rm.dataset.time);
-      renderSlotsUI();
-      return;
-    }
-
-    const btn = e.target.closest('[data-action]');
-    if (!btn) return;
-
-    const id = btn.dataset.id;
-    const all = loadBookings();
-    const i = all.findIndex(b => String(b.id) === String(id));
-    if (i < 0) return;
-
-    if (btn.dataset.action === 'details'){
-      showBookingDetails(all[i]);
-      return;
-    }
-
-    if (btn.dataset.action === 'delete'){
-      if (!confirm('Usunąć rezerwację?')) return;
-      const b = all[i];
-      all.splice(i,1);
-      saveBookings(all);
-      // (opcjonalnie) przywróć slot jeśli usuwamy niepotwierdzoną
-      if ((b.status||'') !== 'Potwierdzona' && b.date && b.time){
-        const arr = loadSlotsArr();
-        if (!arr.some(s=>s.date===b.date && s.time===b.time)){
-          arr.push({date:b.date, time:b.time});
-          saveSlotsFromArr(arr);
-        }
-      }
-      renderAll();
-      return;
-    }
-
-    if (btn.dataset.action === 'confirm'){
-      const b = all[i];
-
-      // uzupełnij datę/godzinę jeśli brakuje (np. przyszło tylko "when")
-      if (!b.date || !b.time){
-        const cand = b.when || b.startDateTime || (b.slot && b.slot.when) || null;
-        if (cand){
-          const d = new Date(cand);
-          if (!Number.isNaN(d.getTime())){
-            b.date = d.toISOString().slice(0,10);
-            b.time = d.toTimeString().slice(0,5);
-          }
-        }
-      }
-
-      b.status = 'Potwierdzona';
-      b.confirmedAt = new Date().toISOString();
-      all[i] = b;
-      saveBookings(all);
-
-      // zdejmij slot z Wolnych terminów
-      if (b.date && b.time) removeSlot(b.date, b.time);
-
-      const ok = await sendConfirmEmail(b);
-      (window.showSuccess || window.alert)( ok
-        ? 'Potwierdzono i wysłano e-mail do klienta.'
-        : 'Potwierdzono. Wysyłka e-mail do klienta nie powiodła się.'
-      );
-
-      renderAll();
-      return;
-    }
-  });
-
-  // ------ Add slot (Wolne Terminy)
-  btnAddSlot && btnAddSlot.addEventListener('click', ()=>{
-    const d = (elSlotDate?.value || '').trim();
-    const t = (elSlotTime?.value || '').trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !/^\d{2}:\d{2}$/.test(t)) {
-      (window.showError || window.alert)('Wybierz poprawną datę i godzinę.');
-      return;
-    }
-    const arr = loadSlotsArr();
-    if (arr.some(s=>s.date===d && s.time===t)){
-      (window.showWarn || window.alert)('Taki termin już istnieje.');
-      return;
-    }
-    arr.push({date:d, time:t});
-    saveSlotsFromArr(arr);
-    renderSlotsUI();
-  });
-
-  // ------ Init
-  document.addEventListener('DOMContentLoaded', renderAll);
-  window.addEventListener('storage', (e)=>{
-    if ([KEY_BOOKINGS, KEY_SLOTS_MAP, KEY_SLOTS_ARR, 'FREE_SLOTS_V2'].includes(e.key)) renderAll();
-  });
-})();
+   
