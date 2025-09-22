@@ -150,7 +150,16 @@
 })();
 </script>
 <!-- Poprawny baner "dziękujemy" (poza <script>) -->
-
+<style>
+#bookingThanks {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  background: #fff; color:#000; border:2px solid #000;
+  padding: 14px 18px; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  display:none; z-index: 9999; text-align:center;
+}
+#bookingThanks.show { display:block; animation: fadein .18s ease-out; }
+@keyframes fadein { from { opacity:0; transform: translateX(-50%) translateY(6px);} to { opacity:1; transform: translateX(-50%) translateY(0);} }
+</style>
 <div id="bookingThanks">Dziękujemy za dokonanie rezerwacji, poczekaj na jej potwierdzenie!</div>
 
 

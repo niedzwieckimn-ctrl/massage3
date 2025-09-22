@@ -90,18 +90,18 @@ async function sendEmail({to, subject, html}) {
 function handleSubmit(e){
   e.preventDefault();
 
-  // 5-cyfrowy numer rezerwacji
+  // numer rezerwacji (5 cyfr)
   const bookingNo = Math.floor(10000 + Math.random() * 90000);
 
   // pola formularza
-  const rodo     = el('#rodo').checked;
-  const name     = el('#name').value.trim();
-  const email    = el('#email').value.trim();
-  const phone    = el('#phone').value.trim();
-  const address  = el('#address').value.trim();
-  const serviceId= el('#service').value;
-  const slotId   = el('#time').value;
-  const notes    = el('#notes').value.trim();
+  const rodo      = el('#rodo').checked;
+  const name      = el('#name').value.trim();
+  const email     = el('#email').value.trim();
+  const phone     = el('#phone').value.trim();
+  const address   = el('#address').value.trim();
+  const serviceId = el('#service').value;
+  const slotId    = el('#time').value;
+  const notes     = el('#notes').value.trim();
 
   if(!rodo){ alert('Musisz wyrazić zgodę RODO.'); return; }
   if(!name || !email || !phone || !serviceId || !slotId){
@@ -109,15 +109,15 @@ function handleSubmit(e){
   }
 
   // anty-duplikat slota
-  const bookings = Store.get('bookings',[]);
-  if (bookings.some(b => b.slotId === slotId)){
+  const bookings = Store.get('bookings', []);
+  if (bookings.some(b => b.slotId === slotId)) {
     alert('Ten termin został już zajęty.'); renderTimeOptions(); return;
   }
 
-  // klient (upsert)
-  let clients = Store.get('clients',[]);
+  // upsert klienta
+  let clients = Store.get('clients', []);
   let client  = clients.find(c => c.email === email || c.phone === phone);
-  if(!client){
+  if (!client) {
     client = {
       id: Store.uid(), name, email, phone, address,
       notesGeneral:'', preferences:{allergies:'',massage:'',health:'',mental:''}
@@ -128,10 +128,12 @@ function handleSubmit(e){
   }
   Store.set('clients', clients);
 
-  // raz policz termin (używamy dalej wszędzie)
+  // --- policz raz i używaj dalej (NIE deklaruj ponownie niżej!)
   const slot    = (Store.get('slots',[])||[]).find(s => s.id === slotId);
   const whenStr = slot ? new Date(slot.when).toLocaleString('pl-PL',
-                    { dateStyle:'full', timeStyle:'short' }) : '(brak)';
+                   { dateStyle:'full', timeStyle:'short' }) : '(brak)';
+  const services = getServices();
+  const service  = services.find(s => s.id === serviceId) || { name:'(brak)', price:0 };
 
   // zapis rezerwacji
   const booking = {
@@ -142,27 +144,23 @@ function handleSubmit(e){
     notes,
     createdAt: new Date().toISOString(),
     status: 'Oczekująca',
-    bookingNo: bookingNo,   // numer rezerwacji
-    when: whenStr           // termin dla wygody w panelu
+    bookingNo,          // numer
+    when: whenStr       // termin (dla wygody w panelu)
   };
   bookings.push(booking);
   Store.set('bookings', bookings);
 
-  // baner (krótko)
-  const services = getServices();
-  const service  = services.find(s => s.id === serviceId) || { name:'(brak)' };
+  // baner "Dziękujemy" (środek ekranu)
   const thanks = document.getElementById('bookingThanks');
-if (thanks){
-  thanks.textContent = `Dziękujemy! Nr ${bookingNo}. ${service.name} — ${whenStr}.`;
-  thanks.classList.add('show');
-  setTimeout(()=>thanks.classList.remove('show'), 5000); // czas wyświetlania
-}
-
+  if (thanks){
+    thanks.textContent = `Dziękujemy! Nr ${bookingNo}. ${service.name} — ${whenStr}.`;
+    thanks.classList.add('show');
+    setTimeout(()=>thanks.classList.remove('show'), 5000);
   }
 
-  // e-mail do masażystki (backend i tak wysyła tylko do THERAPIST_EMAIL)
-  (async ()=>{
-    try{
+  // e-mail do masażystki (backend wysyła tylko do THERAPIST_EMAIL)
+  (async () => {
+    try {
       const html = `
         <h2>Nowa rezerwacja</h2>
         <p><b>Nr rezerwacji:</b> ${bookingNo}</p>
@@ -170,17 +168,19 @@ if (thanks){
         <p><b>Zabieg:</b> ${service.name}</p>
         <p><b>Klient:</b> ${name}</p>
         <p><b>Adres / kontakt:</b><br>${address}<br>Tel: ${phone}<br>Email: ${email}</p>
-        ${notes ? `<p><b>Uwagi:</b> ${notes}</p>` : ''}`;
+        ${notes ? `<p><b>Uwagi:</b> ${notes}</p>` : ''}
+      `;
       await sendEmail({ subject: `Nowa rezerwacja — ${whenStr}`, html });
-    }catch(err){
+    } catch (err) {
       console.warn('Nie wysłano e-maila do masażystki:', err);
     }
   })();
 
-  // reset i odświeżenie godzin
+  // reset formularza i odświeżenie listy godzin
   el('#form').reset();
   renderTimeOptions();
 }
+
 
 
 // --- init
