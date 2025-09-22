@@ -194,7 +194,7 @@
     // DODANE: mapa dat -> listy godzin (dla index.html)
     const map = {};
     arr.forEach(s => { (map[s.date] ||= []).push(s.time); });
-    localStorage.setItem('ms_slots_v61', JSON.stringify(map));
+    localStorage.setItem('ms_slots_v6', JSON.stringify(map));
   }
 
   function render(){
