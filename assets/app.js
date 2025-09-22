@@ -23,18 +23,17 @@ function renderServices(){
   const select = el('#service');
   if(!select) return;
   const services = getServices();
-
   if(!services.length){
     select.innerHTML = '<option value="">Brak usług – dodaj w panelu</option>';
     select.disabled = true;
     return;
   }
-
   select.disabled = false;
-  select.innerHTML = services.map(s => (
-    `<option value="${s.id}">${s.name} — ${fmtMoney(s.price)}</option>`
-  )).join('');
+  select.innerHTML = services.map(
+    s => `<option value="${s.id}">${s.name} — ${fmtMoney(s.price)}</option>`
+  ).join('');
 }
+
 
 // --- wolne godziny dla wybranego dnia (slots=[{id,when}], bookings zajmują slotId)
 function availableTimesFor(dateStr){
@@ -128,19 +127,15 @@ function handleSubmit(e){
   Store.set('clients', clients);
 
   // zapis rezerwacji
-  const bookingNo = Math.floor(10000 + Math.random() * 90000); // np. 58392
-
-const booking = {
-  id: Store.uid(),
-  clientId: client.id,
-  serviceId,
-  slotId,
-  notes,
-  createdAt: new Date().toISOString(),
-  status: 'Oczekująca',
-  bookingNo: bookingNo   // ← dopisane
-};
-
+  const booking = {
+    id: Store.uid(),
+    clientId: client.id,
+    serviceId,
+    slotId,
+    notes,
+    createdAt: new Date().toISOString(),
+    status: 'Oczekująca'
+	
   };
   bookings.push(booking);
   Store.set('bookings', bookings);
@@ -151,12 +146,12 @@ const booking = {
   const slot     = (Store.get('slots',[])||[]).find(s=>s.id===slotId);
   const msg = [
     `Dziękujemy za rezerwację w Massage & SPA!`,
-   
+    
     `Po weryfikacji potwierdzimy termin e-mailem.`,
   ].join('\n');
   alert(msg);
   const thanks = document.getElementById('bookingThanks');
-  if (thanks) { thanks.classList.add('show'); setTimeout(()=>thanks.classList.remove('show'), 4000); }
+  if (thanks) { thanks.classList.add('show'); setTimeout(()=>thanks.classList.remove('show'), 2600); }
 
   // e-mail do masażystki (nie blokuje procesu przy błędzie)
   (async ()=>{
