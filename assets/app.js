@@ -153,7 +153,7 @@ function handleSubmit(e){
   // baner "Dziękujemy" (środek ekranu)
   const thanks = document.getElementById('bookingThanks');
   if (thanks){
-    thanks.textContent = `Dziękujemy! Nr ${bookingNo}. ${service.name} — ${whenStr}.`;
+    thanks.textContent = `Dziękujemy za rezerwację. Poczekaj na potwierdzenie e-mail! `;
     thanks.classList.add('show');
     setTimeout(()=>thanks.classList.remove('show'), 5000);
   }
