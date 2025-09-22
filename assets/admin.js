@@ -270,7 +270,7 @@ function saveClient(){
     email:el('#cEmail').value.trim(),
     phone:el('#cPhone').value.trim(),
     address:el('#cAddress').value.trim(),
-    notesGeneral:el('#cUwagi').value.trim(),
+    notesGeneral:el('#cNotes').value.trim(),
     preferences:{
       allergies:el('#cPrefAll').value.trim(),
       massage:el('#cPrefMassage').value.trim(),
@@ -308,32 +308,46 @@ async function sendConfirmEmail(b){
     const slots = Store.get('slots',[]);
     const clients = Store.get('clients',[]);
     const services = Store.get('services',[]);
-    const slot = slots.find(s=>s.id===b.slotId);
-    const client = clients.find(c=>c.id===b.clientId) || {};
+
+    const slot    = slots.find(s=>s.id===b.slotId);
+    const client  = clients.find(c=>c.id===b.clientId) || {};
     const service = services.find(s=>s.id===b.serviceId) || {};
-    if(!client.email) return false;
-    const whenStr = slot ? new Date(slot.when).toLocaleString('pl-PL') : '';
-    const html = `<h2>Wizyta została potwierdzona </h2>
-      <p><b>Usługa:</b> ${service.name||'-'}</p>
+
+    if (!client.email) return false;
+
+    const whenStr = slot ? new Date(slot.when).toLocaleString('pl-PL',
+                     { dateStyle:'full', timeStyle:'short' }) : '';
+
+    const html = `
+      <h2>Potwierdzenie rezerwacji</h2>
+      <p><b>Nr rezerwacji:</b> ${b.bookingNo || ''}</p>
+      <p><b>Usługa:</b> ${service.name || '-'}</p>
       <p><b>Termin:</b> ${whenStr}</p>
-      ${b.notes ? `<p><b>Uwagi:</b> ${b.notes}</p>` : ''}
-	  <hr>
-<p><b>Aby wizyta była dla Ciebie jak najbardziej komfortowa i efektywna, prosimy o przygotowanie się według poniższych wskazówek:</b></p>
-<ul style="margin-top:8px; margin-bottom:8px;">
-  <li>Zadbaj o świeżą higienę osobistą, aby czuć się swobodnie i zrelaksowanie.</li>
-  <li>Unikaj obfitych posiłków bezpośrednio przed masażem – dzięki temu ciało lepiej się odpręży.</li>
-  <li>Nie stosuj balsamów ani kremów tuż przed wizytą, by olejki i techniki masażu działały w pełni.</li>
-  <li>Poinformuj nas o ewentualnych alergiach, dolegliwościach lub szczególnych potrzebach – to pomoże nam zadbać o Twoje bezpieczeństwo.</li>
-</ul>
-<p>Dziękujemy za zaufanie i do zobaczenia w <b>Massage & SPA</b> 🌿</p>
-`;
+      ${b.notes ? `<p><b>Uwagi klienta:</b> ${b.notes}</p>` : ''}
+      <hr>
+      <p><b>Aby wizyta była jak najbardziej komfortowa:</b></p>
+      <ul>
+        <li>Zadbaj o świeżą higienę osobistą.</li>
+        <li>Nie jedz obficie tuż przed masażem.</li>
+        <li>Nie używaj kremów tuż przed wizytą.</li>
+        <li>Poinformuj nas o ewentualnych alergiach.</li>
+      </ul>
+      <p>Do zobaczenia w Massage & SPA!</p>
+    `;
+
     const r = await fetch('/.netlify/functions/send-email', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ to: client.email, subject: `Potwierdzenie wizyty — ${whenStr}`, html })
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        to: [client.email, 'THERAPIST'],   // ← klient + masażystka
+        subject: `Potwierdzenie wizyty — ${whenStr}`,
+        html
+      })
     });
     return r.ok;
   }catch(_){ return false; }
 }
+
 
 // --- Init
 document.addEventListener('DOMContentLoaded', ()=>{
