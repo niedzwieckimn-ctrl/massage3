@@ -161,7 +161,6 @@ function handleSubmit(e){
       const html = `
   <h2>Nowa rezerwacja</h2>
   <p><b>Nr rezerwacji:</b> ${bookingNo}</p>
-  <p><b>Termin:</b> ${whenStr
   <p><b>Zabieg:</b> ${service.name}</p>
   <p><b>Klient:</b> ${name}</p>
   <p><b>Adres / kontakt:</b><br>
