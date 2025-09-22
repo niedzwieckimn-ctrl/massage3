@@ -127,7 +127,9 @@ function handleSubmit(e){
   Store.set('clients', clients);
 
   // zapis rezerwacji
-
+  const slot = (Store.get('slots',[])||[]).find(s => s.id === slotId);
+const whenStr = slot ? new Date(slot.when).toLocaleString('pl-PL',
+  { dateStyle:'full', timeStyle:'short' }) : '(brak)';
 
 const booking = {
   id: Store.uid(),
@@ -149,10 +151,7 @@ const booking = {
   // podsumowanie dla klienta (alert + baner)
   const services = getServices();
   const service  = services.find(s=>s.id===serviceId) || {name:'Usługa', price:0};
-  const slot    = (Store.get('slots',[])||[]).find(s=>s.id===slotId);
-  const whenStr = slot ? new Date(slot.when).toLocaleString('pl-PL',
-  { dateStyle:'full', timeStyle:'short' }) : '(brak)';
-
+  const slot     = (Store.get('slots',[])||[]).find(s=>s.id===slotId);
   const msg = [
     `Dziękujemy za rezerwację w Massage & SPA!`,
     
