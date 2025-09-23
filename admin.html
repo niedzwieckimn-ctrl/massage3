@@ -174,21 +174,6 @@
   </div>
 
   <script src="assets/store.js"></script>
- <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="assets/admin.js"></script>
-  
-
-  <script>
-    // tab switching
-    const tabs = document.querySelectorAll('.tabbar .tab');
-    const panes = document.querySelectorAll('.tabpane');
-    tabs.forEach(t=> t.addEventListener('click', ()=>{
-      tabs.forEach(x=>x.classList.remove('active'));
-      t.classList.add('active');
-      const id = t.dataset.tab;
-      panes.forEach(p=> p.style.display = (p.dataset.pane===id)?'block':'none');
-    }));
-  </script>
 
 <!-- Supabase SDK (musi być PIERWSZE) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -207,6 +192,17 @@
 <script>
   console.log('ADMIN START');
   if (!window.sb) alert('BŁĄD: Supabase nie jest zainicjalizowane');
-</script>
+</script>  <script>
+    // tab switching
+    const tabs = document.querySelectorAll('.tabbar .tab');
+    const panes = document.querySelectorAll('.tabpane');
+    tabs.forEach(t=> t.addEventListener('click', ()=>{
+      tabs.forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      const id = t.dataset.tab;
+      panes.forEach(p=> p.style.display = (p.dataset.pane===id)?'block':'none');
+    }));
+  </script>
+
 </body>
 </html>
