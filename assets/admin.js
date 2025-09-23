@@ -53,6 +53,19 @@ function renderAll(){
   renderClients();
   renderSettings();
 }
+document.addEventListener('DOMContentLoaded', () => {
+  // handler przycisku „Dodaj termin”
+  const addBtn = document.getElementById('addSlot');
+  if (addBtn){
+    // upewnij się, że to nie jest submit formularza
+    addBtn.setAttribute('type', 'button');
+    addBtn.addEventListener('click', onAddSlot);
+  }
+
+  // pierwszy render listy terminów
+  renderSlots();
+});
+
 
 // --- Rezerwacje (Oczekujące)
 function renderUpcoming(){
@@ -148,42 +161,78 @@ function renderConfirmed(){
   }
 }
 
-// --- Wolne terminy
-function renderSlots(){
-  const list  = el('#slotsList');
-  const slots = (Store.get('slots',[])||[]).sort((a,b)=> new Date(a.when)-new Date(b.when));
-  list.innerHTML = slots.length? '' : '<div class="notice">Brak dodanych terminów.</div>';
-  for(const s of slots){
+// --- Wolne terminy (Supabase) ---
+async function renderSlots(){
+  const list = el('#slotsList');
+  list.innerHTML = '<div class="notice">Ładowanie…</div>';
+
+  const { data: slots, error } = await sb
+    .from('slots')
+    .select('*')
+    .eq('taken', false)
+    .order('when', { ascending: true });
+
+  if (error) {
+    console.error(error);
+    list.innerHTML = '<div class="notice">Błąd pobierania terminów.</div>';
+    return;
+  }
+
+  if (!slots.length){
+    list.innerHTML = '<div class="notice">Brak dodanych terminów.</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  for (const s of slots){
+    const d = new Date(s.when).toLocaleString('pl-PL');
     const row = document.createElement('div');
-    row.className='listItem inline'; row.style.justifyContent='space-between';
-    row.innerHTML = `<div><b>${fmtDate(s.when)}</b></div>
-      <div class='inline'><button class='btn danger' data-id='${s.id||''}' data-when='${s.when}'>Usuń</button></div>`;
+    row.className = 'listItem inline';
+    row.style.justifyContent = 'space-between';
+    row.innerHTML = `
+      <div class="inline"><b>${d}</b></div>
+      <div class="inline">
+        <button class="btn danger" data-id="${s.id}">Usuń</button>
+      </div>
+    `;
     list.appendChild(row);
   }
-  list.onclick = (e)=>{
-    const btn = e.target.closest('button[data-when]'); if(!btn) return;
-    const id = btn.dataset.id, when = btn.dataset.when;
-    let slots = Store.get('slots',[]);
-    slots = id ? slots.filter(s=>s.id!==id) : slots.filter(s=>s.when!==when);
-    Store.set('slots',slots); renderSlots();
-  };
 
-  el('#addSlot').onclick = ()=>{
-    const d = el('#slotDate').value.trim();
-    const t = el('#slotTime').value.trim().slice(0,5);
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(d) || !/^\d{2}:\d{2}$/.test(t)){
-      alert('Podaj poprawną datę i godzinę.'); return;
-    }
-    const iso = new Date(`${d}T${t}:00`).toISOString();
-    let slots = Store.get('slots',[]);
-    if(slots.some(s=>s.when===iso)){ alert('Taki termin już istnieje!'); return; }
-    slots.push({id:Store.uid(), when:iso});
-    slots.sort((a,b)=> new Date(a.when)-new Date(b.when));
-    Store.set('slots',slots);
-    el('#slotDate').value=''; el('#slotTime').value='';
+  // delegacja: klik "Usuń"
+  list.onclick = async (e)=>{
+    const btn = e.target.closest('button[data-id]');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    if (!confirm('Na pewno usunąć ten termin?')) return;
+
+    const { error } = await sb.from('slots').delete().eq('id', id);
+    if (error){ alert('Błąd przy usuwaniu'); console.error(error); return; }
     renderSlots();
   };
 }
+// Dodaj termin (Supabase)
+el('#addSlot').onclick = async ()=>{
+  const d = el('#slotDate').value.trim();   // yyyy-mm-dd
+  const t = el('#slotTime').value.trim();   // hh:mm
+  if (!d || !t){ alert('Wybierz datę i godzinę'); return; }
+
+  const whenISO = new Date(`${d}T${t}:00`).toISOString();
+
+  // próbujemy wstawić termin; unikalność pilnujemy po (when)
+  const { error } = await sb.from('slots').insert([{ when: whenISO, taken: false }]);
+  if (error){
+    // jeśli dubluje się termin, Supabase zwróci błąd unikalności (jeśli dodasz uniq index)
+    console.error(error);
+    alert('Błąd przy dodawaniu terminu (może już istnieje)');
+    return;
+  }
+
+  // wyczyść pola i odśwież listę
+  el('#slotDate').value = '';
+  el('#slotTime').value = '';
+  renderSlots();
+};
+
 
 // --- Usługi
 function renderServices(){

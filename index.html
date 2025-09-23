@@ -70,7 +70,16 @@
 <div class="footer">© Massage &amp; SPA • <span id="contact"></span></div>
 </div>
 <script src="assets/store.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  window.sb = supabase.createClient(
+    '{{SUPABASE_URL}}',         // tu wstaw realny URL albo wstrzyknij z env
+    '{{SUPABASE_ANON_KEY}}'     // jw.
+  );
+</script>
+
 <script src="assets/app.js"></script>
+
 <script>
 (function(){
   const dateEl = document.getElementById('date');
