@@ -82,6 +82,8 @@
 <script src="assets/app.js"></script>
 
 <script>
+let dateEl, timeEl;
+
 // pobieranie slotów z Supabase
 async function loadSlotsFromDB(){
   const { data, error } = await sb
@@ -98,9 +100,9 @@ async function loadSlotsFromDB(){
 }
 
 (async function(){
-  const dateEl = document.getElementById('date');
+  dateEl = document.getElementById('date');
   
-  const timeEl = document.getElementById('time');
+  timeEl = document.getElementById('time');
   if (!dateEl || !timeEl) return;
 
   // 1) pobierz sloty z bazy
@@ -190,6 +192,7 @@ async function loadSlotsFromDB(){
     if(e.key==='slots' || e.key==='bookings') init();
   });
 })();
+
 </script>
 <!-- Poprawny baner "dziękujemy" (poza <script>) -->
 <style>
