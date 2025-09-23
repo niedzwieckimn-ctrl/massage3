@@ -9,6 +9,62 @@ const Session = {
   login(){ sessionStorage.setItem('adminAuthed','1'); },
   logout(){ sessionStorage.removeItem('adminAuthed'); }
 };
+// === SUPABASE helpers (admin) ===
+async function dbLoadServices(){
+  const { data, error } = await sb.from('services')
+    .select('*').order('name', { ascending: true });
+  if(error){ console.error('DB services', error); return []; }
+  return data || [];
+}
+
+async function dbUpsertService(svc){
+  const { error } = await sb.from('services').upsert(svc, { onConflict: 'id' });
+  if(error) throw error;
+}
+
+async function dbDeleteService(id){
+  const { error } = await sb.from('services').delete().eq('id', id);
+  if(error) throw error;
+}
+
+async function dbLoadSlots(){
+  const { data, error } = await sb.from('slots')
+    .select('id, when, taken').order('when', { ascending: true });
+  if(error){ console.error('DB slots', error); return []; }
+  return data || [];
+}
+
+async function dbAddSlot(iso){
+  const id = crypto.randomUUID();
+  const { error } = await sb.from('slots').insert({ id, when: iso, taken: false });
+  if(error) throw error;
+  return id;
+}
+
+async function dbDeleteSlot(id){
+  const { error } = await sb.from('slots').delete().eq('id', id);
+  if(error) throw error;
+}
+
+async function dbLoadBookings(){
+  const { data, error } = await sb.from('bookings')
+    .select('*').order('createdAt', { ascending: false });
+  if(error){ console.error('DB bookings', error); return []; }
+  return data || [];
+}
+
+async function dbUpdateBooking(id, patch){
+  const { error } = await sb.from('bookings').update(patch).eq('id', id);
+  if(error) throw error;
+}
+
+async function dbLoadClients(){
+  const { data, error } = await sb.from('clients')
+    .select('*').order('name', { ascending: true });
+  if(error){ console.error('DB clients', error); return []; }
+  return data || [];
+}
+
 function requireAuth(){
   if(!Session.isAuthed()){
     el('#loginView').style.display='block';
@@ -43,6 +99,47 @@ function migrateSlots(){
   for(const s of slots){ if(seen.has(s.when)) {changed=true; continue;} seen.add(s.when); out.push(s); }
   if(changed) Store.set('slots', out.sort((a,b)=> new Date(a.when)-new Date(b.when)));
 }
+// Lista slotów (tylko wolne)
+async function renderSlots(){
+  const list = document.getElementById('slotsList');
+  if (!list) return;
+
+  list.innerHTML = '<div class="notice">Ładowanie…</div>';
+
+  const slots = await dbLoadSlots();
+  const free = slots.filter(s => !s.taken);
+
+  if (!free.length){
+    list.innerHTML = '<div class="notice">Brak dodanych terminów.</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  free.forEach(s=>{
+    const dstr = new Date(s.when).toLocaleString('pl-PL', { dateStyle:'medium', timeStyle:'short' });
+    const row = document.createElement('div');
+    row.className = 'listItem inline';
+    row.style.justifyContent = 'space-between';
+    row.innerHTML = `
+      <div><b>${dstr}</b></div>
+      <div class="inline">
+        <button class="btn danger" data-id="${s.id}">Usuń</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+
+  // klik "Usuń"
+  list.onclick = async (e)=>{
+    const btn = e.target.closest('button[data-id]');
+    if (!btn) return;
+    if (!confirm('Usunąć ten termin?')) return;
+    try{
+      await dbDeleteSlot(btn.dataset.id);
+      await renderSlots();
+    }catch(err){ alert('Błąd usuwania'); console.error(err); }
+  };
+}
 
 // --- Render All
 function renderAll(){
@@ -56,7 +153,23 @@ function renderAll(){
 document.addEventListener('DOMContentLoaded', () => {
   // handler przycisku „Dodaj termin”
   const addBtn = document.getElementById('addSlot');
-  if (addBtn){
+  if (addBtn)
+  // Dodawanie slota (po kliknięciu przycisku)
+async function onAddSlot(e){
+  e?.preventDefault?.();
+  const d = document.getElementById('slotDate').value.trim(); // YYYY-MM-DD
+  const t = document.getElementById('slotTime').value.trim(); // HH:MM
+  if (!d || !t){ alert('Wybierz datę i godzinę'); return; }
+
+  const iso = new Date(`${d}T${t}:00`).toISOString();
+  try{
+    await dbAddSlot(iso);
+    document.getElementById('slotDate').value = '';
+    document.getElementById('slotTime').value = '';
+    await renderSlots();
+  }catch(err){ alert('Nie udało się dodać'); console.error(err); }
+}
+{
     // upewnij się, że to nie jest submit formularza
     addBtn.setAttribute('type', 'button');
     addBtn.addEventListener('click', onAddSlot);
@@ -82,6 +195,7 @@ function renderUpcoming(){
 
   const wrap = el('#upcoming');
   wrap.innerHTML = items.length? '' : '<div class="notice">Brak rezerwacji.</div>';
+
 
   for(const it of items){
     const whenStr = it.when ? new Date(it.when).toLocaleString('pl-PL') : '—';
@@ -234,39 +348,98 @@ el('#addSlot').onclick = async ()=>{
 };
 
 
-// --- Usługi
-function renderServices(){
-  const services = Store.get('services',[]);
-  const tbody=el('#servicesBody'); tbody.innerHTML='';
-  for(const s of services){
-    const tr=document.createElement('tr');
-    tr.innerHTML = `<td>${s.name}</td><td>${s.durationMin} min</td><td>${fmtMoney(s.price)}</td>
-    <td class='inline'><button class='btn secondary' data-act='edit' data-id='${s.id}'>Edytuj</button>
-    <button class='btn danger' data-act='del' data-id='${s.id}'>Usuń</button></td>`;
-    tbody.appendChild(tr);
+// --- Usługi (Supabase)
+async function renderServices(){
+  const services = await dbLoadServices();
+  const tbody = document.getElementById('servicesBody');
+  if (!tbody) return;
+
+  if (!services.length){
+    tbody.innerHTML = '<tr><td colspan="4">Brak usług.</td></tr>';
+    return;
   }
-  el('#addService').onclick=()=>{
-    const name=prompt('Nazwa usługi:'); if(!name) return;
-    const duration=parseInt(prompt('Czas trwania (min):')||'60',10);
-    const price=parseInt(prompt('Cena (PLN):')||'180',10);
-    const list=Store.get('services',[]);
-    list.push({id:Store.uid(), name, durationMin:duration, price});
-    Store.set('services',list); renderServices();
-  };
-  tbody.onclick=(e)=>{
-    const id=e.target.dataset.id, act=e.target.dataset.act; if(!id) return;
-    let list=Store.get('services',[]);
-    if(act==='del'){ list=list.filter(x=>x.id!==id); Store.set('services',list); renderServices(); }
-    if(act==='edit'){
-      const s=list.find(x=>x.id===id);
-      const name=prompt('Nazwa',s.name)||s.name;
-      const duration=parseInt(prompt('Czas (min)',s.durationMin)||s.durationMin,10);
-      const price=parseInt(prompt('Cena (PLN)',s.price)||s.price,10);
-      list=list.map(x=> x.id===id? {...x,name,durationMin:duration,price}:x);
-      Store.set('services',list); renderServices();
-    }
-  };
+
+  tbody.innerHTML = '';
+  services.forEach(s=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${s.name}</td>
+      <td>${s.duration_min} min</td>
+      <td>${Number(s.price).toFixed(2)} zł</td>
+      <td class="inline">
+        <button class="btn secondary" data-act="edit" data-id="${s.id}">Edytuj</button>
+        <button class="btn danger" data-act="del" data-id="${s.id}">Usuń</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
 }
+
+// Klik "Dodaj usługę"
+el('#addService').onclick = async () => {
+  const name = prompt('Nazwa usługi:'); 
+  if (!name) return;
+
+  const duration = parseInt(prompt('Czas trwania (min):') || '60', 10);
+  const price = parseFloat(prompt('Cena (PLN):') || '180', 10);
+
+  const svc = {
+    id: crypto.randomUUID(),
+    name,
+    duration_min: duration,
+    price,
+    active: true
+  };
+
+  try{
+    await dbUpsertService(svc);
+    await renderServices();
+  }catch(err){
+    alert('Nie udało się dodać usługi.');
+    console.error(err);
+  }
+};
+// Klik w przyciski Edytuj/Usuń (w tabeli usług)
+document.getElementById('servicesBody').onclick = async (e) => {
+  const btn = e.target.closest('button[data-act]');
+  if (!btn) return;
+
+  const id = btn.dataset.id;
+  const act = btn.dataset.act;
+
+  if (act === 'del'){
+    if (!confirm('Usunąć tę usługę?')) return;
+    try{
+      await dbDeleteService(id);
+      await renderServices();
+    }catch(err){
+      alert('Błąd usuwania.');
+      console.error(err);
+    }
+    return;
+  }
+
+  if (act === 'edit'){
+    try{
+      // pobierz aktualny rekord (prosto z DB)
+      const current = (await dbLoadServices()).find(x => x.id === id);
+      if (!current){ alert('Nie znaleziono usługi.'); return; }
+
+      const name = prompt('Nazwa usługi:', current.name);
+      if (!name) return;
+
+      const duration = parseInt(prompt('Czas trwania (min):', current.duration_min) || current.duration_min, 10);
+      const price = parseFloat(prompt('Cena (PLN):', current.price) || current.price, 10);
+
+      await dbUpsertService({ id, name, duration_min: duration, price, active: true });
+      await renderServices();
+    }catch(err){
+      alert('Błąd edycji.');
+      console.error(err);
+    }
+  }
+};
+
 
 // --- Klienci
 function renderClients(){
@@ -303,8 +476,7 @@ function openClient(id){
     tr.innerHTML=`<td>${fmtDate(b.createdAt)}</td><td>${srv.name}</td><td>${b.notes||''}</td><td>${b.status||''}</td>`;
     histWrap.appendChild(tr);
   }
-  
-  // Sugestie
+  `  // Sugestie
   const suggest=[]; if(c?.preferences?.massage) suggest.push('Preferencje: '+c.preferences.massage);
   if(c?.preferences?.health) suggest.push('Stan zdrowia: '+c.preferences.health);
   const last = bookings[0]?.notes; if(last) suggest.push('Ostatnia notatka: '+last);
@@ -398,13 +570,23 @@ async function sendConfirmEmail(b){
 
 
 // --- Init
-document.addEventListener('DOMContentLoaded', ()=>{
-  migrateSlots(); // defensywnie
-  el('#loginBtn').onclick=login;
-  el('#logoutBtn').onclick=logout;
-  el('#saveClientBtn').onclick=saveClient;
-  el('#closeClientBtn').onclick=()=> el('#clientModal').style.display='none';
-  el('#saveSettingsBtn').onclick=saveSettings;
-  el('#slotDate').setAttribute('min', new Date().toISOString().slice(0,10));
-  requireAuth();
+document.addEventListener('DOMContentLoaded', async () => {
+    // Załaduj listę usług z Supabase
+    await renderServices();
+
+    // Załaduj terminy z Supabase
+    await renderSlots();
+
+    // Obsługa przycisków
+    el('#loginBtn').onclick = login;
+    el('#logoutBtn').onclick = logout;
+    el('#saveClientBtn').onclick = saveClient;
+    el('#closeClientBtn').onclick = () => el('#clientModal').style.display = 'none';
+    el('#saveSettingsBtn').onclick = saveSettings;
+
+    const addBtn = document.getElementById('addSlot');
+    if (addBtn){
+        addBtn.setAttribute('type','button'); // żeby nie wysyłał formularza
+        addBtn.addEventListener('click', onAddSlot);
+    }
 });
