@@ -1,24 +1,17 @@
-/* =========================
+/* =========================================
    ADMIN (Supabase-only)
-   ========================= */
+========================================= */
 
-/* ---- Pomocnicze krótkie funkcje UI ---- */
+// --- Krótkie helpery UI (pojedyncza definicja) ---
 const el  = window.el  || ((s,d=document)=>d.querySelector(s));
 const els = window.els || ((s,d=document)=>[...d.querySelectorAll(s)]);
-const fmtMoney = window.fmtMoney || (v => new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(Number(v||0)));
-const fmtDate  = window.fmtDate  || (d => new Date(d).toLocaleString('pl-PL',{dateStyle:'medium', timeStyle:'short'}));
+const money = v => `${(Number(v)||0).toFixed(2)} zł`;
+const dtPL  = iso => {
+  const d = new Date(iso);
+  return isNaN(d) ? '' : d.toLocaleString('pl-PL', { dateStyle:'medium', timeStyle:'short' });
+};
 
-
-/* ---- WYMAGANE: window.sb utworzony w admin.html ----
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-  window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-</script>
-*/
-
-/* =========================
-   SUPABASE — Funkcje DB
-   ========================= */
+// (Nie trzymaj w tym pliku żadnych <script>...</script> – to ma być tylko JS)
 
 /* Usługi */
 async function dbLoadServices(){
