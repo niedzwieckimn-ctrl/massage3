@@ -99,6 +99,25 @@ async function loadSlotsFromDB(){
 
 (async function(){
   const dateEl = document.getElementById('date');
+  
+  const timeEl = document.getElementById('time');
+  if (!dateEl || !timeEl) return;
+
+  // 1) pobierz sloty z bazy
+  const slotsFromDB = await loadSlotsFromDB();
+
+  // 2) zapisz do Store (reszta kodu już czyta ze Store)
+  Store.set('slots', slotsFromDB);
+
+  // 3) od razu narysuj opcje godzin
+  renderTimeOptions && renderTimeOptions();
+
+  // 4) gdyby "slots" zmieniły się (np. w innej karcie) – odśwież
+  window.addEventListener('storage', (e)=>{
+    if (e.key === 'slots') renderTimeOptions && renderTimeOptions();
+  });
+
+
 
   function buildMap(){
     const slots    = Store.get('slots',[]) || [];
