@@ -82,10 +82,23 @@
 <script src="assets/app.js"></script>
 
 <script>
-(function(){
+// pobieranie slotów z Supabase
+async function loadSlotsFromDB(){
+  const { data, error } = await sb
+    .from('slots')
+    .select('id, when, taken')
+    .eq('taken', false)
+    .order('when', { ascending:true });
+
+  if (error){
+    console.error('DB slots error:', error);
+    return [];
+  }
+  return data || [];
+}
+
+(async function(){
   const dateEl = document.getElementById('date');
-  const timeEl = document.getElementById('time');
-  if(!dateEl || !timeEl) return;
 
   function buildMap(){
     const slots    = Store.get('slots',[]) || [];
