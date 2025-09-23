@@ -98,12 +98,40 @@ async function loadSlotsFromDB(){
   }
   return data || [];
 }
+// --- Usługi z Supabase
+async function loadServicesFromDB(){
+  const { data, error } = await sb
+    .from('services')
+    .select('id, name, price, duration_min, active')
+    .eq('active', true)
+    .order('name');
+  if (error) {
+    console.error('DB services error:', error);
+    return [];
+  }
+  return data || [];
+}
+
+async function renderServicesSelect(){
+  const select = document.getElementById('service');
+  if(!select) return;
+  const services = await loadServicesFromDB();
+  select.innerHTML = '<option value="">Wybierz zabieg…</option>';
+  services.forEach(s=>{
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = `${s.name} — ${Number(s.price).toFixed(2)} zł`;
+    select.appendChild(opt);
+  });
+}
 
 (async function(){
   dateEl = document.getElementById('date');
   
   timeEl = document.getElementById('time');
   if (!dateEl || !timeEl) return;
+  // Załaduj listę zabiegów z Supabase
+  renderServicesSelect();
 
   // 1) pobierz sloty z bazy
   const slotsFromDB = await loadSlotsFromDB();
@@ -192,6 +220,7 @@ async function loadSlotsFromDB(){
     if(e.key==='slots' || e.key==='bookings') init();
   });
 })();
+
 
 </script>
 <!-- Poprawny baner "dziękujemy" (poza <script>) -->
