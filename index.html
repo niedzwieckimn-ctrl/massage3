@@ -70,12 +70,84 @@
 <div class="footer">© Massage &amp; SPA • <span id="contact"></span></div>
 </div>
 <script src="assets/store.js"></script>
-<script src="assets/app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-(function(){
-  const dateEl = document.getElementById('date');
-  const timeEl = document.getElementById('time');
-  if(!dateEl || !timeEl) return;
+  const SUPABASE_URL = 'https://eibzijpelnmvbtslquun.supabase.co';   // dokładny Project URL z Supabase
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpYnppanBlbG5tdmJ0c2xxdXVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MTE1OTcsImV4cCI6MjA3NDE4NzU5N30.Dp4u9PlhP-_pGmiNTHp5zSjrMUDfA_k2i85_71_9koo';                             // cały anon public key
+
+  window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
+
+
+<script src="assets/app.js"></script>
+
+<script>
+let dateEl, timeEl;
+
+// pobieranie slotów z Supabase
+async function loadSlotsFromDB(){
+  const { data, error } = await sb
+    .from('slots')
+    .select('id, when, taken')
+    .eq('taken', false)
+    .order('when', { ascending:true });
+
+  if (error){
+    console.error('DB slots error:', error);
+    return [];
+  }
+  return data || [];
+}
+// --- Usługi z Supabase
+async function loadServicesFromDB(){
+  const { data, error } = await sb
+    .from('services')
+    .select('id, name, price, duration_min, active')
+    .eq('active', true)
+    .order('name');
+  if (error) {
+    console.error('DB services error:', error);
+    return [];
+  }
+  return data || [];
+}
+
+async function renderServicesSelect(){
+  const select = document.getElementById('service');
+  if(!select) return;
+  const services = await loadServicesFromDB();
+  select.innerHTML = '<option value="">Wybierz zabieg…</option>';
+  services.forEach(s=>{
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = `${s.name} — ${Number(s.price).toFixed(2)} zł`;
+    select.appendChild(opt);
+  });
+}
+
+(async function(){
+  dateEl = document.getElementById('date');
+  
+  timeEl = document.getElementById('time');
+  if (!dateEl || !timeEl) return;
+  // Załaduj listę zabiegów z Supabase
+  renderServicesSelect();
+
+  // 1) pobierz sloty z bazy
+  const slotsFromDB = await loadSlotsFromDB();
+
+  // 2) zapisz do Store (reszta kodu już czyta ze Store)
+  Store.set('slots', slotsFromDB);
+
+  // 3) od razu narysuj opcje godzin
+  renderTimeOptions && renderTimeOptions();
+
+  // 4) gdyby "slots" zmieniły się (np. w innej karcie) – odśwież
+  window.addEventListener('storage', (e)=>{
+    if (e.key === 'slots') renderTimeOptions && renderTimeOptions();
+  });
+
+
 
   function buildMap(){
     const slots    = Store.get('slots',[]) || [];
@@ -148,6 +220,8 @@
     if(e.key==='slots' || e.key==='bookings') init();
   });
 })();
+
+
 </script>
 <!-- Poprawny baner "dziękujemy" (poza <script>) -->
 <style>

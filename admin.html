@@ -1,11 +1,10 @@
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Massage & SPA — Panel Admin</title>
-  <link rel="stylesheet" href="assets/style.css"/>
+  <link rel="stylesheet" href="assets/style.css" />
 </head>
 <body>
   <div class="container">
@@ -21,16 +20,13 @@
     </div>
 
     <!-- Login -->
-    <div id="loginView" class="card" style="display:none;max-width:520px;margin:40px auto">
+    <div id="loginView" class="card" style="display:none;max-width:520px;margin:40px auto;">
       <h2>Wejście do panelu</h2>
       <div class="grid two">
-        <div style="grid-column:1/-1">
-          <label>PIN</label>
-          <input id="pin" class="input" type="password" placeholder="np. 2505"/>
-        </div>
-        <div style="grid-column:1/-1">
-          <button id="loginBtn" class="btn">Zaloguj</button>
-        </div>
+        <label>PIN</label>
+        <input id="pin" class="input" type="password" placeholder="np. 2505"/>
+        <div style="grid-column:1/-1"></div>
+        <button id="loginBtn" class="btn">Zaloguj</button>
       </div>
     </div>
 
@@ -46,32 +42,20 @@
 
       <!-- Dashboard -->
       <div class="card tabpane" data-pane="dashboard">
-  <h2>Nie potwierdzone rezerwacje</h2>
-  <div id="upcoming" class="grid"></div>
-
-  <hr class="sep"/>
-
-  <h2>Potwierdzone rezerwacje</h2>
-  <div id="confirmed" class="grid"></div>
-</div>
-
-
+        <h2>Nie potwierdzone rezerwacje</h2>
+        <div id="upcoming" class="grid"></div>
+        <hr class="sep"/>
+        <h2>Potwierdzone rezerwacje</h2>
+        <div id="confirmed" class="grid"></div>
+      </div>
 
       <!-- Slots -->
       <div class="card tabpane" data-pane="slots" style="display:none">
         <h2>Wolne Terminy</h2>
         <div class="grid two">
-          <div>
-            <label>Data</label>
-            <input id="slotDate" type="date" class="input"/>
-          </div>
-          <div>
-            <label>Godzina</label>
-            <input id="slotTime" type="time" class="input"/>
-          </div>
-          <div style="grid-column:1/-1">
-            <button id="addSlot" class="btn">Dodaj termin</button>
-          </div>
+          <label>Data</label><input id="slotDate" type="date" class="input"/>
+          <label>Godzina</label><input id="slotTime" type="time" class="input"/>
+          <div style="grid-column:1/-1"><button id="addSlot" class="btn">Dodaj termin</button></div>
         </div>
         <hr class="sep"/>
         <div id="slotsList" class="grid"></div>
@@ -79,12 +63,12 @@
 
       <!-- Services -->
       <div class="card tabpane" data-pane="services" style="display:none">
-        <h2>Usługi & Cennik</h2>
-        <div style="margin:10px 0"><button id="addService" class="btn">Dodaj usługę</button></div>
+        <h2>Usługi</h2>
         <table class="table">
-          <thead><tr><th>Usługa</th><th>Czas</th><th>Cena</th><th>Akcje</th></tr></thead>
+          <thead><tr><th>Nazwa</th><th>Czas</th><th>Cena</th><th></th></tr></thead>
           <tbody id="servicesBody"></tbody>
         </table>
+        <div style="margin-top:10px"><button id="addService" class="btn">Dodaj usługę</button></div>
       </div>
 
       <!-- Clients -->
@@ -96,96 +80,24 @@
       <!-- Settings -->
       <div class="card tabpane" data-pane="settings" style="display:none">
         <h2>Ustawienia</h2>
-        <div class="grid two">
-          <div>
-            <label>Email kontaktowy</label>
-            <input id="setEmail" class="input" type="email"/>
-          </div>
-          <div>
-            <label>Telefon kontaktowy</label>
-            <input id="setTel" class="input" type="tel"/>
-          </div>
-          <div style="grid-column:1/-1">
-            <label>Treść zgody RODO</label>
-            <textarea id="setRodo" class="input" rows="3"></textarea>
-          </div>
-          <div>
-            <label>PIN do panelu</label>
-            <input id="setPIN" class="input" type="text"/>
-          </div>
-          <div style="grid-column:1/-1">
-            <button id="saveSettingsBtn" class="btn">Zapisz ustawienia</button>
-          </div>
-        </div>
+        <div class="notice">Tu wkrótce ustawienia e-mail itd.</div>
       </div>
     </div>
-    <div class="footer">© Massage &amp; SPA</div>
+
+    <div class="footer">© Massage & SPA</div>
   </div>
 
-  <!-- Client modal -->
-  <div id="clientModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);padding:30px;overflow:auto">
-    <div class="card" style="max-width:900px;margin:40px auto">
-      <div class="inline" style="justify-content:space-between">
-        <h2 id="clientName">Klient</h2>
-        <div class="inline">
-          <button id="saveClientBtn" class="btn success">Zapisz</button>
-          <button id="closeClientBtn" class="btn danger">Zamknij</button>
-        </div>
-      </div>
-      <div class="grid two">
-        <div>
-          <label>Email</label><input id="cEmail" class="input" type="email"/>
-        </div>
-        <div>
-          <label>Telefon</label><input id="cPhone" class="input" type="tel"/>
-        </div>
-        <div style="grid-column:1/-1">
-          <label>Adres</label><input id="cAddress" class="input"/>
-        </div>
-        <div style="grid-column:1/-1">
-          <label>Notatka ogólna</label>
-          <textarea id="cNotes" class="input" rows="3"></textarea>
-        </div>
-        <div>
-          <label>Uczulenia</label><input id="cPrefAll" class="input"/>
-        </div>
-        <div>
-          <label>Preferencje masażu</label><input id="cPrefMassage" class="input"/>
-        </div>
-        <div>
-          <label>Stan zdrowia</label><input id="cPrefHealth" class="input"/>
-        </div>
-        <div>
-          <label>Stan psychiczny</label><input id="cPrefMental" class="input"/>
-        </div>
-      </div>
-      <div class="card">
-        <h2>Sugestie terapeutyczne</h2>
-        <div id="clientSuggestion" class="small"></div>
-      </div>
-      <div class="card">
-        <h2>Historia zabiegów</h2>
-        <table class="table">
-          <thead><tr><th>Data</th><th>Zabieg</th><th>Uwagi</th><th>Status</th></tr></thead>
-          <tbody id="historyBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script src="assets/store.js"></script>
-  <script src="assets/admin.js"></script>
+  <!-- Inicjalizacja Supabase: WSTAW SWOJE DANE -->
   <script>
-    // tab switching
-    const tabs = document.querySelectorAll('.tabbar .tab');
-    const panes = document.querySelectorAll('.tabpane');
-    tabs.forEach(t=> t.addEventListener('click', ()=>{
-      tabs.forEach(x=>x.classList.remove('active'));
-      t.classList.add('active');
-      const id = t.dataset.tab;
-      panes.forEach(p=> p.style.display = (p.dataset.pane===id)?'block':'none');
-    }));
+    const SUPABASE_URL = 'https://ELBIZPI...twoj-projekt.supabase.co';   /* <— tu Twój URL */
+    const SUPABASE_ANON_KEY = 'eyJhbGciOi...';                           /* <— tu Twój Anon Key */
+    window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   </script>
 
+  <!-- Główny kod panelu -->
+  <script src="assets/admin.js"></script>
 </body>
 </html>
