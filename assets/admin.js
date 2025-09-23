@@ -3,12 +3,11 @@
    ========================= */
 
 /* ---- Pomocnicze krótkie funkcje UI ---- */
-const el = (sel) => document.querySelector(sel);
-const money = (n) => (Number(n)||0).toFixed(2) + ' zł';
-const dtPL = (iso) => {
-  const d = new Date(iso);
-  return isNaN(d) ? '-' : d.toLocaleString('pl-PL', { dateStyle:'medium', timeStyle:'short' });
-};
+const el  = window.el  || ((s,d=document)=>d.querySelector(s));
+const els = window.els || ((s,d=document)=>[...d.querySelectorAll(s)]);
+const fmtMoney = window.fmtMoney || (v => new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(Number(v||0)));
+const fmtDate  = window.fmtDate  || (d => new Date(d).toLocaleString('pl-PL',{dateStyle:'medium', timeStyle:'short'}));
+
 
 /* ---- WYMAGANE: window.sb utworzony w admin.html ----
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
