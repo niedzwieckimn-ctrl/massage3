@@ -176,9 +176,9 @@
   <script src="assets/store.js"></script>
  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  const SUPABASE_URL = 'https://eibzijpelnmvbtslquun.supabase.co';   // dokładny Project URL z Supabase
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpYnppanBlbG5tdmJ0c2xxdXVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MTE1OTcsImV4cCI6MjA3NDE4NzU5N30.Dp4u9PlhP-_pGmiNTHp5zSjrMUDfA_k2i85_71_9koo';                             // cały anon public key
-
+  // ← wklej tu swoje wartości z Supabase (na start ręcznie)
+  const SUPABASE_URL = 'https://eibzijpelnmvbtslquun.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpYnppanBlbG5tdmJ0c2xxdXVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MTE1OTcsImV4cCI6MjA3NDE4NzU5N30.Dp4u9PlhP-_pGmiNTHp5zSjrMUDfA_k2i85_71_9koo';
   window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 </script>
 
@@ -198,5 +198,23 @@
     }));
   </script>
 
+<!-- Supabase SDK (musi być PIERWSZE) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- Inicjalizacja Supabase (WSTAW SWOJE DANE) -->
+<script>
+  const SUPABASE_URL = 'https://TWÓJ-PROJECT-ID.supabase.co';     // ← wklej swój adres z Supabase
+  const SUPABASE_ANON_KEY = 'ey...';                              // ← wklej swój anon public key
+  window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
+
+<!-- Twój kod panelu admina (musi być PO utworzeniu window.sb) -->
+<script src="assets/admin.js"></script>
+
+<!-- Krótki test, czy wszystko się załadowało -->
+<script>
+  console.log('ADMIN START');
+  if (!window.sb) alert('BŁĄD: Supabase nie jest zainicjalizowane');
+</script>
 </body>
 </html>
