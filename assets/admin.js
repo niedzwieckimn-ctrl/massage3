@@ -173,35 +173,32 @@ function renderSlots(){
       .then(function(){ console.log('[admin] delete OK'); })
       .catch(function(e){ console.error('[admin] delete ERR', e); });
   }
-};
-
-}
 
   el('#addSlot').onclick = ()=>{
-    const d = el('#slotDate').value.trim();
-    const t = el('#slotTime').value.trim().slice(0,5);
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(d) || !/^\d{2}:\d{2}$/.test(t)){
-      alert('Podaj poprawną datę i godzinę.'); return;
-    }
-    const iso = new Date(`${d}T${t}:00`).toISOString();
-    let slots = Store.get('slots',[]);
-    if(slots.some(s=>s.when===iso)){ alert('Taki termin już istnieje!'); return; }
-    slots.push({id:Store.uid(), when:iso});
-    slots.sort((a,b)=> new Date(a.when)-new Date(b.when));
-    Store.set('slots',slots);
-    el('#slotDate').value=''; el('#slotTime').value='';
-    renderSlots();
-	if(window.CloudSlots){
-  CloudSlots.pushNewSlotFromLocal()
-    .then(()=>console.log('[admin] push OK'))
-    .catch(e=>console.warn('[admin] push ERR', e));
-}
+  const d = el('#slotDate').value.trim();
+  const t = el('#slotTime').value.trim().slice(0,5);
+  if(!(/\d{4}-\d{2}-\d{2}/.test(d) && /\d{2}:\d{2}/.test(t))){
+    alert('Podaj poprawną datę i godzinę'); return;
+  }
+  const iso = new Date(`${d}T${t}:00`).toISOString();
 
-  };
-}
-if(window.CloudSlots){
-  CloudSlots.pushNewSlotFromLocal().catch(function(e){ console.warn('[cloud] push fail', e); });
-}
+  let slots = Store.get('slots', []) || [];
+  if(slots.some(s=> s.when===iso)){ alert('Ten termin już istnieje'); return; }
+
+  slots.push({ id: Store.uid(), when: iso });
+  slots.sort((a,b)=> new Date(a.when)-new Date(b.when));
+  Store.set('slots', slots);
+
+  el('#slotDate').value=''; el('#slotTime').value='';
+  renderSlots();
+
+  // ⬇️ NOWE: natychmiastowy push do Supabase
+  if (window.CloudSlots) {
+    CloudSlots.pushNewSlotFromLocal()
+      .then(()=> console.log('[admin] push OK'))
+      .catch(e => console.warn('[admin] push ERR', e));
+  }
+};
 
 // --- Usługi
 function renderServices(){
@@ -354,13 +351,36 @@ async function sendConfirmEmail(b){
 }
 
 // --- Init
-document.addEventListener('DOMContentLoaded', ()=>{
-  migrateSlots(); // defensywnie
-  el('#loginBtn').onclick=login;
-  el('#logoutBtn').onclick=logout;
-  el('#saveClientBtn').onclick=saveClient;
-  el('#closeClientBtn').onclick=()=> el('#clientModal').style.display='none';
-  el('#saveSettingsBtn').onclick=saveSettings;
-  el('#slotDate').setAttribute('min', new Date().toISOString().slice(0,10));
-  requireAuth();
-});
+document.addEventListener('DOMContentLoaded', () => {
+
+  // --- widoki logowania / aplikacji (na podstawie sesji) ---
+  const isAuth = sessionStorage.getItem('adminAuthed') === '1';
+  const loginView = el('#loginView');
+  const appView   = el('#appView');
+  if (loginView) loginView.style.display = isAuth ? 'none'  : 'block';
+  if (appView)   appView.style.display   = isAuth ? 'block' : 'none';
+
+  // --- przyciski / akcje ---
+  if (el('#loginBtn'))        el('#loginBtn').onclick        = login;
+  if (el('#logoutBtn'))       el('#logoutBtn').onclick       = logout;
+  if (el('#saveClientBtn'))   el('#saveClientBtn').onclick   = saveClient;
+  if (el('#closeClientBtn'))  el('#closeClientBtn').onclick  = () => el('#clientModal').style.display = 'none';
+  if (el('#saveSettingsBtn')) el('#saveSettingsBtn').onclick = saveSettings;
+
+  if (el('#slotDate')) el('#slotDate').setAttribute('min', new Date().toISOString().slice(0,10));
+
+  // --- nasłuch: gdy adapter chmury zsynchronizuje sloty, odśwież listę ---
+  document.addEventListener('slots-synced', renderSlots);
+
+  // --- pierwszy render z localStorage (żeby coś zobaczyć od razu) ---
+  if (typeof renderSlots     === 'function') renderSlots();
+  if (typeof renderServices  === 'function') renderServices();
+  if (typeof renderClients   === 'function') renderClients();
+  if (typeof renderConfirmed === 'function') renderConfirmed();
+  if (typeof renderUpcoming  === 'function') renderUpcoming();
+
+  // --- jeśli jest adapter chmury i Supabase: dociągnij aktualne sloty na start ---
+  if (window.CloudSlots && window.sb) {
+    CloudSlots.pull().catch(e => console.warn('[cloud-slots] pull ERR', e));
+  }
+}); // <-- TU jedna para nawiasów i średnik. Nic więcej pod spodem.
