@@ -175,16 +175,29 @@ function renderAll(){
    INIT
    ========================================================= */
 document.addEventListener('DOMContentLoaded', ()=>{
-  // Logowanie
   const loginBtn  = el('#loginBtn');
   const logoutBtn = el('#logoutBtn');
 
   if(loginBtn)  loginBtn.onclick  = login;
   if(logoutBtn) logoutBtn.onclick = logout;
 
-  // Daty: min = dzisiaj
   const sd = el('#slotDate');
   if(sd) sd.setAttribute('min', new Date().toISOString().slice(0,10));
 
-  requireAuth();   // pokaż PIN lub panel
+  // przełączanie zakładek (kafelki)
+  const tabs  = document.querySelectorAll('.tabbar .tab');
+  const panes = document.querySelectorAll('.tabpane');
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () {
+      tabs.forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      const id = t.dataset.tab;
+      panes.forEach(p => {
+        p.style.display = (p.dataset.pane === id ? 'block' : 'none');
+      });
+    });
+  });
+
+  requireAuth();
 });
+
