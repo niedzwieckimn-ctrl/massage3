@@ -189,8 +189,10 @@
 <script>
   if (window.sb && window.CloudSlots) {
     CloudSlots.init(window.sb);
+    CloudSlots.startAutoSync(5000); // co 5s ściąga aktualne dane z chmury
   }
 </script>
+
 
 
   <script src="assets/admin.js"></script>

@@ -191,6 +191,12 @@ function renderSlots(){
     Store.set('slots',slots);
     el('#slotDate').value=''; el('#slotTime').value='';
     renderSlots();
+	if(window.CloudSlots){
+  CloudSlots.pushNewSlotFromLocal()
+    .then(()=>console.log('[admin] push OK'))
+    .catch(e=>console.warn('[admin] push ERR', e));
+}
+
   };
 }
 if(window.CloudSlots){
