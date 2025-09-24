@@ -5,7 +5,7 @@
   'use strict';
 
   // 1) Konfiguracja Supabase – WSTAW SWOJE DANE:
-  const SUPABASE_URL = 'https://eibzijpelnmvbtslquun.supabase.co';      // <-- wklej URL
+ const SUPABASE_URL = 'https://eibzijpelnmvbtslquun.supabase.co';      // <-- wklej URL
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpYnppanBlbG5tdmJ0c2xxdXVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MTE1OTcsImV4cCI6MjA3NDE4NzU5N30.Dp4u9PlhP-_pGmiNTHp5zSjrMUDfA_k2i85_71_9koo';                   // <-- wklej anon public
 
   // 2) Jeśli SDK nie jest w HTML, wstrzyknij je dynamicznie
@@ -59,7 +59,7 @@
 
     // jeśli już ma id (np. UI je generuje), to wstawimy z tym id.
     const payload = { when: newest.when, taken: !!newest.taken };
-    if (newest.id) payload.id = newest.id;
+    
 
     const { data, error } = await sb.from('slots').insert(payload).select('id').single();
     if (error) { console.warn('Cloud push slot error', error); return; }
