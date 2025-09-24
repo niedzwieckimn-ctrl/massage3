@@ -49,25 +49,55 @@
 
   // 6) Dodanie slota do chmury (wołamy zamiast starego zapisu)
   async function pushNewSlotFromLocal(){
-    // chwila, by stare UI zapisało do localStorage
-    await wait(50);
-    const local = get('slots', []);
-    // znajdź rekordy bez id (albo świeżo dodane)
-    // zakładamy, że UI dodaje na koniec. Weź ostatni i spróbuj wstawić:
-    const newest = local[local.length - 1];
-    if (!newest) return;
+    async function pushNewSlotFromLocal() {
+  // bierzemy najnowszy lokalny slot (ten, który właśnie dodałeś)
+  const all = Store.get('slots', []);
+  const newest = all.slice().sort((a,b)=>
+    new Date(b.createdAt || b.when) - new Date(a.createdAt || a.when)
+  )[0];
+  if (!newest) return;
 
-    // jeśli już ma id (np. UI je generuje), to wstawimy z tym id.
-    // nie wysyłamy własnego id – UUID nada baza
-const payload = { when: newest.when, taken: !!newest.taken };
+  // nadaj klientowi UUID jeżeli jeszcze nie ma
+  const id = (newest.id && newest.id.length === 36) ? newest.id : crypto.randomUUID();
+  const payload = { id, when: newest.when, taken: !!newest.taken };
 
-const { data, error } = await sb
-  .from('slots')
-  .upsert(payload, { onConflict: 'when' })   // <- kluczowa zmiana
-  .select('id, when, taken')
-  .single();
+  // 1) zwykły INSERT
+  const { data, error } = await sb
+    .from('slots')
+    .insert(payload)
+    .select('id, when')
+    .single();
 
-if (error) throw error;
+  // 2) jeśli duplikat 'when' (23505) – nie nadpisuj, tylko znajdź istniejący wiersz
+  if (error) {
+    if (error.code === '23505') {
+      const { data: existing } = await sb
+        .from('slots')
+        .select('id, when')
+        .eq('when', payload.when)
+        .single();
+
+      if (existing) {
+        // zsynchronizuj tylko ten jeden rekord lokalnie – reszty nie dotykaj
+        const synced = all.map(s =>
+          s.when === existing.when ? { ...s, id: existing.id } : s
+        );
+        Store.set('slots', synced);
+      }
+      return; // koniec – nic nie nadpisaliśmy
+    }
+
+    console.warn('[cloud push] inny błąd:', error);
+    return;
+  }
+
+  // 3) sukces insertu – podmień lokalnie tylko ten slot, aby miał UUID z bazy
+  const synced = all.map(s =>
+    s.when === data.when ? { ...s, id: data.id } : s
+  );
+  Store.set('slots', synced);
+}
+
 
 // zaktualizuj lokalny rekord o uuid z bazy
 let slots = Store.get('slots', []);
