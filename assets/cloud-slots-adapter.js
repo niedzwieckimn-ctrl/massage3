@@ -48,7 +48,6 @@
   }
 
   // 6) Dodanie slota do chmury (wołamy zamiast starego zapisu)
-  async function pushNewSlotFromLocal(){
     async function pushNewSlotFromLocal() {
   // bierzemy najnowszy lokalny slot (ten, który właśnie dodałeś)
   const all = Store.get('slots', []);
