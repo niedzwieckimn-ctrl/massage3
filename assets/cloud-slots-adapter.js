@@ -1,71 +1,89 @@
-/* prosty adapter: pull = nadpisuje localStorage; push = insert -> pull */
-(function(global){
-  var sb = null;
-  function log(){ var a=Array.prototype.slice.call(arguments); a.unshift('[cloud-slots]'); console.log.apply(console,a); }
+(function (w) {
+  if (!w.CloudSlots) w.CloudSlots = {};
+  var sb = null, timer = null;
 
-  var CloudSlots = {
-    init: function(supabaseClient){
-      sb = supabaseClient;
-      log('ready');
-      return CloudSlots.pullSlotsToLocal();
-    },
+  function isUUID(v){ return typeof v === 'string' && /^[0-9a-fA-F-]{36}$/.test(v); }
 
-    pullSlotsToLocal: function(){
-      if(!sb) return Promise.resolve();
-      return sb.from('slots').select('id,when,taken').order('when',{ascending:true})
-        .then(function(res){
-          var data = (res && res.data) || [];
-          var clean = data.map(function(x){ return { id:x.id, when:x.when, taken:!!x.taken }; });
-          localStorage.setItem('slots', JSON.stringify(clean));
-          document.dispatchEvent(new Event('slots-synced'));
-        })
-        .catch(function(err){ console.warn('[cloud-slots] pull error', err); });
-    },
-
-    pushNewSlotFromLocal: function(){
-      if(!sb) return Promise.resolve();
-      var all = JSON.parse(localStorage.getItem('slots') || '[]');
-      if(!all.length) return Promise.resolve();
-      var newest = all[all.length-1];
-      if(!newest) return Promise.resolve();
-
-      var payload = { when: newest.when, taken: !!newest.taken };
-      // jeśli lokalne id wygląda jak UUID, przekaż je; inaczej nie przekazuj
-      if(typeof newest.id === 'string' && newest.id.length === 36) payload.id = newest.id;
-
-      return sb.from('slots').insert(payload).select('id,when').single()
-        .then(function(res){
-          var d = res && res.data;
-          if(!d) return;
-          // podmień lokalne id na id z bazy
-          var updated = all.map(function(s){ return s.when === d.when ? Object.assign({}, s, { id: d.id }) : s; });
-          localStorage.setItem('slots', JSON.stringify(updated));
-          document.dispatchEvent(new Event('slots-synced'));
-        })
-        .catch(function(err){
-          // jeżeli duplikat (23505) -> pobierz istniejący i zaktualizuj lokalnie
-          var code = err && (err.code || (err.error && err.error.code));
-          if(code === '23505' || code === 23505){
-            return sb.from('slots').select('id,when').eq('when', payload.when).single()
-              .then(function(r2){
-                var d2 = r2 && r2.data;
-                if(!d2) return;
-                var synced = all.map(function(s){ return s.when === d2.when ? Object.assign({}, s, { id: d2.id }) : s; });
-                localStorage.setItem('slots', JSON.stringify(synced));
-                document.dispatchEvent(new Event('slots-synced'));
-              })
-              .catch(function(e2){ console.warn('[cloud-slots] duplicate follow-up error', e2); });
-          }
-          console.warn('[cloud-slots] push error', err);
-        });
-    },
-
-    deleteSlot: function(id){
-      if(!sb || !id) return Promise.resolve();
-      return sb.from('slots').delete().eq('id', id).then(function(){ return CloudSlots.pullSlotsToLocal(); })
-        .catch(function(err){ console.warn('[cloud-slots] delete error', err); });
-    }
+  CloudSlots.init = function (supabaseClient) {
+    sb = supabaseClient;
+    console.log('[cloud-slots] ready');
   };
 
-  global.CloudSlots = CloudSlots;
+  CloudSlots.pull = function () {
+    if (!sb) return Promise.resolve();
+    return sb.from('slots')
+      .select('id, when, taken')
+      .order('when', { ascending: true })
+      .then(function (r) {
+        if (r.error) { console.warn('[cloud-slots] pull error', r.error); return; }
+        var clean = (r.data||[]).map(function (x) {
+          return { id: x.id, when: x.when, taken: !!x.taken };
+        });
+        localStorage.setItem('slots', JSON.stringify(clean));
+        document.dispatchEvent(new Event('slots-synced'));
+        console.log('[cloud-slots] pull OK', clean.length);
+      });
+  };
+
+  CloudSlots.pushNewSlotFromLocal = function () {
+    if (!sb) return Promise.resolve();
+    var all = JSON.parse(localStorage.getItem('slots') || '[]');
+    if (!all.length) return Promise.resolve();
+
+    var newest = all[all.length - 1];
+    if (!newest) return Promise.resolve();
+
+    var payload = { when: newest.when, taken: !!newest.taken };
+    if (isUUID(newest.id)) payload.id = newest.id;
+
+    console.log('[cloud-slots] push start', payload);
+
+    return sb.from('slots')
+      .insert(payload)
+      .select('id, when')
+      .single()
+      .then(function (r1) {
+        if (r1.error) {
+          if (r1.error.code === '23505') {
+            // duplikat when – pobierz istniejący i zsynchronizuj
+            return sb.from('slots').select('id, when').eq('when', payload.when).single();
+          }
+          console.warn('[cloud-slots] push error', r1.error);
+          return;
+        }
+        return r1;
+      })
+      .then(function (r2) {
+        if (!r2 || r2.error || !r2.data) return;
+        var updated = all.map(function (s) {
+          return (s.when === r2.data.when) ? { id: r2.data.id, when: s.when, taken: !!s.taken } : s;
+        });
+        localStorage.setItem('slots', JSON.stringify(updated));
+        document.dispatchEvent(new Event('slots-synced'));
+        console.log('[cloud-slots] push OK', r2.data);
+      });
+  };
+
+  CloudSlots.deleteSlot = function (id) {
+    if (!sb) return Promise.resolve();
+    var all = JSON.parse(localStorage.getItem('slots') || '[]');
+    var s = all.find(function (x) { return x.id === id; });
+    if (!s) return Promise.resolve();
+
+    return sb.from('slots').delete().eq('when', s.when).then(function (r) {
+      if (r.error) { console.warn('[cloud-slots] delete error', r.error); return; }
+      var rest = all.filter(function (x) { return x.id !== id; });
+      localStorage.setItem('slots', JSON.stringify(rest));
+      document.dispatchEvent(new Event('slots-synced'));
+      console.log('[cloud-slots] delete OK', s.when);
+    });
+  };
+
+  CloudSlots.startAutoSync = function (ms) {
+    if (timer) clearInterval(timer);
+    timer = setInterval(function () {
+      CloudSlots.pull().catch(function(){});
+    }, ms || 20000);
+  };
+
 })(window);

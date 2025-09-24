@@ -161,12 +161,21 @@ function renderSlots(){
     list.appendChild(row);
   }
   list.onclick = (e)=>{
-    const btn = e.target.closest('button[data-when]'); if(!btn) return;
-    const id = btn.dataset.id, when = btn.dataset.when;
-    let slots = Store.get('slots',[]);
-    slots = id ? slots.filter(s=>s.id!==id) : slots.filter(s=>s.when!==when);
-    Store.set('slots',slots); renderSlots();
-  };
+  const btn = e.target.closest('button[data-when]'); if(!btn) return;
+  const id = btn.dataset.id, when = btn.dataset.when;
+  let slots = Store.get('slots',[]);
+  slots = id ? slots.filter(s=>s.id!==id) : slots.filter(s=>s.when!==when);
+  Store.set('slots', slots); renderSlots();
+
+  // ✅ POPRAWNIE dla USUWANIA:
+  if (window.CloudSlots) {
+    CloudSlots.deleteSlot(id)                       // przekazujemy id
+      .then(function(){ console.log('[admin] delete OK'); })
+      .catch(function(e){ console.error('[admin] delete ERR', e); });
+  }
+};
+
+}
 
   el('#addSlot').onclick = ()=>{
     const d = el('#slotDate').value.trim();
