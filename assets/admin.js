@@ -108,14 +108,6 @@ function renderSlots(){
     .then(function(){ console.log('[admin] push+pull OK'); })
     .catch(function(e){ console.warn('[admin] push ERR', e); });
 }
-
-
-      // push do chmury (jeśli adapter wczytany)
-      if(window.CloudSlots && typeof CloudSlots.pushNewSlotFromLocal === 'function'){
-        CloudSlots.pushNewSlotFromLocal()
-          .then(()=> console.log('[admin] push OK'))
-          .catch(err=> console.error('[admin] push ERR', err));
-      }
     });
   }
 }
