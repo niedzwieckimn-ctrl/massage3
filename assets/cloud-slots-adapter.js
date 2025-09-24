@@ -58,10 +58,24 @@
     if (!newest) return;
 
     // jeśli już ma id (np. UI je generuje), to wstawimy z tym id.
-    const payload = { when: newest.when, taken: !!newest.taken };
-    
+    // nie wysyłamy własnego id – UUID nada baza
+const payload = { when: newest.when, taken: !!newest.taken };
 
-    const { data, error } = await sb.from('slots').insert(payload).select('id').single();
+const { data, error } = await sb
+  .from('slots')
+  .upsert(payload, { onConflict: 'when' })   // <- kluczowa zmiana
+  .select('id, when, taken')
+  .single();
+
+if (error) throw error;
+
+// zaktualizuj lokalny rekord o uuid z bazy
+let slots = Store.get('slots', []);
+slots = slots.map(s =>
+  (s.id === newest.id || s.when === data.when) ? { ...s, id: data.id } : s
+);
+Store.set('slots', slots);
+
     if (error) { console.warn('Cloud push slot error', error); return; }
 
     // ujednolicamy localStorage: wpisz id z bazy (jeśli brakowało)
