@@ -103,6 +103,12 @@ function renderSlots(){
       el('#slotDate').value = '';
       el('#slotTime').value = '';
       renderSlots();
+	  if (window.CloudSlots) {
+  CloudSlots.pushNewSlotFromLocal()
+    .then(function(){ console.log('[admin] push+pull OK'); })
+    .catch(function(e){ console.warn('[admin] push ERR', e); });
+}
+
 
       // push do chmury (jeśli adapter wczytany)
       if(window.CloudSlots && typeof CloudSlots.pushNewSlotFromLocal === 'function'){
