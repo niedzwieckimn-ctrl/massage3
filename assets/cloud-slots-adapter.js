@@ -44,56 +44,65 @@
 
   // 2) Wyślij ostatnio dodany lokalny slot do chmury
   function pushNewSlotFromLocal() {
-    var all = get('slots', []);
-    if (!all.length) return Promise.resolve();
+  var all = get('slots', []);
+  if (!all.length) return Promise.resolve();
 
-    // Najnowszy = OSTATNI element (bo onAddSlot dopisuje na koniec)
-    var newest = all[all.length - 1];
-    if (!newest) return Promise.resolve();
+  // najnowszy = ostatni element (dopiero co dodany lokalnie)
+  var newest = all[all.length - 1];
+  if (!newest) return Promise.resolve();
 
-    var payload = { id: newest.id, when: newest.when, taken: !!newest.taken };
+  // wykryj czy ID wygląda na UUID (xxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+  var isUUID = function (v) {
+    return typeof v === 'string' && /^[0-9a-fA-F-]{36}$/.test(v);
+  };
 
-    return sb
-      .from('slots')
-      .insert(payload)
-      .select('id')
-      .single()
-      .then(function (res) {
-        if (res.error) {
-          // 23505 = duplikat when -> pobieramy istniejący i podmieniamy ID lokalnie
-          if (res.error.code === '23505') {
-            return sb
-              .from('slots')
-              .select('id, when')
-              .eq('when', payload.when)
-              .single()
-              .then(function (r2) {
-                if (!r2.error && r2.data) {
-                  var synced = all.map(function (s) {
-                    return s.when === r2.data.when
-                      ? Object.assign({}, s, { id: r2.data.id })
-                      : s;
-                  });
-                  set('slots', synced);
-                  document.dispatchEvent(new Event('slots-synced'));
-                }
-              });
-          } else {
-            log('push error', res.error);
-          }
-          return;
-        }
-
-        // sukces – jeśli baza zwróciła inne id, podmień lokalnie
-        var synced2 = all.map(function (s) {
-          return s.when === newest.when
-            ? Object.assign({}, s, { id: res.data.id })
-            : s;
-        });
-        set('slots', synced2);
-        document.dispatchEvent(new Event('slots-synced'));
-      });
+  // jeżeli lokalne id NIE jest uuid -> NIE wysyłaj go, niech baza nada sama
+  var payload = { when: newest.when, taken: !!newest.taken };
+  if (isUUID(newest.id)) {
+    payload.id = newest.id; // OK, przekaż jeżeli już jest prawidłowe UUID
   }
+
+  return sb
+    .from('slots')
+    .insert(payload)
+    .select('id, when')
+    .single()
+    .then(function (res) {
+      if (res.error) {
+        // 23505 = duplikat 'when' -> podmień tylko id lokalnie
+        if (res.error.code === '23505') {
+          return sb
+            .from('slots')
+            .select('id, when')
+            .eq('when', newest.when)
+            .single()
+            .then(function (r2) {
+              if (!r2.error && r2.data) {
+                var updated = all.map(function (s) {
+                  return s.when === r2.data.when
+                    ? Object.assign({}, s, { id: r2.data.id })
+                    : s;
+                });
+                set('slots', updated);
+                document.dispatchEvent(new Event('slots-synced'));
+              }
+            });
+        } else {
+          log('push error', res.error);
+        }
+        return;
+      }
+
+      // sukces – baza zwróciła id (nowo nadane UUID); podmień lokalnie
+      var updated2 = all.map(function (s) {
+        return s.when === res.data.when
+          ? Object.assign({}, s, { id: res.data.id })
+          : s;
+      });
+      set('slots', updated2);
+      document.dispatchEvent(new Event('slots-synced'));
+    });
+}
 
   // 3) Usuń slot w chmurze
   function deleteSlotInCloud(id) {
