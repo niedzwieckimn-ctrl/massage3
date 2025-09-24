@@ -174,39 +174,28 @@
   </div>
 
  
-  <script src="assets/store.js"></script>
+<script src="assets/store.js"></script>
+
+<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+  // WSTAW swoje dane:
   const SUPABASE_URL = 'https://eibzijpelnmvbtslquun.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpYnppanBlbG5tdmJ0c2xxdXVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MTE1OTcsImV4cCI6MjA3NDE4NzU5N30.Dp4u9PlhP-_pGmiNTHp5zSjrMUDfA_k2i85_71_9koo';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpYnppanBlbG5tdmJ0c2xxdXVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MTE1OTcsImV4cCI6MjA3NDE4NzU5N30.Dp4u9PlhP-_pGmiNTHp5zSjrMUDfA_k2i85_71_9koo'; 
   window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 </script>
 
-<!-- adapter bez async/await -->
+<!-- Adapter chmury (UWAGA: poprawna nazwa pliku) -->
 <script src="assets/cloud-slots-adapter.js?v=4"></script>
-
-<!-- po zainicjowaniu window.sb -->
 <script>
   if (window.sb && window.CloudSlots) {
     CloudSlots.init(window.sb);
-    CloudSlots.startAutoSync(5000); // co 5s ściąga aktualne dane z chmury
+    CloudSlots.startAutoSync(5000); // co 5s odświeża z chmury
   }
 </script>
 
-
-
-  <script src="assets/admin.js"></script>
-  <script>
-    // tab switching
-    const tabs = document.querySelectorAll('.tabbar .tab');
-    const panes = document.querySelectorAll('.tabpane');
-    tabs.forEach(t=> t.addEventListener('click', ()=>{
-      tabs.forEach(x=>x.classList.remove('active'));
-      t.classList.add('active');
-      const id = t.dataset.tab;
-      panes.forEach(p=> p.style.display = (p.dataset.pane===id)?'block':'none');
-    }));
-  </script>
-
+<!-- Kod panelu admin – NA KOŃCU i tylko raz -->
+<script src="assets/admin.js"></script>
 </body>
 </html>
+
