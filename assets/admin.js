@@ -184,6 +184,9 @@ function renderSlots(){
     renderSlots();
   };
 }
+if(window.CloudSlots){
+  CloudSlots.pushNewSlotFromLocal().catch(function(e){ console.warn('[cloud] push fail', e); });
+}
 
 // --- Usługi
 function renderServices(){
