@@ -78,8 +78,8 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 }
 
 /* Na dużych ekranach trochę mniejsze, aby nie dominowało */
-@media (min-width:1024px){
-  .logo{ width:420px; }
+@media (min-width:200px){
+  .logo{ width:200px; }
 }
 
 /* =======================
@@ -224,4 +224,55 @@ tbody tr td:last-child {border-top-right-radius:10px;border-bottom-right-radius:
   .container{padding:12px}
   .listItem{flex-direction:column;align-items:flex-start;gap:6px}
   .btn{padding:10px 12px}
+}
+/* ================================
+   Formularze – spójna kolorystyka
+   ================================ */
+
+/* Wygląd podstawowy pól */
+input,
+select,
+textarea {
+  background: #fff;                  /* białe tło */
+  border: 1px solid #DBDBDB;         /* delikatna ramka */
+  border-radius: 6px;                /* lekko zaokrąglone */
+  padding: 10px;
+  font-size: 16px;
+  color: #333;                       /* tekst ciemny */
+  width: 100%;
+  box-sizing: border-box;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+
+/* Po najechaniu */
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: #b5b5b5;
+}
+
+/* Po kliknięciu (focus) */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border: 1px solid #b08d57;         /* złoty/brązowy odcień strony */
+  box-shadow: 0 0 4px rgba(176, 141, 87, 0.3);
+}
+
+/* Chrome autofill (usuwa niebieskie tło) */
+input:-webkit-autofill,
+select:-webkit-autofill,
+textarea:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0px 1000px #fff inset !important; /* białe tło */
+  -webkit-text-fill-color: #333 !important;                 /* tekst ciemny */
+  border: 1px solid #DBDBDB !important;
+}
+
+/* Autofill + focus */
+input:-webkit-autofill:focus,
+select:-webkit-autofill:focus,
+textarea:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #fff inset !important;
+  border: 1px solid #b08d57 !important;
 }
