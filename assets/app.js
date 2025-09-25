@@ -18,20 +18,18 @@ function ensureServicesSeed(){
   }
 }
 
-// --- render listy usług
-function renderServices(){
-  const select = el('#service');
+// Wczytuje zabiegi z Supabase i buduje <select id="service">
+async function renderServicesSelect(){
+  const select = document.getElementById('service');
   if(!select) return;
-  const services = getServices();
-  if(!services.length){
-    select.innerHTML = '<option value="">Brak usług – dodaj w panelu</option>';
-    select.disabled = true;
-    return;
-  }
-  select.disabled = false;
-  select.innerHTML = services.map(
-    s => `<option value="${s.id}">${s.name} — ${fmtMoney(s.price)}</option>`
-  ).join('');
+  const services = await dbLoadServices(); // z index.html
+  select.innerHTML = '<option value="">Wybierz zabieg…</option>';
+  services.forEach(s=>{
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = `${s.name} — ${Number(s.price).toFixed(2)} zł`;
+    select.appendChild(opt);
+  });
 }
 
 
@@ -186,7 +184,7 @@ function handleSubmit(e){
 // --- init
 document.addEventListener('DOMContentLoaded', ()=>{
   ensureServicesSeed();              // jeśli pusto – zasiej 1 usługę
-  renderServices();
+  renderServicesSelect();
   el('#date')?.addEventListener('change', renderTimeOptions);
   el('#form')?.addEventListener('submit', handleSubmit);
   el('#date')?.setAttribute('min', new Date().toISOString().slice(0,10));
@@ -200,3 +198,53 @@ window.addEventListener('storage', (e)=>{
   if(e.key==='services') renderServices();
   if(e.key==='slots' || e.key==='bookings') renderTimeOptions();
 });
+// --- WYSYŁKA FORMULARZA REZERWACJI ---
+(function(){
+  const form = document.getElementById('bookingForm');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+
+    // 1) zbierz dane z formularza
+    const name    = document.getElementById('name')?.value.trim();
+    const email   = document.getElementById('email')?.value.trim();
+    const phone   = document.getElementById('phone')?.value.trim();
+    const address = document.getElementById('address')?.value.trim();
+    const service_id = document.getElementById('service')?.value;
+    let   slotVal    = document.getElementById('time')?.value; // może być ID albo data
+    const notes   = document.getElementById('notes')?.value.trim() || '';
+
+    if(!name || !email || !phone || !service_id || !slotVal){
+      alert('Uzupełnij wymagane pola.'); return;
+    }
+
+    // 2) upewnij się, że mamy slot_id (jeśli w <select> jest data, dociągnij ID z Supabase)
+    let slot_id = slotVal;
+    const isUUID = /^[0-9a-fA-F-]{36}$/.test(slotVal);
+    if (!isUUID) {
+      // traktujemy value jako datę ISO -> pobierz ID slotu z bazy
+      const { data, error } = await sb.from('slots')
+        .select('id')
+        .eq('when', slotVal)
+        .single();
+      if (error || !data) { alert('Nie udało się znaleźć wybranego terminu.'); return; }
+      slot_id = data.id;
+    }
+
+    // 3) klient: znajdź lub utwórz
+    const client_id = await dbEnsureClient({name, email, phone, address});
+    if(!client_id){ alert('Nie udało się zapisać klienta.'); return; }
+
+    // 4) rezerwacja + oznaczenie slotu jako zajęty
+    const r = await dbCreateBooking({ slot_id, service_id, client_id, notes });
+    if(!r.ok){ alert('Nie udało się utworzyć rezerwacji.'); return; }
+
+    // 5) feedback dla klienta (baner „Dziękujemy” jeśli masz #bookingThanks)
+    const thanks = document.getElementById('bookingThanks');
+    if (thanks){ thanks.classList.remove('hidden'); setTimeout(()=>thanks.classList.add('hidden'), 4000); }
+
+    form.reset();
+    // jeśli masz odświeżanie listy terminów na stronie, wywołaj je tutaj
+  });
+})();

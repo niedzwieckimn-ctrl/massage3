@@ -66,6 +66,66 @@
 <div class="footer">© Massage &amp; SPA • <span id="contact"></span></div>
 </div>
 <script src="assets/store.js"></script>
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- Inicjalizacja Supabase -->
+<script>
+  const SUPABASE_URL = 'https://eibzijpelnmvbtslquun.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpYnppanBlbG5tdmJ0c2xxdXVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MTE1OTcsImV4cCI6MjA3NDE4NzU5N30.Dp4u9PlhP-_pGmiNTHp5zSjrMUDfA_k2i85_71_9koo';
+  window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
+
+<!-- Prosty adapter na stronie publicznej -->
+<script>
+  async function dbLoadServices(){
+    const { data, error } = await sb
+      .from('services')
+      .select('id, name, price, duration_min, active')
+      .eq('active', true)
+      .order('name', { ascending:true });
+    if(error){ console.warn('[public] services error:', error); return []; }
+    return data || [];
+  }
+
+  async function dbEnsureClient({name, email, phone, address}){
+    // spróbuj znaleźć po e-mailu
+    let { data: found, error: e1 } = await sb
+      .from('clients')
+      .select('id')
+      .ilike('email', email)
+      .single();
+    if (!e1 && found) return found.id;
+
+    // jeśli nie ma — utwórz
+    const { data: created, error: e2 } = await sb
+      .from('clients')
+      .insert({ name, email, phone, address })
+      .select('id')
+      .single();
+    if(e2){ console.warn('[public] create client error:', e2); return null; }
+    return created?.id || null;
+  }
+
+  async function dbCreateBooking({slot_id, service_id, client_id, notes}){
+    const { data: booking, error: e1 } = await sb
+      .from('bookings')
+      .insert({ slot_id, service_id, client_id, notes })
+      .select('id, created_at')
+      .single();
+    if(e1){ console.warn('[public] booking insert error:', e1); return { ok:false, error:e1 }; }
+
+    // oznacz slot jako zajęty
+    const { error: e2 } = await sb
+      .from('slots')
+      .update({ taken: true })
+      .eq('id', slot_id);
+    if(e2){ console.warn('[public] slot mark taken error:', e2); }
+
+    return { ok:true, booking };
+  }
+</script>
+
 <script src="assets/app.js"></script>
 <script>
 (function(){
