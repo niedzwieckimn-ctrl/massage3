@@ -61,7 +61,7 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
    ======================= */
 header{padding:12px 0;border-bottom:1px solid var(--line);background:var(--bg)}
 .brand{display:flex;align-items:center;gap:12px}
-.brand img{height:100px;width:auto}   /* <- tu zmienisz wielkość logo */
+.brand img{height:300px;width:auto}   /* <- tu zmienisz wielkość logo */
 .brand .title{font-weight:700;letter-spacing:.2px;color:var(--text)}
 
 /* =======================
