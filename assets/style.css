@@ -59,6 +59,7 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 /* =======================
    Nagłówek / logo
    ======================= */
+/* --- Nagłówek / logo --- */
 .header {
   display:flex;
   justify-content:center;
@@ -67,17 +68,16 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
   border-bottom:1px solid var(--line);
   background:var(--bg);
 }
-.logo {
+
+/* Jedna reguła, skaluje się ładnie na wszystkich ekranach */
+.logo{
   display:block;
-  margin:0 auto;
-  max-width:220px;   /* logo na komputerze */
+  margin:12px auto;
+  width:auto;
   height:auto;
+  max-width:clamp(180px, 50vw, 320px); /* min 180px, zwykle 50% szerokości okna, max 320px */
 }
-@media (max-width:768px){
-  .logo {
-    max-width:100px; /* logo większe na telefonie */
-  }
-}
+
 
 /* =======================
    Taby / sekcje
