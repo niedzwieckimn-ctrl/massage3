@@ -68,18 +68,16 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
   background:var(--bg);
 }
 
-/* Domyślnie: szerokość zależna od ekranu, bez limitu z HTML */
-/* LOGO – stały limit szerokości + responsywność */
+/* logo skalowane rozsądnie, bez rozwalania układu */
 .logo{
   display:block;
-  margin:0 auto;
-  width:auto;           /* nie wymuszaj szerokości */
-  max-width:260px;      /* limit na desktopie */
-  height:auto;
+  margin:16px auto;
+  height:clamp(36px, 10vw, 80px); /* min 36px, rośnie do 80px max */
+  width:auto;                     /* zachowuje proporcje SVG */
 }
 
-@media (max-width: 768px){
-  .logo{ max-width:300px; }   /* limit na telefonie */
+@media (min-width: 900px){
+  .logo{ height:64px; }           /* desktop */
 }
 
 
