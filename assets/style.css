@@ -72,7 +72,7 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 .logo{
   display:block;
   margin:16px auto;
-  height:clamp(150px, 14vw, 200px); /* min 36px, rośnie do 80px max */
+  height:clamp(100px, 14vw, 150px); /* min 36px, rośnie do 80px max */
   width:auto;                     /* zachowuje proporcje SVG */
 }
 
