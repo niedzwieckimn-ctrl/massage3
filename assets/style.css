@@ -69,18 +69,19 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 }
 
 /* Domyślnie: szerokość zależna od ekranu, bez limitu z HTML */
+/* LOGO – stały limit szerokości + responsywność */
 .logo{
   display:block;
   margin:0 auto;
-  width:min(92vw, 50px);   /* rośnie do 520px, ale nie więcej niż 92% szerokości */
-  max-width:unset;          /* kasuje ewentualny max-width z wcześniejszych stylów */
+  width:auto;           /* nie wymuszaj szerokości */
+  max-width:260px;      /* limit na desktopie */
   height:auto;
 }
 
-/* Na dużych ekranach trochę mniejsze, aby nie dominowało */
-@media (min-width:200px){
-  .logo{ width:200px; }
+@media (max-width: 768px){
+  .logo{ max-width:180px; }   /* limit na telefonie */
 }
+
 
 /* =======================
    Taby / sekcje
