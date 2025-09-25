@@ -1,13 +1,13 @@
 
 :root{
-  --bg:#0b1220;
-  --card:#0f1a2e;
-  --muted:#a8b1c7;
-  --text:#e7ecf7;
-  --accent1:#80ffe8;
-  --accent2:#9bb3ff;
-  --danger:#ff6b6b;
-  --success:#3ddc97;
+  --bg:#ffffff;
+  --card:#fafafa;
+  --muted:#666666;
+  --text:#111111;
+  --accent1:#8B6B32;
+  --accent2:#6d5126;
+  --danger:#dc2626;
+  --success:#16a34a;
   --shadow:0 10px 30px rgba(0,0,0,.35);
   --radius:18px;
 }
@@ -21,7 +21,7 @@ body{
 .container{max-width:1050px;margin:0 auto;padding:28px 16px 56px}
 .header{display:flex;align-items:center;gap:18px;justify-content:space-between;margin-bottom:18px}
 .brand{display:flex;align-items:center;gap:12px}
-.brand img{height:38px;width:auto}
+.brand img{height:50px;width:auto}
 .brand h1{font-size:20px;margin:0;font-weight:700;letter-spacing:.4px}
 .btn{border:0;border-radius:999px;padding:12px 18px;color:#0d1325;background:linear-gradient(90deg,var(--accent1),var(--accent2));box-shadow:var(--shadow);cursor:pointer;font-weight:700;letter-spacing:.3px}
 .btn.secondary{background:#1b2741;color:var(--text)}
