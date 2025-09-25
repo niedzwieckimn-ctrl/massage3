@@ -69,16 +69,32 @@ function renderSlots(){
   }
 
   // Klik "Usuń"
-  list.onclick = (e)=>{
+  list.onclick = async (e)=>{
     const btn = e.target.closest('button[data-when]');
-    if(!btn) return;
+    if (!btn) return;
+
     const id   = btn.dataset.id;
     const when = btn.dataset.when;
-    let curr = Store.get('slots',[]) || [];
-    curr = id ? curr.filter(x=>x.id!==id) : curr.filter(x=>x.when!==when);
-    Store.set('slots', curr);
+
+    // 1) najpierw usuń w chmurze (Supabase)
+    if (window.CloudSlots) {
+        try {
+            // jeśli jest id – po id; jeśli nie – po when
+            await CloudSlots.deleteSlot(id || when);
+            console.log('[admin] cloud delete OK');
+        } catch (err) {
+            console.warn('[admin] cloud delete ERR', err);
+        }
+    }
+
+    // 2) dopiero teraz usuń lokalnie (LocalStorage)
+    let slots = Store.get('slots', []);
+    slots = id ? slots.filter(s => s.id !== id)
+               : slots.filter(s => s.when !== when);
+    Store.set('slots', slots);
     renderSlots();
-  };
+};
+
 
   // Dodawanie nowego terminu
   const addBtn = el('#addSlot');

@@ -18,20 +18,18 @@ function ensureServicesSeed(){
   }
 }
 
-// --- render listy usług
-function renderServices(){
-  const select = el('#service');
+// Wczytuje zabiegi z Supabase i buduje <select id="service">
+async function renderServicesSelect(){
+  const select = document.getElementById('service');
   if(!select) return;
-  const services = getServices();
-  if(!services.length){
-    select.innerHTML = '<option value="">Brak usług – dodaj w panelu</option>';
-    select.disabled = true;
-    return;
-  }
-  select.disabled = false;
-  select.innerHTML = services.map(
-    s => `<option value="${s.id}">${s.name} — ${fmtMoney(s.price)}</option>`
-  ).join('');
+  const services = await dbLoadServices(); // z index.html
+  select.innerHTML = '<option value="">Wybierz zabieg…</option>';
+  services.forEach(s=>{
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = `${s.name} — ${Number(s.price).toFixed(2)} zł`;
+    select.appendChild(opt);
+  });
 }
 
 
@@ -186,7 +184,7 @@ function handleSubmit(e){
 // --- init
 document.addEventListener('DOMContentLoaded', ()=>{
   ensureServicesSeed();              // jeśli pusto – zasiej 1 usługę
-  renderServices();
+  renderServicesSelect();
   el('#date')?.addEventListener('change', renderTimeOptions);
   el('#form')?.addEventListener('submit', handleSubmit);
   el('#date')?.setAttribute('min', new Date().toISOString().slice(0,10));
@@ -199,4 +197,216 @@ document.addEventListener('DOMContentLoaded', ()=>{
 window.addEventListener('storage', (e)=>{
   if(e.key==='services') renderServices();
   if(e.key==='slots' || e.key==='bookings') renderTimeOptions();
+});
+// --- WYSYŁKA FORMULARZA REZERWACJI ---
+(function(){
+  const form = document.getElementById('bookingForm');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+
+    // 1) zbierz dane z formularza
+    const name    = document.getElementById('name')?.value.trim();
+    const email   = document.getElementById('email')?.value.trim();
+    const phone   = document.getElementById('phone')?.value.trim();
+    const address = document.getElementById('address')?.value.trim();
+    const service_id = document.getElementById('service')?.value;
+    let   slotVal    = document.getElementById('time')?.value; // może być ID albo data
+    const notes   = document.getElementById('notes')?.value.trim() || '';
+
+    if(!name || !email || !phone || !service_id || !slotVal){
+      alert('Uzupełnij wymagane pola.'); return;
+    }
+
+    // 2) upewnij się, że mamy slot_id (jeśli w <select> jest data, dociągnij ID z Supabase)
+    let slot_id = slotVal;
+    const isUUID = /^[0-9a-fA-F-]{36}$/.test(slotVal);
+    if (!isUUID) {
+      // traktujemy value jako datę ISO -> pobierz ID slotu z bazy
+      const { data, error } = await sb.from('slots')
+        .select('id')
+        .eq('when', slotVal)
+        .single();
+      if (error || !data) { alert('Nie udało się znaleźć wybranego terminu.'); return; }
+      slot_id = data.id;
+    }
+
+    // 3) klient: znajdź lub utwórz
+    const client_id = await dbEnsureClient({name, email, phone, address});
+    if(!client_id){ alert('Nie udało się zapisać klienta.'); return; }
+
+    // 4) rezerwacja + oznaczenie slotu jako zajęty
+    const r = await dbCreateBooking({ slot_id, service_id, client_id, notes });
+    if(!r.ok){ alert('Nie udało się utworzyć rezerwacji.'); return; }
+
+    // 5) feedback dla klienta (baner „Dziękujemy” jeśli masz #bookingThanks)
+    const thanks = document.getElementById('bookingThanks');
+    if (thanks){ thanks.classList.remove('hidden'); setTimeout(()=>thanks.classList.add('hidden'), 4000); }
+
+    form.reset();
+    // jeśli masz odświeżanie listy terminów na stronie, wywołaj je tutaj
+  });
+})();
+/* ===========================
+   SUPABASE – Rezerwacje
+   =========================== */
+
+// pobierz usługi i zbuduj select
+async function renderServicesSelect() {
+  const sel = document.getElementById('service');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Wybierz zabieg</option>';
+
+  const { data: services, error } = await window.sb
+    .from('services')
+    .select('id, name, price')
+    .order('name', { ascending: true });
+
+  if (error) { console.error('[services] error:', error); return; }
+  if (!services) return;
+
+  services.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id; 
+    opt.textContent = `${s.name} — ${Number(s.price).toFixed(2)} zł`;
+    sel.appendChild(opt);
+  });
+}
+
+// pobierz wolne sloty dla danej daty
+async function fillTimesFromCloud(dateStr) {
+  const timeSel = document.getElementById('time');
+  if (!timeSel) return;
+
+  timeSel.innerHTML = '';
+  const from = new Date(`${dateStr}T00:00:00`);
+  const to   = new Date(`${dateStr}T23:59:59`);
+
+  const { data: free, error } = await window.sb
+    .from('slots')
+    .select('id, when')
+    .gte('when', from.toISOString())
+    .lte('when', to.toISOString())
+    .eq('taken', false)
+    .order('when', { ascending: true });
+
+  if (error) { console.error('[slots] error:', error); return; }
+  if (!free.length) {
+    const o = document.createElement('option');
+    o.value = '';
+    o.textContent = 'Brak wolnych godzin';
+    o.disabled = true;
+    timeSel.appendChild(o);
+    return;
+  }
+
+  const ph = document.createElement('option');
+  ph.value = '';
+  ph.textContent = 'Wybierz godzinę';
+  ph.disabled = true;
+  ph.selected = true;
+  timeSel.appendChild(ph);
+
+  free.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.id;             // tu mamy ID slotu
+    o.dataset.when = s.when;    
+    o.textContent = new Date(s.when).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+    timeSel.appendChild(o);
+  });
+}
+
+// znajdź klienta po e-mailu albo utwórz nowego
+async function dbFindOrCreateClient({ name, email, phone, address }) {
+  let { data: c } = await window.sb
+    .from('clients')
+    .select('id')
+    .eq('email', email)
+    .single();
+  if (!c) {
+    const { data: cIns, error: cErr } = await window.sb
+      .from('clients')
+      .insert([{ name, email, phone, address }])
+      .select('id')
+      .single();
+    if (cErr) throw cErr;
+    return cIns.id;
+  }
+  return c.id;
+}
+
+// zapisz booking
+async function dbCreateBooking({ client_id, service_id, slot_id, notes }) {
+  const { data, error } = await window.sb
+    .from('bookings')
+    .insert([{ client_id, service_id, slot_id, notes }])
+    .select('id, created_at')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// oznacz slot jako zajęty
+async function dbMarkSlotTaken(slot_id) {
+  const { error } = await window.sb
+    .from('slots')
+    .update({ taken: true })
+    .eq('id', slot_id);
+  if (error) throw error;
+}
+
+// obsługa wysyłki formularza
+async function onSubmitBooking(e) {
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn') || e.submitter;
+  if (btn) btn.disabled = true;
+
+  try {
+    const name    = document.getElementById('name').value.trim();
+    const email   = document.getElementById('email').value.trim();
+    const phone   = document.getElementById('phone').value.trim();
+    const address = document.getElementById('address').value.trim();
+    const service = document.getElementById('service').value.trim(); 
+    const dateStr = document.getElementById('date').value.trim();
+    const timeSel = document.getElementById('time');
+    const notes   = document.getElementById('notes').value.trim();
+
+    if (!name || !email || !phone || !service || !dateStr || !timeSel.value) {
+      alert('Uzupełnij wszystkie pola.');
+      return;
+    }
+
+    const slotId = timeSel.value;
+    const clientId = await dbFindOrCreateClient({ name, email, phone, address });
+    await dbCreateBooking({ client_id: clientId, service_id: service, slot_id: slotId, notes });
+    await dbMarkSlotTaken(slotId);
+
+    alert('Rezerwacja zapisana!');
+    e.target.reset();
+    await fillTimesFromCloud(dateStr);
+
+  } catch (err) {
+    console.error(err);
+    alert('Błąd podczas zapisu rezerwacji.');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// po załadowaniu strony podpinamy
+document.addEventListener('DOMContentLoaded', () => {
+  renderServicesSelect();
+
+  const dateEl = document.getElementById('date');
+  if (dateEl) {
+    dateEl.addEventListener('change', () => {
+      if (dateEl.value) fillTimesFromCloud(dateEl.value);
+    });
+  }
+
+  const formEl = document.getElementById('form');
+  if (formEl) {
+    formEl.addEventListener('submit', onSubmitBooking);
+  }
 });
