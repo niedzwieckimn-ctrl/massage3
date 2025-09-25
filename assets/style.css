@@ -16,7 +16,7 @@
   --success:#16a34a;
   --warning:#d97706;
 
-  --focus:#1d4ed8;      /* niebieska ramka focus */
+  --focus:#DBDBDB;      /* szare podświetlenie focus */
 }
 
 /* =======================
@@ -57,33 +57,27 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 }
 
 /* =======================
-   Nagłówek / brand
+   Nagłówek / logo
    ======================= */
-/* ===== Nagłówek i logo – jedna wersja na desktop i mobile ===== */
 .header {
-  display: flex;
-  align-items: center;
-  justify-content: center;   /* jeśli chcesz po lewej: flex-start */
-  gap: 14px;
-  padding: 14px 12px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:16px;
+  border-bottom:1px solid var(--line);
+  background:var(--bg);
 }
-
-.header .logo {
-  height: 150px !important;   /* domyślna wysokość */
-  width: auto;
-  display: block;
+.logo {
+  display:block;
+  margin:0 auto;
+  max-width:220px;   /* logo na komputerze */
+  height:auto;
 }
-
-/* Mobile – możesz dać jeszcze większe */
-@media (max-width: 768px) {
-  .header {
-    padding: 12px 10px;
-  }
-  .header .logo {
-    height: 72px !important; /* powiększenie na telefonie */
+@media (max-width:768px){
+  .logo {
+    max-width:280px; /* logo większe na telefonie */
   }
 }
-
 
 /* =======================
    Taby / sekcje
@@ -123,8 +117,8 @@ input,select,textarea{
   outline:none;transition:border-color .15s, box-shadow .15s;
 }
 input:focus,select:focus,textarea:focus{
-  border-color:var(--brand);
-  box-shadow:0 0 0 3px color-mix(in oklab, var(--brand) 25%, transparent);
+  border-color:var(--focus);
+  box-shadow:0 0 0 3px var(--focus);
 }
 ::placeholder{color:#9aa1a9}
 
@@ -149,19 +143,14 @@ tbody tr td:last-child {border-top-right-radius:10px;border-bottom-right-radius:
   background:var(--brand);color:#fff;transition:filter .15s, background .15s
 }
 .btn:hover{background:var(--brand-600)}
-.btn:focus{outline:3px solid color-mix(in oklab, var(--focus) 35%, transparent)}
 .btn:disabled{opacity:.6;cursor:not-allowed}
-
 .btn.secondary{
   background:#fff;color:var(--brand);
   border:1px solid var(--brand);
 }
 .btn.secondary:hover{background:var(--brand-100)}
-.btn.danger{background:var(--danger)}
+.btn.danger{background:var(--danger);color:#fff;}
 .btn.danger:hover{filter:brightness(.95)}
-
-/* Małe przyciski w wierszach */
-.btn.sm{padding:8px 10px;border-radius:8px;font-size:.9rem}
 
 /* =======================
    Badges / statusy
@@ -189,7 +178,7 @@ tbody tr td:last-child {border-top-right-radius:10px;border-bottom-right-radius:
 #bookingThanks .line2{font-size:.95rem;opacity:.95}
 
 /* =======================
-   Modale (jeśli używasz)
+   Modale
    ======================= */
 .modal{
   position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:10000
@@ -207,40 +196,29 @@ tbody tr td:last-child {border-top-right-radius:10px;border-bottom-right-radius:
 .calendar .day.taken{background:#fff;border:1px solid var(--line);color:var(--muted)}
 .calendar .day.today{outline:2px solid var(--brand);outline-offset:-2px}
 
+.flatpickr-day.free {
+  border: 2px solid var(--brand);
+  color: var(--brand);
+  font-weight: 500;
+}
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+.flatpickr-day:hover {
+  border-color: var(--brand);
+  background: rgba(160, 120, 40, 0.1);
+  color: var(--brand);
+}
+
 /* =======================
-   RWD
+   Responsywność
    ======================= */
 @media (max-width:720px){
   .container{padding:12px}
   .listItem{flex-direction:column;align-items:flex-start;gap:6px}
   .btn{padding:10px 12px}
-  .brand img{height:48px}
-}
-
-/* =======================
-   Drobne utility
-   ======================= */
-.muted{color:var(--muted)}
-.center{text-align:center}
-.right{text-align:right}
-.hidden{display:none!important}
-/* === Pola formularza – stan focus === */
-input:focus,
-textarea:focus,
-select:focus {
-  outline: none !important;           /* usuwa niebieską poświatę */
-  border: 1px solid #DBDBDB !important; /* obramowanie w kolorze strony */
-  box-shadow: 0 0 4px #DBDBDB;         /* subtelny efekt poświaty */
-}
-/* Logo – ogólnie */
-.logo {
-  max-height: 100px;   /* rozmiar na komputerze */
-  height: auto;
-}
-
-/* Logo – na telefonach */
-@media (max-width: 768px) {
-  .logo {
-    max-height: 80px;   /* tu ustawiasz większą wartość, np. 60–70px */
-  }
 }
