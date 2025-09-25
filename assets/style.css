@@ -264,7 +264,7 @@ textarea:focus {
 input:-webkit-autofill,
 select:-webkit-autofill,
 textarea:-webkit-autofill {
-  -webkit-box-shadow: 0 0 0px 1000px #efe3b8 inset !important; /* białe tło */
+  -webkit-box-shadow: 0 0 0px 1000px #f8f6f4 inset !important; /* białe tło */
   -webkit-text-fill-color: #333 !important;                 /* tekst ciemny */
   border: 1px solid #DBDBDB !important;
 }
@@ -273,6 +273,6 @@ textarea:-webkit-autofill {
 input:-webkit-autofill:focus,
 select:-webkit-autofill:focus,
 textarea:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0px 1000px #efe3b8 inset !important;
+  -webkit-box-shadow: 0 0 0px 1000px #f8f6f4 inset !important;
   border: 1px solid #b08d57 !important;
 }
