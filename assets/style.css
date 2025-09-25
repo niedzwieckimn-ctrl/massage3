@@ -59,10 +59,31 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 /* =======================
    Nagłówek / brand
    ======================= */
-header{padding:12px 0;border-bottom:1px solid var(--line);background:var(--bg)}
-.brand{display:flex;align-items:center;gap:12px}
-.brand img{height:300px;width:auto}   /* <- tu zmienisz wielkość logo */
-.brand .title{font-weight:700;letter-spacing:.2px;color:var(--text)}
+/* ===== Nagłówek i logo – jedna wersja na desktop i mobile ===== */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* jeśli chcesz po lewej: flex-start */
+  gap: 14px;
+  padding: 14px 12px;
+}
+
+.header .logo {
+  height: 150px !important;   /* domyślna wysokość */
+  width: auto;
+  display: block;
+}
+
+/* Mobile – możesz dać jeszcze większe */
+@media (max-width: 768px) {
+  .header {
+    padding: 12px 10px;
+  }
+  .header .logo {
+    height: 72px !important; /* powiększenie na telefonie */
+  }
+}
+
 
 /* =======================
    Taby / sekcje
@@ -203,3 +224,11 @@ tbody tr td:last-child {border-top-right-radius:10px;border-bottom-right-radius:
 .center{text-align:center}
 .right{text-align:right}
 .hidden{display:none!important}
+/* === Pola formularza – stan focus === */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none !important;           /* usuwa niebieską poświatę */
+  border: 1px solid #DBDBDB !important; /* obramowanie w kolorze strony */
+  box-shadow: 0 0 4px #DBDBDB;         /* subtelny efekt poświaty */
+}
