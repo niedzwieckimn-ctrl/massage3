@@ -233,7 +233,7 @@ tbody tr td:last-child {border-top-right-radius:10px;border-bottom-right-radius:
 input,
 select,
 textarea {
-  background: #fff;                  /* białe tło */
+  background: #efe3b8;                  /* białe tło */
   border: 1px solid #DBDBDB;         /* delikatna ramka */
   border-radius: 6px;                /* lekko zaokrąglone */
   padding: 10px;
@@ -241,7 +241,7 @@ textarea {
   color: #333;                       /* tekst ciemny */
   width: 100%;
   box-sizing: border-box;
-  transition: border 0.2s, box-shadow 0.2s;
+  transition: border 0.1s, box-shadow 0.1s;
 }
 
 /* Po najechaniu */
@@ -264,7 +264,7 @@ textarea:focus {
 input:-webkit-autofill,
 select:-webkit-autofill,
 textarea:-webkit-autofill {
-  -webkit-box-shadow: 0 0 0px 1000px #fff inset !important; /* białe tło */
+  -webkit-box-shadow: 0 0 0px 1000px #efe3b8 inset !important; /* białe tło */
   -webkit-text-fill-color: #333 !important;                 /* tekst ciemny */
   border: 1px solid #DBDBDB !important;
 }
@@ -273,6 +273,6 @@ textarea:-webkit-autofill {
 input:-webkit-autofill:focus,
 select:-webkit-autofill:focus,
 textarea:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0px 1000px #fff inset !important;
+  -webkit-box-shadow: 0 0 0px 1000px #efe3b8 inset !important;
   border: 1px solid #b08d57 !important;
 }
