@@ -232,3 +232,15 @@ select:focus {
   border: 1px solid #DBDBDB !important; /* obramowanie w kolorze strony */
   box-shadow: 0 0 4px #DBDBDB;         /* subtelny efekt poświaty */
 }
+/* Logo – ogólnie */
+.logo {
+  max-height: 100px;   /* rozmiar na komputerze */
+  height: auto;
+}
+
+/* Logo – na telefonach */
+@media (max-width: 768px) {
+  .logo {
+    max-height: 80px;   /* tu ustawiasz większą wartość, np. 60–70px */
+  }
+}
