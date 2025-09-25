@@ -59,25 +59,28 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 /* =======================
    Nagłówek / logo
    ======================= */
-/* --- Nagłówek / logo --- */
-.header {
+.header{
   display:flex;
   justify-content:center;
   align-items:center;
-  padding:16px;
+  padding:24px 0;
   border-bottom:1px solid var(--line);
   background:var(--bg);
 }
 
-/* Jedna reguła, skaluje się ładnie na wszystkich ekranach */
+/* Domyślnie: szerokość zależna od ekranu, bez limitu z HTML */
 .logo{
   display:block;
-  margin:12px auto;
-  width:auto;
+  margin:0 auto;
+  width:min(92vw, 520px);   /* rośnie do 520px, ale nie więcej niż 92% szerokości */
+  max-width:unset;          /* kasuje ewentualny max-width z wcześniejszych stylów */
   height:auto;
-  max-width:clamp(180px, 50vw, 320px); /* min 180px, zwykle 50% szerokości okna, max 320px */
 }
 
+/* Na dużych ekranach trochę mniejsze, aby nie dominowało */
+@media (min-width:1024px){
+  .logo{ width:420px; }
+}
 
 /* =======================
    Taby / sekcje
@@ -217,22 +220,8 @@ tbody tr td:last-child {border-top-right-radius:10px;border-bottom-right-radius:
 /* =======================
    Responsywność
    ======================= */
-@media (max-width:720px){
+@media (max-width:200px){
   .container{padding:12px}
   .listItem{flex-direction:column;align-items:flex-start;gap:6px}
   .btn{padding:10px 12px}
-}
-/* --- Logo skalowanie (nadpisanie wszystkiego) --- */
-.logo {
-  display: block !important;
-  margin: 12px auto !important;
-  height: auto !important;
-  width: 220px !important;   /* rozmiar na telefonie */
-  max-width: 80% !important; /* żeby nie wyjechało poza ekran */
-}
-
-@media (min-width: 768px) {
-  .logo {
-    width: 320px !important;  /* rozmiar na desktop */
-  }
 }
