@@ -72,12 +72,12 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 .logo{
   display:block;
   margin:16px auto;
-  height:clamp(60px, 10vw, 120px); /* min 36px, rośnie do 80px max */
+  height:clamp(60px, 14vw, 120px); /* min 36px, rośnie do 80px max */
   width:auto;                     /* zachowuje proporcje SVG */
 }
 
 @media (min-width: 900px){
-  .logo{ height:64px; }           /* desktop */
+  .logo{ height:150px; }           /* desktop */
 }
 
 
