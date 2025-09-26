@@ -364,7 +364,10 @@ async function createBooking({ client_id, service_id, slot_id, notes }) {
       }
 
       // 5.2 usługa
-     // 5.2 usługa – bierzemy UUID prosto z <select>
+      let service_id;
+      {
+        // jeśli option.value = UUID — odbierz od razu:
+        // 5.2 usługa – bierzemy UUID prosto z <select>
 const sel = document.getElementById('service');
 const service_id = sel?.value || '';
 if (!service_id) { alert('Wybierz zabieg.'); return; }
