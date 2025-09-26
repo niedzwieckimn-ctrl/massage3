@@ -68,6 +68,7 @@ function renderSlots(){
     list.appendChild(row);
   }
 
+
   // Klik "Usuń" — trwałe usuwanie: najpierw w chmurze, potem lokalnie, potem refresh
 list.onclick = async (e) => {
   const btn = e.target.closest('button[data-when]');
@@ -143,44 +144,31 @@ list.onclick = async (e) => {
   }
 }
 
-// --- Usługi & Cennik ---
-async function renderServices(){
+/* --- Usługi (zostawiamy stare zachowanie – z Store) --- */
+function renderServices(){
   const tbody = el('#servicesBody');
-  if (!tbody) return;
+  if(!tbody) return;
 
-  // 1) Ściągnij z chmury (jeśli jest sb); jeśli błąd – zostaw to co w localStorage
-  let services = Store.get('services', []);
-  if (window.sb) {
-    const { data, error } = await window.sb
-      .from('services')
-      .select('id, name, price, duration_min, active')
-      .order('name', { ascending: true });
-
-    if (!error && Array.isArray(data)) {
-      services = data;
-      Store.set('services', services); // nadpisz lokalne świeżymi
-    } else {
-      console.warn('[admin] services pull error:', error);
-    }
-  }
-
-  // 2) Render
-  if (!services.length) {
-    tbody.innerHTML = '<tr><td colspan="5"><div class="notice">Brak usług.</div></td></tr>';
+  const services = Store.get('services',[]) || [];
+  if(!services.length){
+    tbody.innerHTML = '<tr><td colspan="4">Brak usług.</td></tr>';
     return;
   }
 
-  tbody.innerHTML = services.map(s => `
-    <tr data-id="${s.id}">
-      <td><input class="svc-name" value="${s.name ?? ''}"></td>
-      <td><input class="svc-price" type="number" step="0.01" value="${s.price ?? ''}"></td>
-      <td><input class="svc-dur" type="number" value="${s.duration_min ?? ''}"></td>
-      <td style="text-align:center"><input class="svc-act" type="checkbox" ${s.active ? 'checked' : ''}></td>
-      <td><button class="btn danger svc-del">Usuń</button></td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = '';
+  services.forEach(s=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${s.name||''}</td>
+      <td>${s.durationMin||0} min</td>
+      <td>${fmtMoney(s.price||0)}</td>
+      <td class="inline">
+        <!-- przyciski edycji/usuń możesz dodać później -->
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
 }
-
 
 /* --- Klienci (zostawiamy z Store) --- */
 function renderClients(){
@@ -241,11 +229,5 @@ document.addEventListener('DOMContentLoaded', ()=>{
   });
 
   requireAuth();
-  renderServices();
-// 2) Odświeżenie po wejściu w kartę "Usługi & Cennik"
-  const tabServices = document.querySelector('.tabbar_tab[data-tab="services"]');
-  if (tabServices) tabServices.addEventListener('click', () => renderServices());
-});
-
 });
 
