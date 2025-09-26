@@ -252,27 +252,6 @@ window.addEventListener('storage', (e)=>{
    SUPABASE – Rezerwacje
    =========================== */
 
-// pobierz usługi i zbuduj select
-async function renderServicesSelect() {
-  const sel = document.getElementById('service');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">Wybierz zabieg</option>';
-
-  const { data: services, error } = await window.sb
-    .from('services')
-    .select('id, name, price')
-    .order('name', { ascending: true });
-
-  if (error) { console.error('[services] error:', error); return; }
-  if (!services) return;
-
-  services.forEach(s => {
-    const opt = document.createElement('option');
-    opt.value = s.id; 
-    opt.textContent = `${s.name} — ${Number(s.price).toFixed(2)} zł`;
-    sel.appendChild(opt);
-  });
-}
 
 // pobierz wolne sloty dla danej daty
 async function fillTimesFromCloud(dateStr) {
@@ -356,57 +335,5 @@ async function dbMarkSlotTaken(slot_id) {
   if (error) throw error;
 }
 
-// obsługa wysyłki formularza
-async function onSubmitBooking(e) {
-  e.preventDefault();
-  const btn = document.getElementById('submitBtn') || e.submitter;
-  if (btn) btn.disabled = true;
 
-  try {
-    const name    = document.getElementById('name').value.trim();
-    const email   = document.getElementById('email').value.trim();
-    const phone   = document.getElementById('phone').value.trim();
-    const address = document.getElementById('address').value.trim();
-    const service = document.getElementById('service').value.trim(); 
-    const dateStr = document.getElementById('date').value.trim();
-    const timeSel = document.getElementById('time');
-    const notes   = document.getElementById('notes').value.trim();
 
-    if (!name || !email || !phone || !service || !dateStr || !timeSel.value) {
-      alert('Uzupełnij wszystkie pola.');
-      return;
-    }
-
-    const slotId = timeSel.value;
-    const clientId = await dbFindOrCreateClient({ name, email, phone, address });
-    await dbCreateBooking({ client_id: clientId, service_id: service, slot_id: slotId, notes });
-    await dbMarkSlotTaken(slotId);
-
-    alert('Rezerwacja zapisana!');
-    e.target.reset();
-    await fillTimesFromCloud(dateStr);
-
-  } catch (err) {
-    console.error(err);
-    alert('Błąd podczas zapisu rezerwacji.');
-  } finally {
-    if (btn) btn.disabled = false;
-  }
-}
-
-// po załadowaniu strony podpinamy
-document.addEventListener('DOMContentLoaded', () => {
-  renderServicesSelect();
-
-  const dateEl = document.getElementById('date');
-  if (dateEl) {
-    dateEl.addEventListener('change', () => {
-      if (dateEl.value) fillTimesFromCloud(dateEl.value);
-    });
-  }
-
-  const formEl = document.getElementById('form');
-  if (formEl) {
-    formEl.addEventListener('submit', onSubmitBooking);
-  }
-});
