@@ -405,23 +405,18 @@ if (slot.taken === true)    { alert('Ten termin został już zajęty.'); return;
       });
 
       // 5.6 sukces – odśwież listę terminów u klienta (LS używasz do mapki)
-      try {
-        const { data: freshSlots } = await window.sb
-          .from('slots')
-          .select('id, when, taken')
-          .eq('taken', false)
-          .order('when', { ascending: true });
-        localStorage.setItem('slots', JSON.stringify(freshSlots || []));
-      } catch(_) {}
+try {
+  const { data: freshSlots } = await window.sb
+    .from('slots')
+    .select('id, when, taken')
+    .eq('taken', false)
+    .order('when', { ascending: true });
 
-      alert('Rezerwacja zapisana. Dziękujemy!');
-      // tu możesz zawołać swoją funkcję e-mail (masażystka/klient),
-      // bo masz już pewność, że zapis do bazy się udał.
+  localStorage.setItem('slots', JSON.stringify(freshSlots || []));
+} catch (e) {
+  console.warn('[public] refresh slots failed', e);
+}
 
-    } catch (err) {
-      console.error(err);
-      alert('Nie udało się zapisać rezerwacji. Spróbuj ponownie.');
-    }
   });
 })();
 
