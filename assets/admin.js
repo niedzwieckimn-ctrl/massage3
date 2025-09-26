@@ -1,233 +1,249 @@
-/* =========================================================
-   ADMIN (Supabase + LocalStorage) — wersja naprawiona
-   ========================================================= */
+'use strict';
 
-/* ---- Krótkie pomocnicze funkcje UI ---- */
-window.el  = window.el  || function (sel, r = document) { return r.querySelector(sel); };
-window.els = window.els || function (sel, r = document) { return r.querySelectorAll(sel); };
-
-function fmtMoney(n){ return new Intl.NumberFormat('pl-PL', { style:'currency', currency:'PLN', minimumFractionDigits:2 }).format(Number(n||0)); }
-function fmtDate(iso){
+/* ===========================
+   Pomocnicze
+=========================== */
+const el = (sel, root = document) => root.querySelector(sel);
+const money = (n) => (Number(n) || 0).toFixed(2) + ' zł';
+const dtPL  = (iso) => {
   const d = new Date(iso);
-  return isNaN(d) ? '' : d.toLocaleString('pl-PL', { dateStyle:'medium', timeStyle:'short' });
-}
-
-/* ---- Sesja PIN ---- */
-const Session = {
-  isAuthed(){ return sessionStorage.getItem('adminAuthed') === '1'; },
-  login(){    sessionStorage.setItem('adminAuthed','1'); },
-  logout(){   sessionStorage.removeItem('adminAuthed'); }
+  return isNaN(d) ? '—' : d.toLocaleString('pl-PL', { dateStyle: 'medium', timeStyle: 'short' });
 };
 
-function requireAuth(){
-  const loginView = el('#loginView');
-  const appView   = el('#appView');
-  if(!loginView || !appView) return;
+/* ===========================
+   Sesja (PIN)
+=========================== */
+const PIN = '2505';
+const Session = {
+  isAuthed(){ return sessionStorage.getItem('adminAuthed') === '1'; },
+  login(){ sessionStorage.setItem('adminAuthed', '1'); },
+  logout(){ sessionStorage.removeItem('adminAuthed'); }
+};
 
-  if(Session.isAuthed()){
-    loginView.style.display = 'none';
-    appView.style.display   = 'block';
-    renderAll();
-  }else{
-    appView.style.display   = 'none';
-    loginView.style.display = 'block';
+/* ===========================
+   Zakładki (taby)
+=========================== */
+function initTabs(){
+  const tabs  = document.querySelectorAll('.tabbar .tab');
+  const panes = document.querySelectorAll('.tabpane');
+  tabs.forEach(t=>{
+    t.addEventListener('click', ()=>{
+      tabs.forEach(x=>x.classList.remove('active'));
+      panes.forEach(p=>p.style.display = (p.dataset.pane === t.dataset.tab) ? 'block' : 'none');
+      t.classList.add('active');
+    });
+  });
+}
+
+/* ===========================
+   SUPABASE – funkcje DB
+   (wymagane: window.sb z admin.html)
+=========================== */
+// Usługi
+async function dbLoadServices(){
+  const { data, error } = await sb.from('services')
+    .select('id, name, price, duration_min, active')
+    .order('name', { ascending: true });
+  if(error){ console.error('DB services:', error); return []; }
+  return data || [];
+}
+async function dbUpsertService(svc){
+  const { error } = await sb.from('services').upsert(svc, { onConflict: 'id' });
+  if(error) throw error;
+}
+async function dbDeleteService(id){
+  const { error } = await sb.from('services').delete().eq('id', id);
+  if(error) throw error;
+}
+
+// Terminy
+async function dbLoadSlots(){
+  const { data, error } = await sb.from('slots')
+    .select('id, when, taken')
+    .order('when', { ascending: true });
+  if(error){ console.error('DB slots:', error); return []; }
+  return data || [];
+}
+async function dbAddSlot(iso){
+  const { data, error } = await sb.from('slots').insert({ when: iso, taken: false }).select('id').single();
+  if(error) throw error;
+  return data.id;
+}
+async function dbDeleteSlot(id){
+  const { error } = await sb.from('slots').delete().eq('id', id);
+  if(error) throw error;
+}
+
+// Rezerwacje (prosty odczyt)
+async function dbLoadBookings(){
+  const { data, error } = await sb.from('bookings')
+    .select('*')
+    .order('createdAt', { ascending: false });
+  if(error){ console.error('DB bookings:', error); return []; }
+  return data || [];
+}
+
+/* ===========================
+   RENDERY
+=========================== */
+// Usługi – lista + dodawanie/edycja/usuwanie
+async function renderServices(){
+  const tbody = el('#servicesBody'); if(!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4">Ładowanie…</td></tr>';
+
+  const list = await dbLoadServices();
+  if(!list.length){ tbody.innerHTML = '<tr><td colspan="4">Brak usług.</td></tr>'; return; }
+
+  tbody.innerHTML = '';
+  list.forEach(s=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${s.name}</td>
+      <td>${s.duration_min} min</td>
+      <td>${money(s.price)}</td>
+      <td class="inline">
+        <button class="btn secondary" data-act="edit" data-id="${s.id}">Edytuj</button>
+        <button class="btn danger" data-act="del" data-id="${s.id}">Usuń</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  tbody.onclick = async (e)=>{
+    const id  = e.target.dataset.id;
+    const act = e.target.dataset.act;
+    if(!id || !act) return;
+
+    if(act === 'del'){
+      if(!confirm('Usunąć usługę?')) return;
+      await dbDeleteService(id);
+      renderServices();
+      return;
+    }
+
+    if(act === 'edit'){
+      const row = list.find(x=>x.id === id); if(!row) return;
+      const name = prompt('Nazwa', row.name) || row.name;
+      const duration_min = parseInt(prompt('Czas (min)', row.duration_min) || row.duration_min, 10);
+      const price = parseFloat(prompt('Cena', row.price) || row.price);
+      await dbUpsertService({ id, name, duration_min, price, active: true });
+      renderServices();
+    }
+  };
+
+  const addBtn = el('#addService');
+  if(addBtn){
+    addBtn.onclick = async ()=>{
+      const name = prompt('Nazwa usługi:'); if(!name) return;
+      const duration_min = parseInt(prompt('Czas trwania (min):', '60'), 10) || 60;
+      const price = parseFloat(prompt('Cena (PLN):', '180'), 10) || 180;
+      await dbUpsertService({ name, duration_min, price, active: true });
+      renderServices();
+    };
   }
 }
 
-function login(){
-  const pinInput = el('#pin');
-  const pin = (pinInput && pinInput.value || '').trim();
-  const expected = (Store.get('pin','') || '2505');     // PIN z localStorage albo 2505
-  if(pin === expected){ Session.login(); requireAuth(); }
-  else { alert('Błędny PIN'); }
-}
-function logout(){ Session.logout(); requireAuth(); }
+// Terminy – lista + dodawanie/usuwanie
+async function renderSlots(){
+  const listEl = el('#slotsList'); if(!listEl) return;
+  listEl.innerHTML = '<div class="notice">Ładowanie…</div>';
 
-/* =========================================================
-   RENDER — Sloty / Usługi / Klienci / Ustawienia
-   ========================================================= */
+  const all  = await dbLoadSlots();
+  const free = all.filter(s=>!s.taken);
+  if(!free.length){ listEl.innerHTML = '<div class="notice">Brak dodanych terminów.</div>'; return; }
 
-/* --- Wolne terminy --- */
-function renderSlots(){
-  const list = el('#slotsList');
-  if(!list) return;
-
-  const slots = (Store.get('slots',[]) || []).sort((a,b)=> new Date(a.when)-new Date(b.when));
-  list.innerHTML = slots.length ? '' : '<div class="notice">Brak dodanych terminów.</div>';
-
-  for(const s of slots){
+  listEl.innerHTML = '';
+  free.forEach(s=>{
     const row = document.createElement('div');
     row.className = 'listItem inline';
     row.style.justifyContent = 'space-between';
     row.innerHTML = `
-      <div>${fmtDate(s.when)}</div>
+      <div><b>${dtPL(s.when)}</b></div>
       <div class="inline">
-        <button class="btn danger" data-id="${s.id||''}" data-when="${s.when}">Usuń</button>
-      </div>
-    `;
-    list.appendChild(row);
-  }
-
-
-  // Klik "Usuń" — trwałe usuwanie: najpierw w chmurze, potem lokalnie, potem refresh
-list.onclick = async (e) => {
-  const btn = e.target.closest('button[data-when]');
-  if (!btn) return;
-
-  const id   = btn.dataset.id || null;
-  const when = btn.dataset.when || null;
-
-  // 1) próbujemy usunąć w Supabase bez blokowania UI
-  if (window.sb && id) {
-    try {
-      await window.sb
-        .from('slots')
-        .delete()
-        .eq('id', id);
-      console.log('[admin] supabase delete OK', id);
-    } catch (err) {
-      console.warn('[admin] supabase delete ERR', err);
-      // nie przerywamy — i tak usuniemy lokalnie, ale zgłosimy błąd
-    }
-  } else if (window.CloudSlots && (id || when)) {
-    // jeśli korzystasz z adaptera zamiast bezpośredniego sb, spróbuj przez niego
-    try {
-      await CloudSlots.deleteSlot(id || when);
-      console.log('[admin] cloud delete OK', id || when);
-    } catch (err) {
-      console.warn('[admin] cloud delete ERR', err);
-    }
-  }
-
-  // 2) usuń lokalnie (od razu dla responsywności)
-  let slots = Store.get('slots', []) || [];
-  slots = id ? slots.filter(s => s.id !== id) : slots.filter(s => s.when !== when);
-  Store.set('slots', slots);
-  renderSlots();
-
-  // 3) opcjonalnie: ściągnij świeże dane z chmury (jeśli masz pull)
-  if (window.CloudSlots && typeof CloudSlots.pull === 'function') {
-    try { await CloudSlots.pull(); } catch(_) { /* ignore */ }
-  }
-};
-
-
-  // Dodawanie nowego terminu
-  const addBtn = el('#addSlot');
-  if(addBtn && !addBtn._bound){
-    addBtn._bound = true;
-    addBtn.addEventListener('click', ()=>{
-      const d = el('#slotDate')?.value.trim();
-      let   t = el('#slotTime')?.value.trim().slice(0,5);
-      if(!d || !t || !/^\d{4}-\d{2}-\d{2}$/.test(d) || !/^\d{2}:\d{2}$/.test(t)){
-        alert('Podaj poprawną datę i godzinę'); return;
-      }
-      const iso = new Date(`${d}T${t}:00`).toISOString();
-
-      let slots = Store.get('slots',[]) || [];
-      // anty-duplikat lokalnie
-      if(slots.some(s => s.when === iso)){ alert('Taki termin już istnieje'); return; }
-
-      slots.push({ id: Store.uid(), when: iso, taken:false });
-      slots.sort((a,b)=> new Date(a.when)-new Date(b.when));
-      Store.set('slots', slots);
-
-      el('#slotDate').value = '';
-      el('#slotTime').value = '';
-      renderSlots();
-	  if (window.CloudSlots) {
-  CloudSlots.pushNewSlotFromLocal()
-    .then(function(){ console.log('[admin] push+pull OK'); })
-    .catch(function(e){ console.warn('[admin] push ERR', e); });
-}
-    });
-  }
-}
-
-/* --- Usługi (zostawiamy stare zachowanie – z Store) --- */
-function renderServices(){
-  const tbody = el('#servicesBody');
-  if(!tbody) return;
-
-  const services = Store.get('services',[]) || [];
-  if(!services.length){
-    tbody.innerHTML = '<tr><td colspan="4">Brak usług.</td></tr>';
-    return;
-  }
-
-  tbody.innerHTML = '';
-  services.forEach(s=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${s.name||''}</td>
-      <td>${s.durationMin||0} min</td>
-      <td>${fmtMoney(s.price||0)}</td>
-      <td class="inline">
-        <!-- przyciski edycji/usuń możesz dodać później -->
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-/* --- Klienci (zostawiamy z Store) --- */
-function renderClients(){
-  const wrap = el('#clientsList');
-  if(!wrap) return;
-  const clients = Store.get('clients',[]) || [];
-  wrap.innerHTML = clients.length ? '' : '<div class="notice">Brak klientów.</div>';
-
-  for(const c of clients){
-    const div = document.createElement('div');
-    div.className = 'listItem';
-    div.innerHTML = `
-      <div class="inline" style="justify-content:space-between">
-        <span class="meta">${c.name||''} — ${c.email||''} — ${c.phone||''}</span>
-        <button class="btn secondary" data-id="${c.id||''}">Otwórz</button>
+        <button class="btn danger" data-id="${s.id}">Usuń</button>
       </div>`;
-    wrap.appendChild(div);
+    listEl.appendChild(row);
+  });
+
+  listEl.onclick = async (e)=>{
+    const id = e.target.dataset.id; if(!id) return;
+    if(!confirm('Usunąć ten termin?')) return;
+    await dbDeleteSlot(id);
+    renderSlots();
+  };
+
+  const addBtn = el('#addSlot');
+  if(addBtn){
+    addBtn.onclick = async ()=>{
+      const d = el('#slotDate').value.trim();
+      const t = el('#slotTime').value.trim();
+      if(!d || !t){ alert('Wybierz datę i godzinę.'); return; }
+      const iso = new Date(`${d}T${t}:00`).toISOString();
+      await dbAddSlot(iso);
+      el('#slotDate').value = ''; el('#slotTime').value = '';
+      renderSlots();
+    };
   }
 }
 
-/* --- Ustawienia (nic nie zmieniamy) --- */
-function renderSettings(){ /* pozostawiam pustą, jeśli nie masz ustawień do pokazania */ }
+// Rezerwacje – proste listy
+async function renderBookings(){
+  const up = el('#upcoming'), cf = el('#confirmed');
+  if(!up || !cf) return;
 
-/* ---- Render całości ---- */
-function renderAll(){
-  renderSlots();
-  // (reszta kart zadziała jak u Ciebie dotąd)
-  renderServices();
-  renderClients();
-  renderSettings();
+  up.innerHTML = cf.innerHTML = '<div class="notice">Ładowanie…</div>';
+  const list = await dbLoadBookings();
+  const upcoming  = list.filter(b => b.status !== 'Potwierdzona');
+  const confirmed = list.filter(b => b.status === 'Potwierdzona');
+
+  const paint = (wrap, arr)=>{
+    if(!arr.length){ wrap.innerHTML = '<div class="notice">Brak pozycji.</div>'; return; }
+    wrap.innerHTML = '';
+    arr.forEach(b=>{
+      const div = document.createElement('div');
+      div.className = 'listItem inline';
+      div.style.justifyContent = 'space-between';
+      div.innerHTML = `
+        <div><b>${dtPL(b.when)}</b> — ${b.client_name || ''}</div>
+        <div class="badge ${b.status==='Potwierdzona'?'success':'warning'}">${b.status || 'Oczekująca'}</div>`;
+      wrap.appendChild(div);
+    });
+  };
+  paint(up, upcoming);
+  paint(cf, confirmed);
 }
 
-/* =========================================================
-   INIT
-   ========================================================= */
+/* ===========================
+   Start / logowanie
+=========================== */
+function requireAuth(){
+  const loginView = el('#loginView');
+  const appView   = el('#appView');
+  if(Session.isAuthed()){
+    loginView.style.display = 'none';
+    appView.style.display   = 'block';
+    initTabs();
+    renderServices();
+    renderSlots();
+    renderBookings();
+  }else{
+    loginView.style.display = 'block';
+    appView.style.display   = 'none';
+  }
+}
+
 document.addEventListener('DOMContentLoaded', ()=>{
-  const loginBtn  = el('#loginBtn');
+  console.log('ADMIN START');
+
+  const loginBtn = el('#loginBtn');
+  if(loginBtn){
+    loginBtn.onclick = ()=>{
+      const val = el('#pin').value.trim();
+      if(val === PIN){ Session.login(); requireAuth(); }
+      else alert('Błędny PIN');
+    };
+  }
   const logoutBtn = el('#logoutBtn');
-
-  if(loginBtn)  loginBtn.onclick  = login;
-  if(logoutBtn) logoutBtn.onclick = logout;
-
-  const sd = el('#slotDate');
-  if(sd) sd.setAttribute('min', new Date().toISOString().slice(0,10));
-
-  // przełączanie zakładek (kafelki)
-  const tabs  = document.querySelectorAll('.tabbar .tab');
-  const panes = document.querySelectorAll('.tabpane');
-  tabs.forEach(function (t) {
-    t.addEventListener('click', function () {
-      tabs.forEach(x => x.classList.remove('active'));
-      t.classList.add('active');
-      const id = t.dataset.tab;
-      panes.forEach(p => {
-        p.style.display = (p.dataset.pane === id ? 'block' : 'none');
-      });
-    });
-  });
+  if(logoutBtn) logoutBtn.onclick = ()=>{ Session.logout(); requireAuth(); };
 
   requireAuth();
 });
-
