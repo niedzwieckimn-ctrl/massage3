@@ -143,7 +143,6 @@ list.onclick = async (e) => {
   }
 }
 
-/* --- Usługi (zostawiamy stare zachowanie – z Store) --- */
 // --- Usługi & Cennik ---
 async function renderServices(){
   const tbody = el('#servicesBody');
