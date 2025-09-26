@@ -198,56 +198,7 @@ window.addEventListener('storage', (e)=>{
   if(e.key==='services') renderServices();
   if(e.key==='slots' || e.key==='bookings') renderTimeOptions();
 });
-// --- WYSYŁKA FORMULARZA REZERWACJI ---
-(function(){
-  const form = document.getElementById('bookingForm');
-  if (!form) return;
 
-  form.addEventListener('submit', async (e)=>{
-    e.preventDefault();
-
-    // 1) zbierz dane z formularza
-    const name    = document.getElementById('name')?.value.trim();
-    const email   = document.getElementById('email')?.value.trim();
-    const phone   = document.getElementById('phone')?.value.trim();
-    const address = document.getElementById('address')?.value.trim();
-    const service_id = document.getElementById('service')?.value;
-    let   slotVal    = document.getElementById('time')?.value; // może być ID albo data
-    const notes   = document.getElementById('notes')?.value.trim() || '';
-
-    if(!name || !email || !phone || !service_id || !slotVal){
-      alert('Uzupełnij wymagane pola.'); return;
-    }
-
-    // 2) upewnij się, że mamy slot_id (jeśli w <select> jest data, dociągnij ID z Supabase)
-    let slot_id = slotVal;
-    const isUUID = /^[0-9a-fA-F-]{36}$/.test(slotVal);
-    if (!isUUID) {
-      // traktujemy value jako datę ISO -> pobierz ID slotu z bazy
-      const { data, error } = await sb.from('slots')
-        .select('id')
-        .eq('when', slotVal)
-        .single();
-      if (error || !data) { alert('Nie udało się znaleźć wybranego terminu.'); return; }
-      slot_id = data.id;
-    }
-
-    // 3) klient: znajdź lub utwórz
-    const client_id = await dbEnsureClient({name, email, phone, address});
-    if(!client_id){ alert('Nie udało się zapisać klienta.'); return; }
-
-    // 4) rezerwacja + oznaczenie slotu jako zajęty
-    const r = await dbCreateBooking({ slot_id, service_id, client_id, notes });
-    if(!r.ok){ alert('Nie udało się utworzyć rezerwacji.'); return; }
-
-    // 5) feedback dla klienta (baner „Dziękujemy” jeśli masz #bookingThanks)
-    const thanks = document.getElementById('bookingThanks');
-    if (thanks){ thanks.classList.remove('hidden'); setTimeout(()=>thanks.classList.add('hidden'), 4000); }
-
-    form.reset();
-    // jeśli masz odświeżanie listy terminów na stronie, wywołaj je tutaj
-  });
-})();
 /* ===========================
    SUPABASE – Rezerwacje
    =========================== */
@@ -334,6 +285,157 @@ async function dbMarkSlotTaken(slot_id) {
     .eq('id', slot_id);
   if (error) throw error;
 }
+/* ====== ZAPIS DO SUPABASE: klient + rezerwacja + zajęcie slotu ====== */
+
+// 1) pomocnicze: pobierz UUID usługi z <select>
+function getSelectedServiceId() {
+  const sel = document.getElementById('service');
+  if (!sel) return null;
+  // Zakładam, że option.value jest nazwą usługi (jak u Ciebie).
+  // Jeśli już masz value = UUID, to to wystarczy: return sel.value;
+  const selectedName = sel.value?.trim();
+  if (!selectedName) return null;
+  return window.sb
+    .from('services')
+    .select('id, name')
+    .eq('name', selectedName)
+    .single();
+}
+
+// 2) znajdź slot po dacie/godzinie (ISO identyczne jak w slots.when)
+async function getSlotByDateTime(dateStr, timeStr) {
+  if (!dateStr || !timeStr) return { data: null, error: { message: 'Brak daty lub godziny' } };
+  // ISO „yyyy-mm-ddThh:mm:00.000Z”
+  const iso = new Date(`${dateStr}T${timeStr}:00`).toISOString();
+  return await window.sb
+    .from('slots')
+    .select('id, when, taken')
+    .eq('when', iso)
+    .single();
+}
+
+// 3) ensureClient – nie duplikuje: szuka po e-mailu, w razie braku tworzy
+async function ensureClient({ name, email, phone, address }) {
+  // spróbuj znaleźć po e-mailu
+  let { data: found, error: findErr } = await window.sb
+    .from('clients')
+    .select('id')
+    .eq('email', email)
+    .single();
+
+  if (found && found.id) return found.id;
+
+  // utwórz
+  let { data: created, error: insErr } = await window.sb
+    .from('clients')
+    .insert([{ name, email, phone, address }])
+    .select('id')
+    .single();
+
+  if (insErr || !created) throw new Error('Błąd tworzenia klienta');
+  return created.id;
+}
+
+// 4) createBooking – zapisuje do bookings i zajmuje slot
+async function createBooking({ client_id, service_id, slot_id, notes }) {
+  // rezerwacja
+  const { data: booking, error: bErr } = await window.sb
+    .from('bookings')
+    .insert([{ client_id, service_id, slot_id, notes }])
+    .select('id, created_at')
+    .single();
+  if (bErr) throw new Error('Błąd tworzenia rezerwacji');
+
+  // oznacz slot jako zajęty
+  const { error: updErr } = await window.sb
+    .from('slots')
+    .update({ taken: true })
+    .eq('id', slot_id);
+  if (updErr) throw new Error('Błąd oznaczania slotu jako zajęty');
+
+  return booking;
+}
+
+// 5) handler przycisku „Rezerwuj”
+(function hookPublicBooking() {
+  const btn = document.querySelector('#reserveBtn, button[type="submit"]');
+  const form = document.getElementById('form'); // jeśli masz id="form" na gridzie
+  if (!btn || !form) return;
+
+  // zabezpieczenie, by nie dodać kilka razy
+  if (btn._bound) return;
+  btn._bound = true;
+
+  btn.addEventListener('click', async (e) => {
+    e.preventDefault();
+
+    try {
+      // 5.1 odczytaj dane z formularza
+      const name    = (document.getElementById('name')?.value || '').trim();
+      const email   = (document.getElementById('email')?.value || '').trim();
+      const phone   = (document.getElementById('phone')?.value || '').trim();
+      const address = (document.getElementById('address')?.value || '').trim();
+      const dateStr = (document.getElementById('date')?.value || '').trim();
+      const timeStr = (document.getElementById('time')?.value || '').trim();
+      const notes   = (document.getElementById('notes')?.value || '').trim();
+      const rodo    = document.querySelector('#rodo')?.checked;
+
+      if (!name || !email || !phone || !dateStr || !timeStr || !rodo) {
+        alert('Uzupełnij wymagane pola (w tym zgoda RODO).');
+        return;
+      }
+
+      // 5.2 usługa
+      let service_id;
+      {
+        // jeśli option.value = UUID — odbierz od razu:
+        const sel = document.getElementById('service');
+        if (sel && sel.options[sel.selectedIndex] && sel.options[sel.selectedIndex].dataset.id) {
+          service_id = sel.options[sel.selectedIndex].dataset.id;
+        } else {
+          // gdy value = nazwa — pobierz UUID z bazy:
+          const { data: svc, error: svcErr } = await getSelectedServiceId();
+          if (svcErr || !svc) { alert('Nie udało się pobrać usługi'); return; }
+          service_id = svc.id;
+        }
+      }
+
+      // 5.3 slot po dacie/godzinie
+      const { data: slot, error: slotErr } = await getSlotByDateTime(dateStr, timeStr);
+      if (slotErr || !slot) { alert('Nie znaleziono wybranego terminu.'); return; }
+      if (slot.taken) { alert('Wybrany termin jest już zajęty.'); return; }
+
+      // 5.4 klient
+      const client_id = await ensureClient({ name, email, phone, address });
+
+      // 5.5 rezerwacja
+      const booking = await createBooking({
+        client_id,
+        service_id,
+        slot_id: slot.id,
+        notes
+      });
+
+      // 5.6 sukces – odśwież listę terminów u klienta (LS używasz do mapki)
+      try {
+        const { data: freshSlots } = await window.sb
+          .from('slots')
+          .select('id, when, taken')
+          .eq('taken', false)
+          .order('when', { ascending: true });
+        localStorage.setItem('slots', JSON.stringify(freshSlots || []));
+      } catch(_) {}
+
+      alert('Rezerwacja zapisana. Dziękujemy!');
+      // tu możesz zawołać swoją funkcję e-mail (masażystka/klient),
+      // bo masz już pewność, że zapis do bazy się udał.
+
+    } catch (err) {
+      console.error(err);
+      alert('Nie udało się zapisać rezerwacji. Spróbuj ponownie.');
+    }
+  });
+})();
 
 
 
