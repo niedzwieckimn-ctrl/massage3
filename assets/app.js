@@ -206,3 +206,30 @@ async function refreshClientSlotsCache() {
     form.reset();
   });
 })();
+async function populateServicesSelect() {
+  const sel = document.getElementById('service');
+  if (!sel || !window.sb) return;
+
+  sel.innerHTML = '<option value="">Wybierz zabieg</option>';
+
+  const { data, error } = await window.sb
+    .from('services')
+    .select('id,name,price,active')
+    .eq('active', true)
+    .order('name', { ascending:true });
+
+  if (error) {
+    console.warn('[public] services pull error:', error);
+    return;
+  }
+
+  (data || []).forEach(s => {
+    const o = new Option(`${s.name} — ${Number(s.price||0).toFixed(2)} zł`, s.id);
+    sel.add(o);
+  });
+}
+
+// po DOMContentLoaded:
+document.addEventListener('DOMContentLoaded', ()=>{
+  populateServicesSelect();   // <-- to musi się wykonać po załadowaniu strony
+});

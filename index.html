@@ -342,6 +342,36 @@ window.addEventListener('storage', (e) => {
     }
   };
 })();
+</script><script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const sel = document.getElementById('service');
+  if(!sel) return;
+
+  try {
+    const { data, error } = await window.sb
+      .from('services')
+      .select('id,name,price')
+      .eq('active', true)
+      .order('name', { ascending:true });
+
+    if (error) {
+      console.error('[public] services err:', error);
+      sel.innerHTML = '<option value="">Brak usług</option>';
+      return;
+    }
+
+    sel.innerHTML =
+      '<option value="">Wybierz zabieg</option>' +
+      (data || []).map(s =>
+        `<option value="${s.id}">${s.name} — ${(Number(s.price)||0).toFixed(2)} zł</option>`
+      ).join('');
+  } catch (e) {
+    console.error('[public] services load crash:', e);
+    document.getElementById('service').innerHTML =
+      '<option value="">Błąd wczytywania usług</option>';
+  }
+});
 </script>
+
 </body>
 </html>
