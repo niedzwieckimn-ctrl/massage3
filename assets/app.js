@@ -367,18 +367,31 @@ async function createBooking({ client_id, service_id, slot_id, notes }) {
       let service_id;
       {
         // jeśli option.value = UUID — odbierz od razu:
-        // 5.2 usługa – bierzemy UUID prosto z <select>
-const sel = document.getElementById('service');
-const service_id = sel?.value || '';
+       // 5.2 usługa – bierzemy UUID prosto z <select>
+const service_id = document.getElementById('service')?.value;
 if (!service_id) { alert('Wybierz zabieg.'); return; }
-// nie pobieramy już po nazwie, nie wołamy getSelectedServiceId()
 
-      }
+// 5.3 slot – bierzemy UUID prosto z <select>
+const slot_id = document.getElementById('time')?.value;
+if (!slot_id) { alert('Wybierz godzinę.'); return; }
 
-      // 5.3 slot po dacie/godzinie
-      const { data: slot, error: slotErr } = await getSlotByDateTime(dateStr, timeStr);
-      if (slotErr || !slot) { alert('Nie znaleziono wybranego terminu.'); return; }
-      if (slot.taken) { alert('Wybrany termin jest już zajęty.'); return; }
+// walidacja UUID (opcjonalnie)
+const isUUID = v => typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v);
+if (!isUUID(service_id) || !isUUID(slot_id)) {
+  alert('Błąd wyboru zabiegu lub godziny. Odśwież stronę i wybierz ponownie.');
+  return;
+}
+
+// sprawdź slot w bazie po ID i czy nie jest zajęty
+const { data: slot, error: sErr } = await window.sb
+  .from('slots')
+  .select('id, when, taken')
+  .eq('id', slot_id)
+  .single();
+
+if (sErr || !slot)          { alert('Nie udało się znaleźć wybranego terminu.'); return; }
+if (slot.taken === true)    { alert('Ten termin został już zajęty.'); return; }
+
 
       // 5.4 klient
       const client_id = await ensureClient({ name, email, phone, address });
