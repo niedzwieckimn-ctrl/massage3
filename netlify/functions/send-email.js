@@ -1,29 +1,32 @@
+// netlify/functions/send-email.js  — tylko do masażystki (Resend, bez dodatkowych paczek)
 export async function handler(event) {
   try {
-    const { to, subject, html } = JSON.parse(event.body || '{}');
-    if (!subject || !html) return { statusCode: 400, body: 'Missing fields' };
+    const { subject, html } = JSON.parse(event.body || '{}');
 
-    // przyjmij 1 adres lub tablicę; 'THERAPIST' zamień na env
-    const input = Array.isArray(to) ? to : [to].filter(Boolean);
-    const recipients = (input.length ? input : ['THERAPIST'])
-      .map(a => a === 'THERAPIST' ? process.env.THERAPIST_EMAIL : a)
-      .filter(Boolean);
+    if (!subject || !html) {
+      return { statusCode: 400, body: 'Missing fields' };
+    }
 
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.FROM_EMAIL,
-        to: recipients,
+        from: process.env.FROM_EMAIL,          // nadawca z Twojej zweryfikowanej domeny
+        to: process.env.THERAPIST_EMAIL,       // <-- tylko masażystka
         subject,
         html
       })
     });
-    if (!r.ok) return { statusCode: r.status, body: await r.text() };
-    return { statusCode: 200, body: 'OK' };
+
+    if (!r.ok) {
+      const text = await r.text();
+      return { statusCode: r.status, body: text };
+    }
+    const data = await r.json();
+    return { statusCode: 200, body: JSON.stringify(data) };
   } catch (err) {
     return { statusCode: 500, body: 'Server error: ' + err.message };
   }
