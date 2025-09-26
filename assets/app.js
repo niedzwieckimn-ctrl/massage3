@@ -186,7 +186,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
   ensureServicesSeed();              // jeśli pusto – zasiej 1 usługę
   renderServicesSelect();
   el('#date')?.addEventListener('change', renderTimeOptions);
+  if (!window.sb) {
   el('#form')?.addEventListener('submit', handleSubmit);
+  }
   el('#date')?.setAttribute('min', new Date().toISOString().slice(0,10));
   // stopka kontakt
   const s = Store.get('settings',{}); el('#contact').textContent = `${s.contactEmail||''} • ${s.contactTel||''}`;
@@ -205,47 +207,23 @@ window.addEventListener('storage', (e)=>{
 
 
 // pobierz wolne sloty dla danej daty
-async function fillTimesFromCloud(dateStr) {
-  const timeSel = document.getElementById('time');
-  if (!timeSel) return;
+async function renderServicesSelect(){
+  const select = document.getElementById('service');
+  if(!select) return;
 
-  timeSel.innerHTML = '';
-  const from = new Date(`${dateStr}T00:00:00`);
-  const to   = new Date(`${dateStr}T23:59:59`);
+  const services = await dbLoadServices();  // z Supabase
+  Store.set('services', services || []);    // <-- DODAJ
 
-  const { data: free, error } = await window.sb
-    .from('slots')
-    .select('id, when')
-    .gte('when', from.toISOString())
-    .lte('when', to.toISOString())
-    .eq('taken', false)
-    .order('when', { ascending: true });
-
-  if (error) { console.error('[slots] error:', error); return; }
-  if (!free.length) {
-    const o = document.createElement('option');
-    o.value = '';
-    o.textContent = 'Brak wolnych godzin';
-    o.disabled = true;
-    timeSel.appendChild(o);
-    return;
-  }
-
-  const ph = document.createElement('option');
-  ph.value = '';
-  ph.textContent = 'Wybierz godzinę';
-  ph.disabled = true;
-  ph.selected = true;
-  timeSel.appendChild(ph);
-
-  free.forEach(s => {
-    const o = document.createElement('option');
-    o.value = s.id;             // tu mamy ID slotu
-    o.dataset.when = s.when;    
-    o.textContent = new Date(s.when).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
-    timeSel.appendChild(o);
+  select.innerHTML = '<option value="">Wybierz zabieg…</option>';
+  (services || []).forEach(s=>{
+    const opt = document.createElement('option');
+    opt.value = s.id;                       // value = UUID
+    opt.dataset.id = s.id;                  // <-- DODAJ
+    opt.textContent = `${s.name} — ${Number(s.price).toFixed(2)} zł`;
+    select.appendChild(opt);
   });
 }
+
 
 // znajdź klienta po e-mailu albo utwórz nowego
 async function dbFindOrCreateClient({ name, email, phone, address }) {
@@ -386,18 +364,12 @@ async function createBooking({ client_id, service_id, slot_id, notes }) {
       }
 
       // 5.2 usługa
-      let service_id;
-      {
-        // jeśli option.value = UUID — odbierz od razu:
-        const sel = document.getElementById('service');
-        if (sel && sel.options[sel.selectedIndex] && sel.options[sel.selectedIndex].dataset.id) {
-          service_id = sel.options[sel.selectedIndex].dataset.id;
-        } else {
-          // gdy value = nazwa — pobierz UUID z bazy:
-          const { data: svc, error: svcErr } = await getSelectedServiceId();
-          if (svcErr || !svc) { alert('Nie udało się pobrać usługi'); return; }
-          service_id = svc.id;
-        }
+     // 5.2 usługa – bierzemy UUID prosto z <select>
+const sel = document.getElementById('service');
+const service_id = sel?.value || '';
+if (!service_id) { alert('Wybierz zabieg.'); return; }
+// nie pobieramy już po nazwie, nie wołamy getSelectedServiceId()
+
       }
 
       // 5.3 slot po dacie/godzinie
