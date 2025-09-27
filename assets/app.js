@@ -334,23 +334,28 @@ async function handleSubmit(e){
     return;
   }
 
-  // 6) e-mail do masażystki (jeśli masz sendEmail)
-  if (typeof sendEmail === 'function'){
-    try{
-      const whenStr = `${dateStr} ${timeStr}`;
-      const html = `
-        <h3>Nowa rezerwacja</h3>
-        <p><b>Termin:</b> ${whenStr}</p>
-        <p><b>Zabieg:</b> ${service_name}</p>
-        <p><b>Klient:</b> ${name}</p>
-        <p><b>Adres / kontakt:</b> ${address}<br>Tel.: ${phone}<br>Email: ${email}</p>
-        ${notes ? `<p><b>Uwagi:</b> ${notes}</p>` : ''}
-      `;
-      await sendEmail({ subject:`Nowa rezerwacja — ${whenStr}`, html });
-    }catch(e){
-      console.warn('[FORM] e-mail ERR:', e);
-    }
+  // 6) e-mail do masażystki
+try {
+  const whenStr = `${dateStr} ${timeStr}`;
+  const html = `
+    <h3>Nowa rezerwacja</h3>
+    <p><b>Termin:</b> ${whenStr}</p>
+    <p><b>Zabieg:</b> ${service_name}</p>
+    <p><b>Klient:</b> ${name}</p>
+    <p><b>Adres / kontakt:</b> ${address}<br>Tel.: ${phone}<br>Email: ${email}</p>
+    ${notes ? `<p><b>Uwagi:</b> ${notes}</p>` : ''}
+  `;
+  if (typeof window.sendEmail === 'function') {
+    await window.sendEmail({ subject: `Nowa rezerwacja — ${whenStr}`, html });
+    console.log('[MAIL] sent');
+  } else {
+    console.warn('[MAIL] sendEmail not found (window.sendEmail === undefined)');
   }
+} catch (e) {
+  console.error('[MAIL] fail:', e);
+  // opcjonalnie: toast('Nie udało się wysłać e-maila do masażystki.', 'warning');
+}
+
 
   // 7) baner „Dziękujemy” + reset
   const thanks = document.getElementById('bookingThanks');
