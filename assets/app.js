@@ -83,6 +83,40 @@ async function sendEmail({to, subject, html}) {
   });
   if (!r.ok) throw new Error('Email HTTP ' + r.status);
 }
+/**
+ * Zwraca slot po dacie (YYYY-MM-DD) i godzinie (HH:MM).
+ * Szuka w Supabase w zakresie dnia i dopasowuje po lokalnym HH:MM.
+ */
+async function getSlotByDateTime(dateStr, timeStr) {
+  if (!window.sb) return null;
+  try {
+    const [y, m, d] = dateStr.split('-').map(Number);
+
+    // zakres całego dnia w UTC – unikamy "Invalid time value"
+    const from = new Date(Date.UTC(y, m - 1, d, 0, 0, 0)).toISOString();
+    const to   = new Date(Date.UTC(y, m - 1, d, 23, 59, 59)).toISOString();
+
+    const { data: slots, error } = await window.sb
+      .from('slots')
+      .select('id, when, taken')
+      .eq('taken', false)
+      .gte('when', from)
+      .lte('when', to)
+      .order('when', { ascending: true });
+
+    if (error || !Array.isArray(slots)) return null;
+
+    // pomocnik HH:MM w CZASIE LOKALNYM
+    const pad  = n => (n < 10 ? '0' : '') + n;
+    const toHM = iso => { const d = new Date(iso); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+
+    const found = slots.find(s => toHM(s.when) === timeStr);
+    return found || null;
+  } catch (e) {
+    console.warn('[public] getSlotByDateTime ERR:', e);
+    return null;
+  }
+}
 
 // --- submit rezerwacji (wersja stabilna)
 async function handleSubmit(e){
