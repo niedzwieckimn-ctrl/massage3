@@ -403,8 +403,31 @@ window.addEventListener('storage', (e) => {
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpYnppanBlbG5tdmJ0c2xxdXVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MTE1OTcsImV4cCI6MjA3NDE4NzU5N30.Dp4u9PlhP-_pGmiNTHp5zSjrMUDfA_k2i85_71_9koo';
   window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 </script>
+<script>
+  // Klient: wywołanie Netlify Function z przeglądarki
+  window.sendEmail = async ({ subject, html }) => {
+    try {
+      const r = await fetch('/.netlify/functions/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject, html })
+      });
+      const body = await r.text();       // tekst lub JSON-tekst
+      if (!r.ok) {
+        console.warn('[MAIL] ERR', r.status, body);
+        return { ok: false, status: r.status, body };
+      }
+      return { ok: true, status: r.status, body };
+    } catch (e) {
+      console.warn('[MAIL] fetch ERR', e);
+      return { ok: false, error: e.message };
+    }
+  };
+</script>
+
 <script src="assets/app.js"></script>
 <!-- Prosty adapter na stronie publicznej -->
 </body>
 </html>
+
 
