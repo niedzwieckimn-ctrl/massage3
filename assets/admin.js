@@ -78,7 +78,7 @@ async function dbDeleteSlot(id){
 async function dbLoadBookings(){
   const { data, error } = await sb.from('bookings')
     .select('*')
-    .order('createdAt', { ascending: false });
+    .order('created_At', { ascending: false });
   if(error){ console.error('DB bookings:', error); return []; }
   return data || [];
 }
@@ -230,33 +230,6 @@ function requireAuth(){
     appView.style.display   = 'none';
   }
 }
-/* ===== SYNC z Supabase -> localStorage (public) ===== */
-(async function syncPublicData() {
-  try {
-    if (!window.sb) return;
-
-    // 1) Usługi -> localStorage
-    const { data: services, error: sErr } = await window.sb
-      .from('services')
-      .select('id, name, price, duration_min, active')
-      .eq('active', true)
-      .order('name', { ascending: true });
-    if (sErr) console.warn('[public] services pull error:', sErr);
-    localStorage.setItem('services', JSON.stringify(services || []));
-
-    // 2) Wolne sloty -> localStorage
-    const { data: slots, error: slErr } = await window.sb
-      .from('slots')
-      .select('id, when, taken')
-      .eq('taken', false)
-      .order('when', { ascending: true });
-    if (slErr) console.warn('[public] slots pull error:', slErr);
-    localStorage.setItem('slots', JSON.stringify(slots || []));
-
-  } catch (e) {
-    console.warn('[public] SYNC ERR:', e);
-  }
-})();
 
 document.addEventListener('DOMContentLoaded', ()=>{
   console.log('ADMIN START');
