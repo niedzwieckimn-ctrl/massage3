@@ -225,17 +225,6 @@ if (window.sb) {
     console.warn('[SB] save booking ERR:', e?.message || e);
   }
 }
-// === /SUPABASE ===
-
-
-    // (opcjonalnie) jeśli mail do klienta potrzebuje nazwy zabiegu:
-    window.__lastServiceName = service_name;
-
-  } catch (e) {
-    console.warn('[SB] save booking ERR:', e?.message || e);
-  }
-}
-// === /SUPABASE ===
 
   // reset formularza i odświeżenie listy godzin
   el('#form').reset();
