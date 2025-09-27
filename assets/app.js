@@ -180,24 +180,15 @@ if (window.sb) {
   try {
     const isUUID = v => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v||'');
 
-    // Pola z formularza
-    const name     = document.getElementById('name')?.value.trim();
-    const email    = document.getElementById('email')?.value.trim();
-    const phone    = document.getElementById('phone')?.value.trim();
-    const address  = document.getElementById('address')?.value.trim();
-    const notes    = document.getElementById('notes')?.value.trim() || '';
-
-    // UUID-y z selectów
-    const serviceSel = document.getElementById('service');
-    const service_id = serviceSel?.value || '';
-    const service_name = serviceSel?.options[serviceSel.selectedIndex]?.dataset?.name || '';
-
-    const slot_id = document.getElementById('time')?.value || '';
+    // UŻYWAMY gotowych zmiennych z góry funkcji:
+    // name, email, phone, address, notes, serviceId, slotId
+    const service_id = serviceId;
+    const slot_id    = slotId;
 
     if (!isUUID(service_id) || !isUUID(slot_id)) {
-      console.warn('[SB] pomijam zapis: brak UUID (service/slot)', { service_id, slot_id });
+      console.warn('[SB] pomijam zapis: brak UUID service/slot', { service_id, slot_id });
     } else {
-      // 1) ensure client (po e-mailu)
+      // 1) ensure client po e-mailu
       let { data: cl } = await window.sb
         .from('clients').select('id').eq('email', email).single();
 
@@ -209,21 +200,19 @@ if (window.sb) {
         cl = ins.data;
       }
 
-      // 2) insert booking
+      // 2) booking
       if (cl?.id) {
         const { error: bErr } = await window.sb
           .from('bookings')
           .insert({ client_id: cl.id, service_id, slot_id, notes })
-          .select('id')
-          .single();
-
+          .select('id').single();
         if (bErr) console.warn('[SB] bookings insert error:', bErr);
       }
 
       // 3) oznacz slot jako zajęty (dla pewności)
       await window.sb.from('slots').update({ taken: true }).eq('id', slot_id);
 
-      // 4) odśwież wolne sloty w LS (żeby inne urządzenia szybciej zobaczyły zmianę)
+      // 4) odśwież wolne sloty w LS
       const { data: freshSlots } = await window.sb
         .from('slots')
         .select('id, when, taken')
@@ -232,6 +221,12 @@ if (window.sb) {
 
       localStorage.setItem('slots', JSON.stringify(freshSlots || []));
     }
+  } catch (e) {
+    console.warn('[SB] save booking ERR:', e?.message || e);
+  }
+}
+// === /SUPABASE ===
+
 
     // (opcjonalnie) jeśli mail do klienta potrzebuje nazwy zabiegu:
     window.__lastServiceName = service_name;
