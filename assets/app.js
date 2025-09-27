@@ -14,6 +14,22 @@ function fmtDate(d){
   const nd = (d instanceof Date) ? d : new Date(d);
   return nd.getFullYear()+'-'+fmt2(nd.getMonth()+1)+'-'+fmt2(nd.getDate());
 }
+// --- MAIL: bezpieczny wrapper, nie psuje reszty flow ---
+window.safeSendEmail = async function safeSendEmail({ subject, html, to }) {
+  try {
+    if (typeof window.sendEmail !== 'function') {
+      console.warn('[MAIL] sendEmail not found – pomijam wysyłkę');
+      return { ok: false, skipped: true };
+    }
+    const res = await window.sendEmail({ subject, html, to });
+    if (res && res.ok) return { ok: true };
+    console.warn('[MAIL] backend zwrócił błąd:', res);
+    return { ok: false, error: res?.error || 'mail backend error' };
+  } catch (e) {
+    console.warn('[MAIL] wyjątek podczas wysyłki:', e);
+    return { ok: false, error: e?.message || String(e) };
+  }
+};
 
 /* prosta warstwa na localStorage – używamy jako cache */
 const LS = {
@@ -334,23 +350,32 @@ async function handleSubmit(e){
     return;
   }
 
-  // 6) e-mail do masażystki (jeśli masz sendEmail)
-  if (typeof sendEmail === 'function'){
-    try{
-      const whenStr = `${dateStr} ${timeStr}`;
-      const html = `
-        <h3>Nowa rezerwacja</h3>
-        <p><b>Termin:</b> ${whenStr}</p>
-        <p><b>Zabieg:</b> ${service_name}</p>
-        <p><b>Klient:</b> ${name}</p>
-        <p><b>Adres / kontakt:</b> ${address}<br>Tel.: ${phone}<br>Email: ${email}</p>
-        ${notes ? `<p><b>Uwagi:</b> ${notes}</p>` : ''}
-      `;
-      await sendEmail({ subject:`Nowa rezerwacja — ${whenStr}`, html });
-    }catch(e){
-      console.warn('[FORM] e-mail ERR:', e);
-    }
+ // 6) e-mail do masażystki — BEZPIECZNIE
+try {
+  const whenStr = `${dateStr} ${timeStr}`;
+  const html = `
+    <h3>Nowa rezerwacja</h3>
+    <p><b>Termin:</b> ${whenStr}</p>
+    <p><b>Zabieg:</b> ${service_name}</p>
+    <p><b>Klient:</b> ${name}</p>
+    <p><b>Adres / kontakt:</b> ${address}<br>Tel.: ${phone}<br>Email: ${email}</p>
+    ${notes ? `<p><b>Uwagi:</b> ${notes}</p>` : ''}
+  `;
+
+  const mail = await window.safeSendEmail({ subject: `Nowa rezerwacja — ${whenStr}`, html });
+  if (!mail.ok) {
+    // logujemy, ale NIE przerywamy procesu rezerwacji
+    console.warn('[MAIL] nie wysłano (aplikacja działa dalej):', mail);
+    // opcjonalnie subtelny komunikat dla Ciebie:
+    // toast && toast('Nie udało się wysłać e-maila do masażystki (rezerwacja zapisana).', 'warning');
+  } else {
+    console.log('[MAIL] wysłano');
   }
+} catch (_) {
+  // absolutny bezpiecznik – nigdy nie walimy throw
+  console.warn('[MAIL] błąd niekrytyczny – pomijam, rezerwacja zapisana');
+}
+
 
   // 7) baner „Dziękujemy” + reset
   const thanks = document.getElementById('bookingThanks');
