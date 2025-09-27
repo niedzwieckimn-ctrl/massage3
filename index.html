@@ -74,6 +74,40 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpYnppanBlbG5tdmJ0c2xxdXVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MTE1OTcsImV4cCI6MjA3NDE4NzU5N30.Dp4u9PlhP-_pGmiNTHp5zSjrMUDfA_k2i85_71_9koo';
   window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 </script>
+<script>
+  // SUPABASE → render #service (nadpisujemy select, więc nie będzie duplikatów)
+  document.addEventListener('DOMContentLoaded', async () => {
+    const sel = document.getElementById('service');
+    if (!sel || !window.sb) return;
+
+    try {
+      const { data, error } = await window.sb
+        .from('services')
+        .select('id, name, price, duration_min, active')
+        .eq('active', true)
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.warn('[public] services error:', error);
+        return;
+      }
+
+      // Nadpisz select – znikają ewentualne stare opcje
+      sel.innerHTML = '<option value="">Wybierz zabieg</option>' + 
+        (data || []).map(s => {
+          const price = (Number(s.price) || 0).toFixed(2).replace('.', ',');
+          return `<option value="${s.id}" data-name="${s.name}">${s.name} — ${price} zł</option>`;
+        }).join('');
+
+      // (opcjonalnie) Jeżeli Twój app.js ma własny renderer – odśwież go:
+      if (typeof window.renderServicesSelect === 'function') {
+        window.renderServicesSelect();
+      }
+    } catch (e) {
+      console.warn('[public] services crash:', e);
+    }
+  });
+</script>
 
 <!-- Prosty adapter na stronie publicznej -->
 <script>
