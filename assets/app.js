@@ -175,6 +175,87 @@ function handleSubmit(e){
       console.warn('Nie wysłano e-maila do masażystki:', err);
     }
   })();
+// === SUPABASE: klient + booking + oznacz slot jako zajęty + odśwież sloty ===
+if (window.sb) {
+  try {
+    const isUUID = v => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v||'');
+
+    // 1) dane z formularza (użyj swoich ID pól – tu są najczęstsze)
+    const name     = document.getElementById('name')?.value.trim();
+    const email    = document.getElementById('email')?.value.trim();
+    const phone    = document.getElementById('phone')?.value.trim();
+    const address  = document.getElementById('address')?.value.trim();
+    const notes    = document.getElementById('notes')?.value.trim() || '';
+
+    // 2) identyfikatory z selectów (u Ciebie zwykle to są UUID)
+    const service_id = document.getElementById('service')?.value || '';
+    const timeVal    = document.getElementById('time')?.value || '';
+
+    // 2a) slot_id: najpierw spróbuj wprost z <select id="time">
+    let slot_id = isUUID(timeVal) ? timeVal : '';
+
+    // 2b) awaryjnie: gdyby <select id="time"> zwracał "HH:MM", znajdź slot po dacie+godzinie
+    if (!slot_id) {
+      const dateStr = document.getElementById('date')?.value || '';
+      if (dateStr && timeVal) {
+        const [y,m,d] = dateStr.split('-').map(Number);
+        const from = new Date(Date.UTC(y, (m||1)-1, d||1, 0,0,0)).toISOString();
+        const to   = new Date(Date.UTC(y, (m||1)-1, d||1, 23,59,59)).toISOString();
+        const { data: slots } = await window.sb
+          .from('slots')
+          .select('id, when, taken')
+          .eq('taken', false)
+          .gte('when', from).lt('when', to)
+          .order('when', { ascending: true });
+
+        const hhmm = w => {
+          const dt = new Date(w);
+          return String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');
+        };
+        const found = (slots||[]).find(s => hhmm(s.when) === timeVal);
+        slot_id = found?.id || '';
+      }
+    }
+
+    if (!isUUID(service_id) || !isUUID(slot_id)) {
+      console.warn('[SB] pomijam zapis: brak UUID service/slot', { service_id, slot_id });
+    } else {
+      // 3) ensure client po e-mailu
+      let { data: cl } = await window.sb
+        .from('clients').select('id').eq('email', email).single();
+      if (!cl) {
+        const ins = await window.sb
+          .from('clients')
+          .insert({ name, email, phone, address })
+          .select('id').single();
+        cl = ins.data;
+      }
+
+      // 4) booking
+      if (cl?.id) {
+        const { error: bErr } = await window.sb
+          .from('bookings')
+          .insert({ client_id: cl.id, service_id, slot_id, notes })
+          .select('id').single();
+        if (bErr) console.warn('[SB] bookings insert error:', bErr);
+      }
+
+      // 5) oznacz slot jako zajęty (dla pewności)
+      await window.sb.from('slots').update({ taken: true }).eq('id', slot_id);
+
+      // 6) odśwież wolne sloty w LS, żeby kalendarz na innych urządzeniach szybciej zniknął
+      const { data: freshSlots } = await window.sb
+        .from('slots')
+        .select('id, when, taken')
+        .eq('taken', false)
+        .order('when', { ascending: true });
+      localStorage.setItem('slots', JSON.stringify(freshSlots || []));
+    }
+  } catch (e) {
+    console.warn('[SB] save skipped:', e?.message || e);
+  }
+}
+// === /SUPABASE ===
 
   // reset formularza i odświeżenie listy godzin
   el('#form').reset();
