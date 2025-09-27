@@ -139,11 +139,7 @@ async function handleSubmit(e){
     return;
   }
 
-  // --- 2) slot (po dacie/godzinie)
-  const slot = await getSlotByDateTime(dateStr, timeStr);
-  if (!slot) { alert('Nie znaleziono wybranego terminu.'); return; }
-  if (slot.taken) { alert('Wybrany termin jest już zajęty.'); return; }
-
+ 
   // --- 3) zapis lokalny (tak jak do tej pory – dla UI)
   const whenStr = `${dateStr} ${timeStr}`;
   const booking = {
