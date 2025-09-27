@@ -31,3 +31,4 @@ export async function handler(event) {
     return { statusCode: 500, body: 'Server error: ' + err.message };
   }
 }
+window.sendemail = sendemail;
