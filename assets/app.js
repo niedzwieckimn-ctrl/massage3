@@ -85,76 +85,131 @@ async function sendEmail({to, subject, html}) {
 }
 
 // --- submit rezerwacji (wersja stabilna)
-function handleSubmit(e){
+async function handleSubmit(e){
   e.preventDefault();
+  console.log('[FORM] submit start');
 
-  // numer rezerwacji (5 cyfr)
-  const bookingNo = Math.floor(10000 + Math.random() * 90000);
+  // --- 1) dane z formularza
+  const name    = (document.getElementById('name')?.value || '').trim();
+  const email   = (document.getElementById('email')?.value || '').trim();
+  const phone   = (document.getElementById('phone')?.value || '').trim();
+  const address = (document.getElementById('address')?.value || '').trim();
+  const service_id = document.getElementById('service')?.value || '';     // <-- z <select>
+  const dateStr = (document.getElementById('date')?.value || '').trim();
+  const timeStr = (document.getElementById('time')?.value || '').trim();
+  const notes   = (document.getElementById('notes')?.value || '').trim();
+  const rodo    = document.querySelector('#rodo')?.checked;
 
-  // pola formularza
-  const rodo      = el('#rodo').checked;
-  const name      = el('#name').value.trim();
-  const email     = el('#email').value.trim();
-  const phone     = el('#phone').value.trim();
-  const address   = el('#address').value.trim();
-  const serviceId = el('#service').value;
-  const slotId    = el('#time').value;
-  const notes     = el('#notes').value.trim();
-
-  if(!rodo){ alert('Musisz wyrazić zgodę RODO.'); return; }
-  if(!name || !email || !phone || !serviceId || !slotId){
-    alert('Uzupełnij wszystkie wymagane pola.'); return;
+  if(!name || !email || !phone || !dateStr || !timeStr || !service_id || !rodo){
+    alert('Uzupełnij wymagane pola (w tym zgoda RODO).');
+    return;
   }
 
-  // anty-duplikat slota
-  const bookings = Store.get('bookings', []);
-  if (bookings.some(b => b.slotId === slotId)) {
-    alert('Ten termin został już zajęty.'); renderTimeOptions(); return;
-  }
+  // --- 2) slot (po dacie/godzinie)
+  const slot = await getSlotByDateTime(dateStr, timeStr);
+  if (!slot) { alert('Nie znaleziono wybranego terminu.'); return; }
+  if (slot.taken) { alert('Wybrany termin jest już zajęty.'); return; }
 
-  // upsert klienta
-  let clients = Store.get('clients', []);
-  let client  = clients.find(c => c.email === email || c.phone === phone);
-  if (!client) {
-    client = {
-      id: Store.uid(), name, email, phone, address,
-      notesGeneral:'', preferences:{allergies:'',massage:'',health:'',mental:''}
-    };
-    clients.push(client);
-  } else {
-    client.name = name; client.phone = phone; client.address = address;
-  }
-  Store.set('clients', clients);
-
-  // --- policz raz i używaj dalej (NIE deklaruj ponownie niżej!)
-  const slot    = (Store.get('slots',[])||[]).find(s => s.id === slotId);
-  const whenStr = slot ? new Date(slot.when).toLocaleString('pl-PL',
-                   { dateStyle:'full', timeStyle:'short' }) : '(brak)';
-  const services = getServices();
-  const service  = services.find(s => s.id === serviceId) || { name:'(brak)', price:0 };
-
-  // zapis rezerwacji
+  // --- 3) zapis lokalny (tak jak do tej pory – dla UI)
+  const whenStr = `${dateStr} ${timeStr}`;
   const booking = {
     id: Store.uid(),
-    clientId: client.id,
-    serviceId,
-    slotId,
+    clientId: 'local',          // lokalne ID (UI)
+    serviceId: service_id,
+    slotId: slot.id,
     notes,
     createdAt: new Date().toISOString(),
     status: 'Oczekująca',
-    bookingNo,          // numer
-    when: whenStr       // termin (dla wygody w panelu)
+    bookingNo: '',              // (opcjonalnie) numer
+    when: whenStr               // dla wygody w panelu
   };
+  const bookings = Store.get('bookings', []);
   bookings.push(booking);
   Store.set('bookings', bookings);
 
-  // baner "Dziękujemy" (środek ekranu)
+  // (opcjonalnie) nazwa zabiegu do maila
+  try {
+    const opt = document.querySelector('#service option:checked');
+    window.__lastServiceName = opt ? opt.textContent.trim() : '';
+  } catch(_) {}
+
+  // --- 4) e-mail do masażystki (zostawiasz swoją działającą funkcję)
+  (async ()=>{
+    try {
+      const html = `
+        <h3>Nowa rezerwacja</h3>
+        <p><b>Nr rezerwacji:</b> ${booking.bookingNo || ''}</p>
+        <p><b>Termin:</b> ${whenStr}</p>
+        <p><b>Zabieg:</b> ${window.__lastServiceName || ''}</p>
+        <p><b>Klient:</b> ${name}</p>
+        <p><b>Adres:</b> ${address}<br>Tel: ${phone}<br>Email: ${email}</p>
+        <p><b>Uwagi:</b> ${notes || ''}</p>`;
+      await sendEmail({ subject: `Nowa rezerwacja — ${whenStr}`, html });
+    } catch(err){
+      console.warn('[MAIL] błąd wysyłki:', err);
+    }
+  })();
+
+  // --- 5) SYNC → Supabase (w tle, bez blokowania UI)
+  (async ()=>{
+    try {
+      if (!window.sb) return; // brak klienta supabase – nic nie psujemy
+
+      // prosta walidacja UUID
+      const isUUID = v => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
+      if (!isUUID(service_id) || !isUUID(slot.id)) {
+        console.warn('[SB] pomijam zapis – service_id/slot.id nie jest UUID', {service_id, slotId: slot.id});
+        return;
+      }
+
+      // 5.1 klient: znajdź po e-mailu albo utwórz
+      let { data: cl, error: cErr } = await window.sb
+        .from('clients').select('id').eq('email', email).single();
+
+      if (!cl) {
+        let { data: created, error: insErr } = await window.sb
+          .from('clients')
+          .insert({ name, email, phone, address })
+          .select('id').single();
+        if (insErr || !created) { console.warn('[SB] create client ERR:', insErr); return; }
+        cl = created;
+      }
+
+      // 5.2 rezerwacja
+      let { error: bErr } = await window.sb
+        .from('bookings')
+        .insert({ client_id: cl.id, service_id, slot_id: slot.id, notes })
+        .select('id').single();
+      if (bErr) { console.warn('[SB] bookings insert ERR:', bErr); return; }
+
+      // 5.3 oznacz slot jako zajęty (w chmurze)
+      await window.sb.from('slots').update({ taken: true }).eq('id', slot.id);
+
+      // 5.4 zaciągnij świeże wolne sloty do LS (żeby klient od razu widział)
+      let { data: fresh } = await window.sb
+        .from('slots')
+        .select('id, when, taken')
+        .eq('taken', false)
+        .order('when', { ascending: true });
+      localStorage.setItem('slots', JSON.stringify(fresh || []));
+    } catch(e){
+      console.warn('[SB] sync ERR:', e?.message || e);
+    }
+  })();
+
+  // --- 6) UI: baner „Dziękujemy” + reset formularza + odświeżenie godzin
   const thanks = document.getElementById('bookingThanks');
-  if (thanks){
-    thanks.innerHTML= `Dziękujemy za rezerwację. <br> Poczekaj na potwierdzenie e-mail! `;
+  if (thanks) {
+    thanks.innerHTML = 'Dziękujemy za rezerwację.<br>Poczekaj na potwierdzenie e-mail.';
     thanks.classList.add('show');
     setTimeout(()=>thanks.classList.remove('show'), 5000);
   }
+  document.querySelector('form')?.reset();
+  renderTimeOptions();
+
+  console.log('[FORM] submit done!');
+}
+
 
   // e-mail do masażystki (backend wysyła tylko do THERAPIST_EMAIL)
   (async () => {
