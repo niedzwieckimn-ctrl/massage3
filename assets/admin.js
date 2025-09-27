@@ -78,7 +78,7 @@ async function dbDeleteSlot(id){
 async function dbLoadBookings(){
   const { data, error } = await sb.from('bookings')
     .select('*')
-    .order('created_At', { ascending: false });
+    .order('created_at', { ascending: false });
   if(error){ console.error('DB bookings:', error); return []; }
   return data || [];
 }
