@@ -210,32 +210,6 @@ async function handleSubmit(e){
   console.log('[FORM] submit done!');
 }
 
-
-  // e-mail do masażystki (backend wysyła tylko do THERAPIST_EMAIL)
-  (async () => {
-    try {
-      const html = `
-        <h2>Nowa rezerwacja</h2>
-        <p><b>Nr rezerwacji:</b> ${bookingNo}</p>
-        <p><b>Termin:</b> ${whenStr}</p>
-        <p><b>Zabieg:</b> ${service.name}</p>
-        <p><b>Klient:</b> ${name}</p>
-        <p><b>Adres / kontakt:</b><br>${address}<br>Tel: ${phone}<br>Email: ${email}</p>
-        ${notes ? `<p><b>Uwagi:</b> ${notes}</p>` : ''}
-      `;
-      await sendEmail({ subject: `Nowa rezerwacja — ${whenStr}`, html });
-    } catch (err) {
-      console.warn('Nie wysłano e-maila do masażystki:', err);
-    }
-  })();
-
-  // reset formularza i odświeżenie listy godzin
-  el('#form').reset();
-  renderTimeOptions();
-}
-
-
-
 // --- init
 document.addEventListener('DOMContentLoaded', ()=>{
   ensureServicesSeed();              // jeśli pusto – zasiej 1 usługę
