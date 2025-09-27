@@ -171,18 +171,40 @@ async function renderSlots(){
     renderSlots();
   };
 
-  const addBtn = el('#addSlot');
-  if(addBtn){
-    addBtn.onclick = async ()=>{
-      const d = el('#slotDate').value.trim();
-      const t = el('#slotTime').value.trim();
-      if(!d || !t){ alert('Wybierz datę i godzinę.'); return; }
-      const iso = new Date(`${d}T${t}:00`).toISOString();
-      await dbAddSlot(iso);
-      el('#slotDate').value = ''; el('#slotTime').value = '';
-      renderSlots();
-    };
-  }
+ const addBtn = el('#addSlot');
+if (addBtn && !addBtn._bound) {
+  addBtn._bound = true;
+  addBtn.addEventListener('click', async () => {
+    const d = el('#slotDate').value.trim();
+    const t = el('#slotTime').value.trim();
+    if (!d || !t) {
+      alert('Wybierz datę i godzinę');
+      return;
+    }
+
+    const iso = new Date(`${d}T${t}:00`).toISOString();
+    console.log('[ADMIN] klik Dodaj termin:', iso);
+
+    // bezpośrednio zapisujemy do Supabase
+    const { data, error } = await window.sb
+      .from('slots')
+      .insert([{ when: iso, taken: false }])
+      .select()
+      .single();
+
+    if (error) {
+      console.warn('[ADMIN] błąd insert slota:', error);
+      alert('Nie udało się zapisać terminu');
+      return;
+    }
+
+    console.log('[ADMIN] slot zapisany:', data);
+
+    // wyczyść pola i odśwież listę
+    el('#slotDate').value = '';
+    el('#slotTime').value = '';
+    renderSlots();
+  });
 }
 
 // Rezerwacje – proste listy
