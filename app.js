@@ -4,89 +4,6 @@
 function el(sel, root = document) { return root.querySelector(sel); }
 function fmtMoney(v){ return new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(v||0); }
 function fmtDate(d){ return new Date(d).toLocaleString('pl-PL',{dateStyle:'medium', timeStyle:'short'}); }
-// ============ SUPABASE HELPERS ============
-// Uwaga: zakładam, że masz już window.sb = supabase.createClient(...) w index.html
-
-async function sbEnsureClient({ name, email, phone, address }) {
-  if (!window.sb) return null;
-
-  // 1) spróbuj znaleźć klienta po e-mailu
-  let { data: found, error: fErr } = await window.sb
-    .from('clients')
-    .select('id')
-    .eq('email', email)
-    .single();
-
-  if (found && found.id) return found.id;
-
-  // 2) jeśli nie ma – utwórz
-  let { data: created, error: cErr } = await window.sb
-    .from('clients')
-    .insert([{ name, email, phone, address }])
-    .select('id')
-    .single();
-
-  if (cErr || !created) {
-    console.warn('[SB] create client ERR:', cErr);
-    return null;
-  }
-  return created.id;
-}
-
-/**
- * Zapis rezerwacji + atomowe zajęcie slotu.
- * Zwraca { ok:true, booking } lub { ok:false, reason:'taken'|'error' }.
- */
-async function sbCreateBookingAndTakeSlot({ client_id, service_id, slot_id, notes }) {
-  if (!window.sb) return { ok:false, reason:'no-sb' };
-
-  // 1) spróbuj zająć slot atomowo (tylko jeśli jeszcze nie był zajęty)
-  const { data: upd, error: updErr } = await window.sb
-    .from('slots')
-    .update({ taken: true })
-    .eq('id', slot_id)
-    .eq('taken', false)      // <-- zabezpieczenie przed overbookingiem
-    .select('id,taken')
-    .single();
-
-  if (updErr || !upd) {
-    // jeśli brak rekordu, to ktoś zajął go przed chwilą
-    return { ok:false, reason:'taken' };
-  }
-
-  // 2) wstaw rezerwację
-  const { data: booking, error: bErr } = await window.sb
-    .from('bookings')
-    .insert([{ client_id, service_id, slot_id, notes }])
-    .select('id, created_at')
-    .single();
-
-  if (bErr || !booking) {
-    console.warn('[SB] booking insert ERR:', bErr);
-    // opcjonalnie możesz cofnąć zajęcie slotu, jeśli chcesz:
-    await window.sb.from('slots').update({ taken:false }).eq('id', slot_id);
-    return { ok:false, reason:'error' };
-  }
-
-  return { ok:true, booking };
-}
-
-/** Ściągnij ponownie wolne sloty i odłóż do LS (żeby widok miał świeże dane) */
-async function sbRefreshFreeSlotsToLS(){
-  if (!window.sb) return;
-  const { data, error } = await window.sb
-    .from('slots')
-    .select('id, when, taken')
-    .eq('taken', false)
-    .order('when', { ascending: true });
-
-  if (!error) {
-    localStorage.setItem('slots', JSON.stringify(data || []));
-  } else {
-    console.warn('[SB] refresh slots ERR:', error);
-  }
-}
-// ============ /SUPABASE HELPERS ============
 
 // --- źródła danych
 const settings = Store.get('settings', {}); // kontakt do masażystki, tel, rodo, itp.
@@ -194,7 +111,6 @@ function handleSubmit(e){
   if (bookings.some(b => b.slotId === slotId)) {
     alert('Ten termin został już zajęty.'); renderTimeOptions(); return;
   }
-
 
   // upsert klienta
   let clients = Store.get('clients', []);
