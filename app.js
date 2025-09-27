@@ -194,7 +194,7 @@ function handleSubmit(e){
   if (bookings.some(b => b.slotId === slotId)) {
     alert('Ten termin został już zajęty.'); renderTimeOptions(); return;
   }
-  
+
 
   // upsert klienta
   let clients = Store.get('clients', []);
