@@ -204,7 +204,7 @@ if (addBtn && !addBtn._bound) {
     el('#slotDate').value = '';
     el('#slotTime').value = '';
     renderSlots();
-  });
+  }
 }
 
 // Rezerwacje – proste listy
