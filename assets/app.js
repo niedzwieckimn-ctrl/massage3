@@ -215,6 +215,40 @@ document.addEventListener('DOMContentLoaded', ()=>{
     form._bound = true;
   }
 });
+/**
+ * Pobiera slot po dacie (YYYY-MM-DD) i godzinie (HH:MM)
+ * Szuka w Supabase między 00:00 a 23:59 tego dnia
+ * Zwraca obiekt slotu { id, when, taken } lub null
+ */
+async function getSlotByDateTime(dateStr, timeStr) {
+  if (!window.sb) return null;
+  try {
+    const [y,m,d] = dateStr.split('-').map(Number);
+    const from = new Date(Date.UTC(y, m-1, d, 0, 0, 0));
+    const to   = new Date(Date.UTC(y, m-1, d, 23, 59, 59));
+
+    const { data: slots, error } = await window.sb
+      .from('slots')
+      .select('id, when, taken')
+      .eq('taken', false)
+      .gte('when', from.toISOString())
+      .lt('when', to.toISOString())
+      .order('when', { ascending: true });
+
+    if (error || !Array.isArray(slots)) return null;
+
+    // dopasuj po godzinie (czas lokalny)
+    const found = slots.find(s => {
+      const hm = new Date(s.when).toISOString().substr(11,5); // "HH:MM"
+      return hm === timeStr;
+    });
+
+    return found || null;
+  } catch (e) {
+    console.warn('[FORM] getSlotByDateTime ERR:', e);
+    return null;
+  }
+}
 
 
 // --- init
