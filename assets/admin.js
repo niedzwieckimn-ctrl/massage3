@@ -375,8 +375,6 @@ if (document.getElementById('pendingBookings') || document.getElementById('confi
   loadBookingsUI();
 }
 
-}
-
 /* ===========================
    Start / logowanie
 =========================== */
