@@ -98,68 +98,65 @@ async function sendEmail({to, subject, html}) {
 }
 
 // --- submit rezerwacji (wersja stabilna)
-function handleSubmit(e){
+async function handleSubmit(e){
   e.preventDefault();
 
-  // numer rezerwacji (5 cyfr)
-  const bookingNo = Math.floor(10000 + Math.random() * 90000);
+  const name    = document.querySelector('#name')?.value.trim();
+  const email   = document.querySelector('#email')?.value.trim();
+  const phone   = document.querySelector('#phone')?.value.trim();
+  const address = document.querySelector('#address')?.value.trim();
+  const notes   = document.querySelector('#notes')?.value.trim() || '';
 
-  // pola formularza
-  const rodo      = el('#rodo').checked;
-  const name      = el('#name').value.trim();
-  const email     = el('#email').value.trim();
-  const phone     = el('#phone').value.trim();
-  const address   = el('#address').value.trim();
-  const serviceId = el('#service').value;
-  const slotId    = el('#time').value;
-  const notes     = el('#notes').value.trim();
+  const service_id = document.getElementById('service')?.value;
+  const slot_id    = document.getElementById('time')?.value;
+  const dateStr    = document.getElementById('date')?.value;
 
-  if(!rodo){ alert('Musisz wyrazić zgodę RODO.'); return; }
-  if(!name || !email || !phone || !serviceId || !slotId){
-    alert('Uzupełnij wszystkie wymagane pola.'); return;
+  if (!name || !email || !phone || !service_id || !slot_id || !dateStr) {
+    toast('Uzupełnij wymagane pola.'); 
+    return;
   }
 
-  // anty-duplikat slota
-  const bookings = Store.get('bookings', []);
-  if (bookings.some(b => b.slotId === slotId)) {
-    alert('Ten termin został już zajęty.'); renderTimeOptions(); return;
+  // 1) REWALIDACJA slota (musi istnieć i być wolny)
+  const { data: slot, error: sErr } = await window.sb
+    .from('slots')
+    .select('id, when, taken')
+    .eq('id', slot_id)
+    .single();
+
+  if (sErr || !slot) { toast('Nie znaleziono wybranego terminu.'); return; }
+  if (slot.taken)    { toast('Ten termin został już zajęty.'); 
+                       await fillTimesFromCloud(dateStr); 
+                       return; }
+
+  // 2) KLIENT: znajdź po e-mailu lub utwórz
+  let { data: cl, error: cErr } = await window.sb
+    .from('clients').select('id').eq('email', email).single();
+
+  if (cErr || !cl) {
+    const ins = await window.sb
+      .from('clients')
+      .insert({ name, email, phone, address })
+      .select('id')
+      .single();
+    cl = ins.data;
+    if (!cl) { toast('Błąd tworzenia klienta.'); return; }
   }
 
-  // upsert klienta
-  let clients = Store.get('clients', []);
-  let client  = clients.find(c => c.email === email || c.phone === phone);
-  if (!client) {
-    client = {
-      id: Store.uid(), name, email, phone, address,
-      notesGeneral:'', preferences:{allergies:'',massage:'',health:'',mental:''}
-    };
-    clients.push(client);
-  } else {
-    client.name = name; client.phone = phone; client.address = address;
-  }
-  Store.set('clients', clients);
+  // 3) BOOKING
+  const { data: b, error: bErr } = await window.sb
+    .from('bookings')
+    .insert({ client_id: cl.id, service_id, slot_id, notes })
+    .select('id')
+    .single();
 
-  // --- policz raz i używaj dalej (NIE deklaruj ponownie niżej!)
-  const slot    = (Store.get('slots',[])||[]).find(s => s.id === slotId);
-  const whenStr = slot ? new Date(slot.when).toLocaleString('pl-PL',
-                   { dateStyle:'full', timeStyle:'short' }) : '(brak)';
-  const services = getServices();
-  const service  = services.find(s => s.id === serviceId) || { name:'(brak)', price:0 };
+  if (bErr || !b) { toast('Błąd zapisu rezerwacji.'); return; }
 
-  // zapis rezerwacji
-  const booking = {
-    id: Store.uid(),
-    clientId: client.id,
-    serviceId,
-    slotId,
-    notes,
-    createdAt: new Date().toISOString(),
-    status: 'Oczekująca',
-    bookingNo,          // numer
-    when: whenStr       // termin (dla wygody w panelu)
-  };
-  bookings.push(booking);
-  Store.set('bookings', bookings);
+  // 4) OZNACZ SLOT jako zajęty
+  await window.sb.from('slots').update({ taken: true }).eq('id', slot_id);
+
+  // 5) Odśwież godziny dla tej daty (żeby zniknął slot)
+  await fillTimesFromCloud(dateStr);
+
 
   // baner "Dziękujemy" (środek ekranu)
   const thanks = document.getElementById('bookingThanks');
