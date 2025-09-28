@@ -307,7 +307,6 @@ function renderBookingsList(containerId, list, isConfirmed){
     };
   });
 }
-
 async function loadBookingsUI(){
   const pending = await dbLoadBookingsByStatus(['pending','Niepotwierdzona',null]);
   const confirmed = await dbLoadBookingsByStatus(['Potwierdzona','confirmed']);

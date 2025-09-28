@@ -43,7 +43,6 @@ window.CloudSlots = (function () {
         console.log('[cloud-slots] pull OK', clean.length);
       });
   }
-
   /* szuka najnowszego lokalnego slotu i wpycha go do chmury */
   function pushNewSlotFromLocal() {
     var all = get('slots', []);

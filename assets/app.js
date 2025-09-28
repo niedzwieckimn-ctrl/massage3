@@ -46,7 +46,6 @@ function availableTimesFor(dateStr){
   const isFree = (s.taken === false || s.taken == null);
   return slotKey === dateKey && isFree && !takenIds.has(s.id);
 }).sort((a,b) => new Date(a.when) - new Date(b.when));
-
 }
 
 // --- wypełnienie <select id="time">
