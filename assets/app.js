@@ -78,7 +78,7 @@ async function renderServices(){
   const sel = el('#service');
   if (!sel) return;
 
-  // wyczyść (bez duplikatów)
+  // wyczyść listę
   sel.innerHTML = '';
   // placeholder
   const ph = document.createElement('option');
@@ -86,19 +86,19 @@ async function renderServices(){
   ph.textContent = 'Wybierz zabieg';
   sel.appendChild(ph);
 
+  // 1) pokaż z cache (jeśli masz) żeby UI nie było puste
   let services = LS.get('services', []);
-  // najpierw cache, żeby UI nie było puste
   if (Array.isArray(services) && services.length){
     for (const s of services){
       const opt = document.createElement('option');
-      opt.value = s.name;           // wyświetlasz nazwę, ale...
-      opt.dataset.id = s.id;        // ...używamy uuid do zapisu
+      opt.value = s.name;            // nazwa do wyświetlenia
+      opt.dataset.id = s.id;         // UUID do zapisu rezerwacji
       opt.textContent = `${s.name} — ${(Number(s.price)||0).toFixed(2)} zł`;
       sel.appendChild(opt);
     }
   }
 
-  // spróbuj ściągnąć z chmury
+  // 2) ściągnij z Supabase i nadpisz listę (żeby nie dublować)
   if (window.sb){
     try{
       const { data, error } = await window.sb
@@ -108,10 +108,10 @@ async function renderServices(){
         .order('name', { ascending: true });
 
       if (!error && Array.isArray(data)){
-        const free = data.filter(s => s && s.taken === false);
-		window.SlotsCache.data = free;
-	  }
-        // nadpisz listę (żeby nie dublować)
+        // zaktualizuj cache usług
+        LS.set('services', data);
+
+        // nadpisz select świeżą listą
         sel.innerHTML = '';
         const ph2 = document.createElement('option');
         ph2.value = '';
@@ -132,6 +132,7 @@ async function renderServices(){
   }
 }
 
+
 /**
  * Ściągnij z Supabase wszystkie WOLNE sloty i zapisz do cache (localStorage).
  * Używane do mapki godzin.
@@ -146,12 +147,34 @@ async function pullPublicSlots(){
       .order('when', { ascending: true });
 
     if (!error && Array.isArray(data)){
-      LS.set('slots', data);
+      // tylko pamięć – żadnego localStorage
+      window.SlotsCache = window.SlotsCache || { data: [] };
+      window.SlotsCache.data = data;
     }
   }catch(e){
     console.warn('[public] pullPublicSlots ERR:', e);
   }
 }
+function updateCalendarHighlights(){
+  const slots = (window.SlotsCache && window.SlotsCache.data) || [];
+  const daysWithFree = new Set(
+    slots.map(s => {
+      const d = new Date(s.when);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const dd = String(d.getDate()).padStart(2,'0');
+      return `${yyyy}-${mm}-${dd}`;
+    })
+  );
+
+  // DOPASUJ selektor do swojego kalendarza (elementy dnia z data-date="YYYY-MM-DD")
+  document.querySelectorAll('[data-date]').forEach(el => {
+    const day = el.getAttribute('data-date');
+    if (daysWithFree.has(day)) el.classList.add('has-free');
+    else el.classList.remove('has-free');
+  });
+}
+
 
 /**
  * Zwraca slot (id, when, taken) po dacie i godzinie wybranej przez klienta.
