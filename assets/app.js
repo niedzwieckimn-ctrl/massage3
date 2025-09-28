@@ -43,7 +43,7 @@ function availableTimesFor(dateStr){
   return slots.filter(s => {
     const slotKey = (function(){const _d=new Date(s.when);return [_d.getFullYear(),String(_d.getMonth()+1).padStart(2,'0'),String(_d.getDate()).padStart(2,'0')].join('-');})(); // dzień z ISO
     const d = new Date(s.when);
-  const slotKey = [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-');
+  
   const isFree = (s.taken === false || s.taken == null);
   return slotKey === dateKey && isFree && !takenIds.has(s.id);
   }).sort((a,b)=> new Date(a.when) - new Date(b.when));
