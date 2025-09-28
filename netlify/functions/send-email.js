@@ -1,5 +1,5 @@
 // netlify/functions/send-email.js  — tylko do masażystki (Resend, bez dodatkowych paczek)
-exports.handler = async function(event) {
+export async function handler(event) {
   try {
     const { subject, html } = JSON.parse(event.body || '{}');
 
