@@ -18,10 +18,13 @@ window.CloudSlots = (function () {
   /* ściąga wszystkie sloty z chmury do LocalStorage */
   function pull() {
     if (!sb) return Promise.resolve();
-    return sb
-      .from('slots')
-      .select('id, when, taken, created_at')
-      .order('when', { ascending: true })
+   return sb
+  .from('slots')
+  .select('id, when, taken, created_at')
+  .eq('taken', false)                         // <-- tylko wolne
+  .gte('when', new Date().toISOString())      // <-- (opcjonalnie) tylko przyszłe
+  .order('when', { ascending: true })
+
       .then(function (res) {
         var data = res.data, error = res.error;
         if (error) {
