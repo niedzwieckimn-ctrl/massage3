@@ -40,14 +40,14 @@ function availableTimesFor(dateStr){
   const bookings = Store.get('bookings',[]) || [];
   const takenIds = new Set(bookings.map(b => b.slotId));
 
- return slots.filter(s => {
+   return slots.filter(s => {
   const slotKey = new Date(s.when).toISOString().slice(0,10);
-  const isFree = (s.taken === false || s.taken == null);
+  const isFree = (s.taken === false || s.taken == null);  // ważne
   return slotKey === dateKey && isFree && !takenIds.has(s.id);
 });
+  }).sort((a,b)=> new Date(a.when) - new Date(b.when));
+}
 
-
- 
 // --- wypełnienie <select id="time">
 function renderTimeOptions(){
   const dateVal = el('#date')?.value;
