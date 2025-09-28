@@ -432,6 +432,7 @@ async function initPublic(){
   await pullPublicSlots();   // cache slotów
   await renderServices();    // <select> usługi
   renderTimeOptions();       // godziny dla domyślnej/wybranej daty
+try { localStorage.removeItem('slots'); } catch(e) {}
 
   // reaguj na zmianę daty
   el('#date')?.addEventListener('change', renderTimeOptions);
@@ -451,6 +452,7 @@ async function initPublic(){
   if (!window.__slotsRefreshTimer) {
   window.__slotsRefreshTimer = setInterval(async () => {
     await pullPublicSlots();
+	updateCalendarHighlights?.();
     renderTimeOptions();
     if (typeof updateCalendarHighlights === 'function') updateCalendarHighlights();
   }, 30000);
