@@ -319,62 +319,96 @@ function renderTimeOptions(){
    Obsługa formularza (JEDEN submit)
 =========================== */
 
-async function handleSubmit(e){
+async function handleSubmit(e) {
   e.preventDefault();
-  console.log('[FORM] submit start');
+  let canSendMail = false; // domyślnie NIE wysyłamy maila
 
-  // 1) Dane z formularza
-  const name   = el('#name')?.value?.trim() || '';
-  const email  = el('#email')?.value?.trim() || '';
-  const phone  = el('#phone')?.value?.trim() || '';
-  const address= el('#address')?.value?.trim() || '';
-  const notes  = el('#notes')?.value?.trim() || '';
-  const rodo   = el('#rodo')?.checked || false;
+  const name = el('#name')?.value?.trim();
+  const email = el('#email')?.value?.trim();
+  const phone = el('#phone')?.value?.trim();
+  const address = el('#address')?.value?.trim();
+  const notes = el('#notes')?.value?.trim();
+  const dateStr = el('#date')?.value;
+  const timeStr = el('#time')?.value;
+  const sel = el('#service');
+  const service_id = sel?.options[sel.selectedIndex]?.dataset.id || '';
+  const service_name = sel?.value || '';
 
-  const dateStr= el('#date')?.value?.trim() || '';
-  const timeStr= el('#time')?.value?.trim() || '';
-
-  // 2) Usługa – bierzemy UUID z <option data-id>
-  const sel    = el('#service');
-  const service_id = sel && sel.selectedIndex>0 ? sel.options[sel.selectedIndex].dataset.id : '';
-  const service_name = sel && sel.selectedIndex>0 ? sel.options[sel.selectedIndex].textContent : '';
-
-  if (!name || !email || !phone || !dateStr || !timeStr || !service_id || !rodo){
-    toast('Uzupełnij wymagane pola (w tym zgoda RODO).', 'warning');
+  if (!name || !email || !phone || !address || !dateStr || !timeStr || !service_id) {
+    toast('Wypełnij wszystkie pola', 'warning');
     return;
   }
 
-  // 3) szukamy slota po dacie/godzinie
-  let slot = null;
-  try{
-    slot = await getSlotByDateTime(dateStr, timeStr);
-  }catch(e){
-    console.warn('[FORM] getSlotByDateTime ERR:', e);
-  }
-  if (!slot){
-    toast('Nie znaleziono wybranego terminu.', 'warning');
+  // rewalidacja: czy slot nadal wolny?
+  const slot = await getSlotByDateTime(dateStr, timeStr);
+  if (!slot) {
+    toast('Ten termin został właśnie zajęty. Wybierz inny.', 'warning', 5000);
+    await pullPublicSlots();
+    renderTimeOptions();
+    updateCalendarHighlights?.();
     return;
   }
 
-  // 4) klient (po e-mailu)
-  const client_id = await ensureClient({ name, email, phone, address });
-  if (!client_id){
-    toast('Nie udało się zapisać klienta.', 'warning');
-    return;
-  }
+  try {
+    // 1) client
+    const { data: clientData, error: clientErr } = await window.sb
+      .from('clients')
+      .insert([{ name, email, phone, address }])
+      .select()
+      .single();
+    if (clientErr) throw clientErr;
+    const client_id = clientData.id;
 
-  // 5) rezerwacja
-  const res = await createBooking({
-    client_id,
-    service_id,
-    slot_id: slot.id,
-    notes
-  });
-  if (!res.ok){
-    console.warn('[FORM] booking err:', res.error);
-    toast('Nie udało się utworzyć rezerwacji.', 'warning');
-    return;
+    // 2) booking
+    const bookingNo = Math.floor(100000 + Math.random() * 900000);
+    const { error: bookErr } = await window.sb
+      .from('bookings')
+      .insert([{ client_id, service_id, slot_id: slot.id, notes, booking_no: bookingNo, status: 'pending' }]);
+    if (bookErr) throw bookErr;
+
+    // 3) oznacz slot jako zajęty
+    const { error: updErr } = await window.sb
+      .from('slots')
+      .update({ taken: true })
+      .eq('id', slot.id);
+    if (updErr) throw updErr;
+
+    // jeśli wszystkie 3 etapy się udały:
+    canSendMail = true;
+
+    toast('Dziękujemy za rezerwację! Czekaj na potwierdzenie e-mail.', 'success');
+    e.target.reset();
+    await pullPublicSlots();
+    renderTimeOptions();
+    updateCalendarHighlights?.();
+
+    // 4) e-mail (tylko jeśli rezerwacja się zapisała)
+    if (canSendMail) {
+      try {
+        const whenStr = `${dateStr} ${timeStr}`;
+        const html = `
+          <h3>Nowa rezerwacja</h3>
+          <p><b>Nr rezerwacji:</b> ${bookingNo}</p>
+          <p><b>Termin:</b> ${whenStr}</p>
+          <p><b>Zabieg:</b> ${service_name}</p>
+          <p><b>Klient:</b> ${name}</p>
+          <p><b>Adres:</b> ${address}</p>
+          <p><b>Tel:</b> ${phone}, <b>Email:</b> ${email}</p>
+          <p><b>Uwagi:</b> ${notes || '-'}</p>
+        `.trim();
+
+        const r = await window.sendEmail?.({ subject: `Nowa rezerwacja — ${whenStr}`, html });
+        if (!r?.ok) console.warn('[MAIL] nie wysłano (rezerwacja zapisana):', r);
+      } catch (mailErr) {
+        console.warn('[MAIL] wyjątek – rezerwacja zapisana, mail nie poszedł:', mailErr);
+      }
+    }
+  } catch (err) {
+    console.warn('[BOOKING] error:', err);
+    toast('Nie udało się zapisać rezerwacji. Spróbuj ponownie.', 'error');
   }
+}
+
 
  // 6) e-mail do masażystki — BEZPIECZNIE
 try {
