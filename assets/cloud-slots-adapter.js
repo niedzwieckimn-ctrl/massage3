@@ -21,7 +21,9 @@ window.CloudSlots = (function () {
     return sb
       .from('slots')
       .select('id, when, taken, created_at')
-      .order('when', { ascending: true })
+      .gte('when', new Date().toISOString())
+  .or('taken.is.false,taken.is.null')
+  .order('when', { ascending: true })
       .then(function (res) {
         var data = res.data, error = res.error;
         if (error) {
