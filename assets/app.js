@@ -361,3 +361,72 @@ window.addEventListener('slots-synced', () => {
     }
   } catch (e) { console.warn('slots-synced handler error', e); }
 });
+/* ===== HARD OVERRIDE for public booking UI ===== */
+
+// 1) Stabilny klucz dnia YYYY-MM-DD
+function _dayKey(d) {
+  const x = new Date(d);
+  return [x.getFullYear(), String(x.getMonth()+1).padStart(2,'0'), String(x.getDate()).padStart(2,'0')].join('-');
+}
+
+// 2) Wypełnianie listy godzin wyłącznie z localStorage['slots']
+window._fillTimes = function _fillTimes() {
+  try {
+    const dateEl = document.getElementById('date');
+    const timeSel = document.getElementById('time');
+    if (!dateEl || !timeSel) return;
+
+    const dateKey = dateEl.value; // input[type=date] daje YYYY-MM-DD
+    const slots = JSON.parse(localStorage.getItem('slots') || '[]');
+
+    const times = slots
+      .filter(s => _dayKey(s.when) === dateKey && (s.taken === false || s.taken == null))
+      .sort((a,b) => new Date(a.when) - new Date(b.when));
+
+    timeSel.innerHTML = '';
+    if (!times.length) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = 'Brak wolnych godzin';
+      timeSel.appendChild(opt);
+      return;
+    }
+
+    times.forEach(s => {
+      const t = new Date(s.when);
+      const hh = String(t.getHours()).padStart(2,'0');
+      const mm = String(t.getMinutes()).padStart(2,'0');
+      const opt = document.createElement('option');
+      opt.value = s.id;            // wartość = id slota (ważne!)
+      opt.textContent = `${hh}:${mm}`;
+      timeSel.appendChild(opt);
+    });
+  } catch (e) { console.warn('[override] _fillTimes error', e); }
+};
+
+// 3) Po zsynchronizowaniu slotów – ustaw pierwszy wolny dzień i wypełnij godziny
+window.addEventListener('slots-synced', () => {
+  try {
+    const slots = JSON.parse(localStorage.getItem('slots') || '[]');
+    if (!slots.length) return;
+    const firstDay = _dayKey(slots[0].when);
+    const dateEl = document.getElementById('date');
+    if (dateEl && !dateEl.value) dateEl.value = firstDay;
+    window._fillTimes();
+  } catch (e) { console.warn('[override] slots-synced handler', e); }
+});
+
+// 4) Nasłuch na zmianę daty
+document.getElementById('date')?.addEventListener('change', () => window._fillTimes());
+
+// 5) Po utworzeniu rezerwacji — oznacz slot i odśwież listę (zachowaj nazwy Twoich funkcji!)
+if (typeof dbMarkSlotTaken === 'function') {
+  window._afterBooking = async function _afterBooking(slot_id) {
+    try {
+      await dbMarkSlotTaken(slot_id);
+      if (window.CloudSlots?.pull) await window.CloudSlots.pull();
+      window._fillTimes();
+    } catch (e) { console.warn('[override] _afterBooking error', e); }
+  };
+}
+// ===== END OVERRIDE =====
