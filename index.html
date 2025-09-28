@@ -229,44 +229,7 @@
   });
 })();
 </script>
-<script>
-  // SUPABASE → LocalStorage: services + slots, potem odśwież UI
-  document.addEventListener('DOMContentLoaded', async () => {
-    if (!window.sb) return;
-    try {
-      const [{ data: svc, error: e1 }, { data: slots, error: e2 }] = await Promise.all([
-        window.sb.from('services')
-          .select('id, name, price, duration_min, active')
-          .eq('active', true)
-          .order('name', { ascending: true }),
-        window.sb.from('slots')
-          .select('id, when, taken')
-          .eq('taken', false)
-          .order('when', { ascending: true })
-      ]);
 
-      if (!e1 && Array.isArray(svc)) {
-        localStorage.setItem('services', JSON.stringify(svc));
-        const sel = document.getElementById('service');
-        if (sel) {
-          sel.innerHTML = '<option value="">Wybierz zabieg</option>' +
-            svc.map(s => {
-              const price = (Number(s.price) || 0).toFixed(2).replace('.', ',');
-              return `<option value="${s.id}" data-name="${s.name}">${s.name} — ${price} zł</option>`;
-            }).join('');
-        }
-      }
-
-    
-        if (typeof window.renderTimeOptions === 'function') {
-          window.renderTimeOptions();
-        }
-      }
-    } catch (err) {
-      console.warn('[public sync] fail:', err);
-    }
-  });
-</script>
 
 <!-- Poprawny baner "dziękujemy" (poza <script>) -->
 <style>
