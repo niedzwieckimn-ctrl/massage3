@@ -30,3 +30,39 @@
   global.CloudSlots = global.CloudSlots || {}; global.CloudSlots.pull = pull; global.CloudSlots.get = get;
   console.log('[cloud-slots] ready');
 })(window);
+(function (global) {
+  const LS_KEY = 'slots';
+
+  async function pull() {
+    try {
+      // Pobierz wolne terminy z widoku free_slots
+      let { data, error } = await (global.sb)
+        .from('free_slots')
+        .select('id, when, taken')
+        .order('when', { ascending: true });
+
+      if (error) throw error;
+
+      // Filtruj tylko przyszłość
+      const today = new Date(); today.setHours(0,0,0,0);
+      const cleaned = (data || []).filter(
+        s => (s.taken === false || s.taken == null) && new Date(s.when) >= today
+      );
+
+      localStorage.setItem(LS_KEY, JSON.stringify(cleaned));
+      global.dispatchEvent(new Event('slots-synced'));
+    } catch (e) {
+      console.error('[cloud-slots] pull error:', e);
+      localStorage.setItem(LS_KEY, '[]');
+      global.dispatchEvent(new Event('slots-synced'));
+    }
+  }
+
+  function get() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); }
+    catch { return []; }
+  }
+
+  global.CloudSlots = { pull, get };
+  console.log('[cloud-slots] ready');
+})(window);
