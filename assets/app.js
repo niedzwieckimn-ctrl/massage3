@@ -1,202 +1,233 @@
-/* app.js — Supabase-only, brak LocalStorage dla 'slots' */
-/* Wklej zamiast obecnego pliku assets/app.js. */
+/* assets/app.js — public, Supabase-only, bez localStorage
+   Ładuje godziny z SB, sam ustawia datę (jeśli pusta), rewaliduje slot przed zapisem. */
 
-function $(sel){ return document.querySelector(sel); }
-const fmtHM = d => new Date(d).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
+function $(s){ return document.querySelector(s); }
+const fmtHM = iso => new Date(iso).toLocaleTimeString('pl-PL',{ hour:'2-digit', minute:'2-digit' });
 
-/* ---------- Services (select) ---------- */
+/* ---------- SERVICES ---------- */
 async function renderServicesSelect(){
   const sel = $('#service');
-  if (!sel) return;
+  if(!sel || !window.sb) return;
   sel.innerHTML = '<option value="">Wybierz zabieg</option>';
-  if (!window.sb) return;
+
   const { data, error } = await window.sb
     .from('services')
     .select('id, name, price, active')
     .eq('active', true)
     .order('name', { ascending: true });
-  if (error || !Array.isArray(data)) { console.warn('[public] services error', error); return; }
-  data.forEach(s=>{
-    const opt = document.createElement('option');
-    opt.value = s.id;
-    opt.textContent = `${s.name} — ${Number(s.price||0).toFixed(2)} zł`;
-    sel.appendChild(opt);
+
+  if (error) { console.warn('[services]', error); return; }
+  (data||[]).forEach(s=>{
+    const o = document.createElement('option');
+    o.value = s.id;
+    o.textContent = `${s.name} — ${Number(s.price||0).toFixed(2)} zł`;
+    sel.appendChild(o);
   });
 }
 
-/* ---------- Times from Supabase (no LS) ---------- */
-async function fillTimesFromCloud(dateStr){
+/* ---------- SLOTS z Supabase ---------- */
+function dayBounds(dateStr){
+  const from = new Date(`${dateStr}T00:00:00`);
+  const to   = new Date(`${dateStr}T23:59:59`);
+  return { fromISO: from.toISOString(), toISO: to.toISOString() };
+}
+
+async function fillTimesForDate(dateStr){
   const timeSel = $('#time');
-  if (!timeSel) return;
+  if(!timeSel) return;
+
   timeSel.innerHTML = '';
   timeSel.disabled = true;
-  if (!dateStr) {
-    const ph = document.createElement('option'); ph.value=''; ph.textContent='Najpierw wybierz datę'; ph.disabled=true; ph.selected=true;
-    timeSel.appendChild(ph); return;
-  }
-  if (!window.sb) return;
-  const fromISO = new Date(`${dateStr}T00:00:00`).toISOString();
-  const toISO   = new Date(`${dateStr}T23:59:59`).toISOString();
 
-  const { data: free, error } = await window.sb
+  if(!dateStr){
+    const o = document.createElement('option');
+    o.value=''; o.disabled=true; o.selected=true;
+    o.textContent='Najpierw wybierz datę';
+    timeSel.appendChild(o);
+    return;
+  }
+
+  const { fromISO, toISO } = dayBounds(dateStr);
+  const { data, error } = await window.sb
     .from('slots')
-    .select('id, when, taken')
+    .select('id, when')
     .gte('when', fromISO)
     .lte('when', toISO)
     .eq('taken', false)
-    .order('when', { ascending: true });
+    .order('when', { ascending:true });
 
-  if (error) { console.error('[public] slots error:', error); const o=document.createElement('option'); o.value=''; o.textContent='Błąd wczytywania godzin'; o.disabled=true; o.selected=true; timeSel.appendChild(o); return; }
-  if (!free?.length) { const o=document.createElement('option'); o.value=''; o.textContent='Brak wolnych godzin'; o.disabled=true; o.selected=true; timeSel.appendChild(o); return; }
-
-  const ph = document.createElement('option'); ph.value=''; ph.textContent='Wybierz godzinę'; ph.disabled=true; ph.selected=true; timeSel.appendChild(ph);
-  free.forEach(s=>{
+  if (error){
     const o = document.createElement('option');
-    o.value = s.id;              // ID slota (UUID) — krytyczne
-    o.dataset.when = s.when;
+    o.value=''; o.disabled=true; o.selected=true;
+    o.textContent='Błąd wczytywania godzin';
+    timeSel.appendChild(o);
+    return;
+  }
+
+  if (!data?.length){
+    const o = document.createElement('option');
+    o.value=''; o.disabled=true; o.selected=true;
+    o.textContent='Brak wolnych godzin';
+    timeSel.appendChild(o);
+    return;
+  }
+
+  const ph = document.createElement('option');
+  ph.value=''; ph.disabled=true; ph.selected=true;
+  ph.textContent='Wybierz godzinę';
+  timeSel.appendChild(ph);
+
+  data.forEach(s=>{
+    const o = document.createElement('option');
+    o.value = s.id;            // UUID slota
+    o.dataset.when = s.when;   // ISO do maila/opisu
     o.textContent = fmtHM(s.when);
     timeSel.appendChild(o);
   });
+
   timeSel.disabled = false;
 }
 
-/* ---------- Supabase helpers ---------- */
+/* ---------- REWALIDACJA slota ---------- */
+async function revalidateSelectedSlot(){
+  const timeSel = $('#time');
+  const slot_id = timeSel?.value;
+  if(!slot_id) return { ok:false, reason:'no-slot' };
+
+  const { data:slot, error } = await window.sb
+    .from('slots')
+    .select('id, when, taken')
+    .eq('id', slot_id)
+    .single();
+
+  if (error || !slot) return { ok:false, reason:'not-found' };
+  if (slot.taken)     return { ok:false, reason:'taken' };
+  return { ok:true, slot };
+}
+
+/* ---------- DB helpers ---------- */
 async function dbFindOrCreateClient({ name, email, phone, address }){
-  if (!window.sb) return null;
-  // find
-  let { data: found, error: e1 } = await window.sb.from('clients').select('id').eq('email', email).single();
+  let { data:found } = await window.sb
+    .from('clients').select('id').eq('email', email).single();
   if (found?.id) return found.id;
-  // create
-  const { data: created, error: e2 } = await window.sb.from('clients').insert({ name, email, phone, address }).select('id').single();
-  if (e2 || !created?.id) { console.warn('[public] create client error', e2); return null; }
+
+  const { data:created, error } = await window.sb
+    .from('clients').insert({ name, email, phone, address }).select('id').single();
+  if (error || !created?.id) throw new Error('client-insert');
   return created.id;
 }
 
 async function dbCreateBooking({ client_id, service_id, slot_id, notes }){
-  const { data, error } = await window.sb.from('bookings').insert({ client_id, service_id, slot_id, notes }).select('id, created_at').single();
-  if (error) console.warn('[public] booking insert error', error);
-  return data;
+  const { data, error } = await window.sb
+    .from('bookings')
+    .insert({ client_id, service_id, slot_id, notes })
+    .select('id')
+    .single();
+  if (error || !data?.id) throw new Error('booking-insert');
+  return data.id;
 }
 
 async function dbMarkSlotTaken(slot_id){
-  if (!slot_id) return;
-  const { error } = await window.sb.from('slots').update({ taken: true }).eq('id', slot_id);
-  if (error) console.warn('[public] slot mark taken error', error);
+  const { error } = await window.sb
+    .from('slots')
+    .update({ taken:true })
+    .eq('id', slot_id);
+  if (error) throw new Error('slot-update');
 }
 
-/* ---------- Mail (Netlify) ---------- */
+/* ---------- MAIL (Netlify Function) ---------- */
 async function sendEmail({ subject, html }){
-  try {
+  try{
     const r = await fetch('/.netlify/functions/send-email', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json' },
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
       body: JSON.stringify({ subject, html })
     });
-    if (!r.ok) {
-      const t = await r.text();
-      console.warn('[MAIL] backend nie OK:', r.status, t);
-    }
-  } catch(e){ console.warn('[MAIL] wyjątek:', e); }
+    if(!r.ok) console.warn('[MAIL]', r.status, await r.text());
+  }catch(e){ console.warn('[MAIL-exc]', e); }
 }
 
-/* ---------- Calendar refresh (no LS) ---------- */
-async function refreshCalendarDays(){
-  if (!window.sb) return;
-  const nowISO = new Date().toISOString();
-  const { data, error } = await window.sb
-    .from('slots')
-    .select('id, when, taken')
-    .gte('when', nowISO)
-    .eq('taken', false)
-    .order('when', { ascending: true });
-  if (error) { console.warn('[public] days fetch err:', error); window.currentSlots = []; return; }
-  // trzymamy w pamięci
-  window.currentSlots = data || [];
-  // wywołaj funkcję, która rysuje podświetlenia (jeśli istnieje)
-  if (typeof window.updateCalendarHighlights === 'function') window.updateCalendarHighlights();
-  if (window.fp && typeof window.fp.redraw === 'function') window.fp.redraw();
-}
-
-/* ---------- Submit (Supabase) ---------- */
+/* ---------- SUBMIT ---------- */
 async function handleSubmit(e){
   e.preventDefault();
-  const form    = $('#form') || $('#bookingForm');
-  const rodo    = $('#rodo')?.checked;
-  const name    = $('#name')?.value.trim();
-  const email   = $('#email')?.value.trim();
-  const phone   = $('#phone')?.value.trim();
+
+  const form = $('#form') || $('#bookingForm');
+  const rodo = $('#rodo')?.checked;
+  const name = $('#name')?.value.trim();
+  const email = $('#email')?.value.trim();
+  const phone = $('#phone')?.value.trim();
   const address = $('#address')?.value.trim();
-  const notes   = $('#notes')?.value.trim() || '';
+  const notes = $('#notes')?.value.trim() || '';
+
   const serviceSel = $('#service');
   const timeSel    = $('#time');
   const service_id = serviceSel?.value || '';
   const slot_id    = timeSel?.value || '';
 
-  if (!rodo){ alert('Musisz wyrazić zgodę RODO.'); return; }
-  if (!name || !email || !phone || !service_id || !slot_id){ alert('Uzupełnij wymagane pola.'); return; }
+  if(!rodo){ alert('Musisz wyrazić zgodę RODO.'); return; }
+  if(!name || !email || !phone || !service_id || !slot_id){
+    alert('Uzupełnij wymagane pola.'); return;
+  }
 
-  // rewalidacja slota
-  const { data: slot, error: sErr } = await window.sb.from('slots').select('id, when, taken').eq('id', slot_id).single();
-  if (sErr || !slot) { alert('Wybrany termin nie istnieje.'); await fillTimesFromCloud($('#date')?.value); return; }
-  if (slot.taken) { alert('Ten termin został już zajęty.'); await fillTimesFromCloud($('#date')?.value); return; }
+  // rewalidacja
+  const chk = await revalidateSelectedSlot();
+  if(!chk.ok){
+    const msg =
+      chk.reason==='taken'     ? 'Ten termin został właśnie zajęty.' :
+      chk.reason==='not-found' ? 'Wybrany termin nie istnieje.' :
+      'Nie wybrano godziny.';
+    alert(msg);
+    const d = $('#date')?.value; if (d) await fillTimesForDate(d);
+    return;
+  }
 
-  const whenISO = timeSel.options[timeSel.selectedIndex]?.dataset?.when || slot.when;
-  const whenStr = new Date(whenISO).toLocaleString('pl-PL',{dateStyle:'full', timeStyle:'short'});
+  // dane do maila
+  const whenISO = timeSel.options[timeSel.selectedIndex]?.dataset?.when || chk.slot.when;
+  const whenStr = new Date(whenISO).toLocaleString('pl-PL',{ dateStyle:'full', timeStyle:'short' });
   const serviceName = serviceSel?.options[serviceSel.selectedIndex]?.textContent || '';
 
-  // 1) klient
-  const client_id = await dbFindOrCreateClient({ name, email, phone, address });
-  if (!client_id){ alert('Nie udało się zapisać klienta.'); return; }
+  try{
+    const client_id = await dbFindOrCreateClient({ name, email, phone, address });
+    await dbCreateBooking({ client_id, service_id, slot_id, notes });
+    await dbMarkSlotTaken(slot_id);
 
-  // 2) booking
-  const booking = await dbCreateBooking({ client_id, service_id, slot_id, notes });
-  if (!booking?.id){ alert('Nie udało się utworzyć rezerwacji.'); return; }
-
-  // 3) oznacz slot
-  await dbMarkSlotTaken(slot_id);
-
-  // 4) wyślij mail (nie blokuje)
-  try {
-    const html = `<h2>Nowa rezerwacja</h2>
+    // mail do masażystki
+    const html = `
+      <h2>Nowa rezerwacja</h2>
       <p><b>Termin:</b> ${whenStr}</p>
       <p><b>Zabieg:</b> ${serviceName}</p>
       <p><b>Klient:</b> ${name}</p>
       <p><b>Adres / kontakt:</b><br>${address}<br>Tel: ${phone}<br>Email: ${email}</p>
       ${notes ? `<p><b>Uwagi:</b> ${notes}</p>` : ''}`;
     await sendEmail({ subject:`Nowa rezerwacja — ${whenStr}`, html });
-  } catch(e){}
 
-  // 5) feedback + refresh times + calendar
-  const thanks = $('#bookingThanks');
-  if (thanks){ thanks.classList.add('show'); setTimeout(()=>thanks.classList.remove('show'), 4000); }
-  form?.reset();
+    // sukces: baner + reset + odświeżenie godzin
+    const thanks = $('#bookingThanks');
+    if (thanks){ thanks.classList.add('show'); setTimeout(()=>thanks.classList.remove('show'), 4000); }
+    form?.reset();
+    const d = $('#date')?.value; if (d) await fillTimesForDate(d);
 
-  const d = $('#date')?.value;
-  if (d) await fillTimesFromCloud(d);
-  await refreshCalendarDays();
+  }catch(err){
+    console.warn('[submit]', err);
+    alert('Nie udało się zapisać rezerwacji.');
+  }
 }
 
-/* ---------- init ---------- */
+/* ---------- INIT ---------- */
 document.addEventListener('DOMContentLoaded', async ()=>{
+  // 1) usługi
   await renderServicesSelect();
-  const d = $('#date');
-  d?.setAttribute('min', new Date().toISOString().slice(0,10));
-  if (d?.value) await fillTimesFromCloud(d.value);
-  d?.addEventListener('change', e=> fillTimesFromCloud(e.target.value));
 
+  // 2) data — jeśli pusta, ustaw „dzisiaj”; ustaw min na dziś
+  const d = $('#date');
+  if (d){
+    d.setAttribute('min', new Date().toISOString().slice(0,10));
+    if (!d.value) d.value = new Date().toISOString().slice(0,10); // <<< AUTO
+    await fillTimesForDate(d.value);
+    d.addEventListener('change', ()=> fillTimesForDate(d.value));
+  }
+
+  // 3) submit
   const form = $('#form') || $('#bookingForm');
   if (form && !form._bound){ form.addEventListener('submit', handleSubmit); form._bound = true; }
-
-  // load calendar highlights from cloud (keeps calendar in sync)
-  await refreshCalendarDays();
-});
-
-/* optional: react when other tabs change services/slots (still no LS writes here) */
-window.addEventListener('storage', async (e)=>{
-  if (e.key === 'services') await renderServicesSelect();
-  if (e.key === 'slots') {
-    const d = $('#date')?.value;
-    if (d) await fillTimesFromCloud(d);
-    await refreshCalendarDays();
-  }
 });
