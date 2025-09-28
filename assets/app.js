@@ -14,6 +14,7 @@ function fmtDate(d){
   const nd = (d instanceof Date) ? d : new Date(d);
   return nd.getFullYear()+'-'+fmt2(nd.getMonth()+1)+'-'+fmt2(nd.getDate());
 }
+window.SlotsCache = {data: [] };
 // --- MAIL: bezpieczny wrapper, nie psuje reszty flow ---
 window.safeSendEmail = async function safeSendEmail({ subject, html, to }) {
   try {
@@ -107,7 +108,9 @@ async function renderServices(){
         .order('name', { ascending: true });
 
       if (!error && Array.isArray(data)){
-        LS.set('services', data);
+        const free = data.filter(s => s && s.taken === false);
+		window.SlotsCache.data = free;
+	  }
         // nadpisz listę (żeby nie dublować)
         sel.innerHTML = '';
         const ph2 = document.createElement('option');
@@ -263,7 +266,7 @@ function renderTimeOptions(){
   }
 
   // sloty z cache (wcześniej ściągane z chmury)
-  const slots = LS.get('slots', []) || [];
+  const slots = (window.SlotsCache && window.SlotsCache.data) || [];
   const filtered = slots
     .filter(s => !s.taken && fmtDate(s.when) === dateStr)
     .sort((a,b) => new Date(a.when) - new Date(b.when));
@@ -388,6 +391,10 @@ try {
   renderTimeOptions();
 
   console.log('[FORM] submit done!');
+ await pullPublicSlots();
+renderTimeOptions();
+if (typeof updateCalendarHighlights === 'function') updateCalendarHighlights();
+
 }
 
 /* ===========================
@@ -418,6 +425,14 @@ async function initPublic(){
     if (e.key === 'slots' || e.key === 'bookings') renderTimeOptions();
     if (e.key === 'services') renderServices();
   });
+  if (!window.__slotsRefreshTimer) {
+  window.__slotsRefreshTimer = setInterval(async () => {
+    await pullPublicSlots();
+    renderTimeOptions();
+    if (typeof updateCalendarHighlights === 'function') updateCalendarHighlights();
+  }, 30000);
+}
+
 }
 
 window.addEventListener('DOMContentLoaded', ()=>{ initPublic(); });
