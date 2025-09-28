@@ -71,7 +71,9 @@ async function refreshCalendarDays(){
   if (error) { console.warn('[public] days fetch err:', error); return; }
 
   // zgodność z kalendarzem – karmimy go przez localStorage('slots')
-  try { localStorage.setItem('slots', JSON.stringify(data || [])); } catch(_){}
+  try { localStorage.setItem('slots', JSON.stringify(data || []));
+localStorage.setItem('ms_slots_v6', JSON.stringify(data || [])); // dla kalendarza
+} catch(_){}
 
   // jeśli masz własną funkcję rysującą podświetlenia – użyj jej
   if (typeof window.updateCalendarHighlights === 'function') {
