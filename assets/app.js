@@ -40,12 +40,11 @@ function availableTimesFor(dateStr){
   const bookings = Store.get('bookings',[]) || [];
   const takenIds = new Set(bookings.map(b => b.slotId));
 
- return slots.filter(s => {
-  const slotKey = new Date(s.when).toLocaleDateString('sv-SE'); // np. "2025-09-28"
-  const isFree = (s.taken === false || s.taken == null);
+  return slots.filter(s => {
+    const slotKey = new Date(s.when).toLocaleDateString('sv-SE'); // dzień z ISO
+    const isFree = (s.taken === false || s.taken == null);
   return slotKey === dateKey && isFree && !takenIds.has(s.id);
-}).sort((a,b)=> new Date(a.when) - new Date(b.when));
-
+  }).sort((a,b)=> new Date(a.when) - new Date(b.when));
 }
 
 // --- wypełnienie <select id="time">
@@ -239,10 +238,7 @@ window.addEventListener('storage', (e)=>{
     if(!client_id){ alert('Nie udało się zapisać klienta.'); return; }
 
     // 4) rezerwacja + oznaczenie slotu jako zajęty
-    const r = await dbCreateBooking({ slot_id, service_id, client_id, notes });
-    if(!r.ok){ alert('Nie udało się utworzyć rezerwacji.'); return; }
-
-    
+    \1
 // oznacz slot jako zajęty i odśwież listę wolnych
 await dbMarkSlotTaken(slot_id);
 if (window.CloudSlots) { await window.CloudSlots.pull(); }
@@ -342,25 +338,20 @@ async function dbMarkSlotTaken(slot_id) {
 }
 
 
-// Po zsynchronizowaniu slotów wybierz automatycznie pierwszy wolny dzień
+
+
+
+/* Auto-select first available day after slots sync */
 window.addEventListener('slots-synced', () => {
   try {
     const slots = JSON.parse(localStorage.getItem('slots') || '[]');
     if (!slots.length) return;
-
-    const firstDay = new Date(slots[0].when).toISOString().slice(0,10);
+    const firstDay = new Date(slots[0].when).toLocaleDateString('sv-SE'); // YYYY-MM-DD in local TZ
     const dateEl = document.getElementById('date');
     if (!dateEl) return;
-
-    // upewnij się, że min nie blokuje dnia
-    const today = new Date().toISOString().slice(0,10);
-    if (!dateEl.min || dateEl.min < today) dateEl.min = today;
-
-    // jeśli nic nie wybrane – ustaw pierwszy wolny i wywołaj change
     if (!dateEl.value) {
       dateEl.value = firstDay;
       dateEl.dispatchEvent(new Event('change', { bubbles: true }));
     }
-  } catch (e) { console.warn('slots-synced handler:', e); }
+  } catch (e) { console.warn('slots-synced handler error', e); }
 });
-
