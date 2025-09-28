@@ -4,6 +4,19 @@
 function el(sel, root = document) { return root.querySelector(sel); }
 function fmtMoney(v){ return new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(v||0); }
 function fmtDate(d){ return new Date(d).toLocaleString('pl-PL',{dateStyle:'medium', timeStyle:'short'}); }
+async function dbLoadServices() {
+  const { data, error } = await window.sb
+    .from('services')
+    .select('id, name, price, duration_min, active')
+    .eq('active', true)
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.warn('[SB] load services error:', error);
+    return [];
+  }
+  return data || [];
+}
 
 // --- źródła danych
 const settings = Store.get('settings', {}); // kontakt do masażystki, tel, rodo, itp.
