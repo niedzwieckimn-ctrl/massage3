@@ -41,8 +41,10 @@ function availableTimesFor(dateStr){
   const takenIds = new Set(bookings.map(b => b.slotId));
 
   return slots.filter(s => {
-    const slotKey = new Date(s.when).toLocaleDateString('sv-SE'); // dzień z ISO
-    const isFree = (s.taken === false || s.taken == null);
+    const slotKey = (function(){const _d=new Date(s.when);return [_d.getFullYear(),String(_d.getMonth()+1).padStart(2,'0'),String(_d.getDate()).padStart(2,'0')].join('-');})(); // dzień z ISO
+    const d = new Date(s.when);
+  const slotKey = [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-');
+  const isFree = (s.taken === false || s.taken == null);
   return slotKey === dateKey && isFree && !takenIds.has(s.id);
   }).sort((a,b)=> new Date(a.when) - new Date(b.when));
 }
@@ -238,7 +240,10 @@ window.addEventListener('storage', (e)=>{
     if(!client_id){ alert('Nie udało się zapisać klienta.'); return; }
 
     // 4) rezerwacja + oznaczenie slotu jako zajęty
-    \1
+    const r = await dbCreateBooking({ slot_id, service_id, client_id, notes });
+    if(!r.ok){ alert('Nie udało się utworzyć rezerwacji.'); return; }
+
+    
 // oznacz slot jako zajęty i odśwież listę wolnych
 await dbMarkSlotTaken(slot_id);
 if (window.CloudSlots) { await window.CloudSlots.pull(); }
@@ -341,12 +346,13 @@ async function dbMarkSlotTaken(slot_id) {
 
 
 
-/* Auto-select first available day after slots sync */
+/* Auto-select first available day after slots sync (robust, no locales) */
 window.addEventListener('slots-synced', () => {
   try {
     const slots = JSON.parse(localStorage.getItem('slots') || '[]');
     if (!slots.length) return;
-    const firstDay = new Date(slots[0].when).toLocaleDateString('sv-SE'); // YYYY-MM-DD in local TZ
+    const d = new Date(slots[0].when);
+    const firstDay = [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-');
     const dateEl = document.getElementById('date');
     if (!dateEl) return;
     if (!dateEl.value) {
