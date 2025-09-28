@@ -41,11 +41,11 @@ function availableTimesFor(dateStr){
   const takenIds = new Set(bookings.map(b => b.slotId));
 
   return slots.filter(s => {
-    const slotKey = new Date(s.when).toISOString().slice(0,10); // dzień z ISO
-    const isFree = (s.taken === false || s.taken == null);
+  const slotKey = new Date(s.when).toLocaleDateString('sv-SE'); // np. "2025-09-28"
+  const isFree = (s.taken === false || s.taken == null);
   return slotKey === dateKey && isFree && !takenIds.has(s.id);
-  }).sort((a,b)=> new Date(a.when) - new Date(b.when));
-}
+}).sort((a,b)=> new Date(a.when) - new Date(b.when));
+
 
 // --- wypełnienie <select id="time">
 function renderTimeOptions(){
