@@ -374,6 +374,14 @@ async function loadBookingsUI() {
 if (document.getElementById('pendingBookings') || document.getElementById('confirmedBookings')) {
   loadBookingsUI();
 }
+// Mostek dla starego kodu, który wywołuje renderBookings()
+function renderBookings() {
+  return loadBookingsUI();
+}
+
+// Na wszelki wypadek przypnij do window
+window.loadBookingsUI = loadBookingsUI;
+window.renderBookings = renderBookings;
 
 /* ===========================
    Start / logowanie
