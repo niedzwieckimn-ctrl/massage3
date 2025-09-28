@@ -341,4 +341,25 @@ async function dbMarkSlotTaken(slot_id) {
 }
 
 
+// Po zsynchronizowaniu slotów wybierz automatycznie pierwszy wolny dzień
+window.addEventListener('slots-synced', () => {
+  try {
+    const slots = JSON.parse(localStorage.getItem('slots') || '[]');
+    if (!slots.length) return;
+
+    const firstDay = new Date(slots[0].when).toISOString().slice(0,10);
+    const dateEl = document.getElementById('date');
+    if (!dateEl) return;
+
+    // upewnij się, że min nie blokuje dnia
+    const today = new Date().toISOString().slice(0,10);
+    if (!dateEl.min || dateEl.min < today) dateEl.min = today;
+
+    // jeśli nic nie wybrane – ustaw pierwszy wolny i wywołaj change
+    if (!dateEl.value) {
+      dateEl.value = firstDay;
+      dateEl.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  } catch (e) { console.warn('slots-synced handler:', e); }
+});
 
