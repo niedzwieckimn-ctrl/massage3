@@ -55,6 +55,33 @@ async function fillTimesFromCloud(dateStr){
   }
 
   if (!window.sb) return;
+/* ---------- Calendar highlights (dni z wolnymi slotami) ---------- */
+async function refreshCalendarDays(){
+  if (!window.sb) return;
+
+  // wszystkie przyszłe wolne sloty
+  const nowISO = new Date().toISOString();
+  const { data, error } = await window.sb
+    .from('slots')
+    .select('id, when, taken')
+    .gte('when', nowISO)
+    .eq('taken', false)
+    .order('when', { ascending: true });
+
+  if (error) { console.warn('[public] days fetch err:', error); return; }
+
+  // zgodność z kalendarzem – karmimy go przez localStorage('slots')
+  try { localStorage.setItem('slots', JSON.stringify(data || [])); } catch(_){}
+
+  // jeśli masz własną funkcję rysującą podświetlenia – użyj jej
+  if (typeof window.updateCalendarHighlights === 'function') {
+    window.updateCalendarHighlights();
+  }
+  // jeżeli używasz flatpickr i trzymasz referencję w window.fp
+  if (window.fp && typeof window.fp.redraw === 'function') {
+    window.fp.redraw();
+  }
+}
 
   // zakres dnia (UTC w ISO) – unikamy "Invalid time value"
   const fromISO = new Date(`${dateStr}T00:00:00`).toISOString();
@@ -237,6 +264,8 @@ async function handleSubmit(e){
   const thanks = $('#bookingThanks');
   if (thanks){ thanks.classList.add('show'); setTimeout(()=>thanks.classList.remove('show'), 4000); }
   form?.reset();
+// po zmianie statusu slotu odśwież kalendarz dni
+await refreshCalendarDays();
 
   const d = $('#date')?.value;
   if (d) await fillTimesFromCloud(d); // zniknie z listy
@@ -260,6 +289,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     form.addEventListener('submit', handleSubmit);
     form._bound = true;
   }
+  // podświetlenia dni w kalendarzu – dane z Supabase
+  await refreshCalendarDays();
+});
 
   // stopka kontakt (opcjonalnie z LocalStorage ustawień Admina)
   try {
