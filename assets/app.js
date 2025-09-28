@@ -41,9 +41,11 @@ function availableTimesFor(dateStr){
   const takenIds = new Set(bookings.map(b => b.slotId));
 
   return slots.filter(s => {
-    const slotKey = new Date(s.when).toISOString().slice(0,10); // dzień z ISO
-    const d=new Date(s.when); const slotKey=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-'); const isFree=(s.taken===false||s.taken==null); return slotKey===dateKey && isFree && !takenIds.has(s.id);
-  }).sort((a,b)=> new Date(a.when) - new Date(b.when));
+    const d = new Date(s.when);
+const slotKey = [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-');
+const isFree = (s.taken === false || s.taken == null);
+return slotKey === dateKey && isFree && !takenIds.has(s.id);
+
 }
 
 // --- wypełnienie <select id="time">
