@@ -185,31 +185,196 @@ async function renderSlots(){
   }
 }
 
-// Rezerwacje – proste listy
-async function renderBookings(){
-  const up = el('#upcoming'), cf = el('#confirmed');
-  if(!up || !cf) return;
+/**************************
+ * REZERWACJE – logika
+ **************************/
 
-  up.innerHTML = cf.innerHTML = '<div class="notice">Ładowanie…</div>';
-  const list = await dbLoadBookings();
-  const upcoming  = list.filter(b => b.status !== 'Potwierdzona');
-  const confirmed = list.filter(b => b.status === 'Potwierdzona');
+// 1) Pobranie list wg statusu
+async function dbLoadBookingsByStatus(statuses) {
+  // statuses = tablica, np. ['pending','Niepotwierdzona', null]
+  // Pobieramy od razu powiązane rekordy (slots, clients, services)
+  const sel = `
+    id, booking_no, status, notes, created_at,
+    slot_id, service_id, client_id,
+    slots(when), clients(name, email, phone), services(title)
+  `;
+  let q = sb.from('bookings').select(sel).order('created_at', { ascending: false });
 
-  const paint = (wrap, arr)=>{
-    if(!arr.length){ wrap.innerHTML = '<div class="notice">Brak pozycji.</div>'; return; }
-    wrap.innerHTML = '';
-    arr.forEach(b=>{
-      const div = document.createElement('div');
-      div.className = 'listItem inline';
-      div.style.justifyContent = 'space-between';
-      div.innerHTML = `
-        <div><b>${dtPL(b.when)}</b> — ${b.client_name || ''}</div>
-        <div class="badge ${b.status==='Potwierdzona'?'success':'warning'}">${b.status || 'Oczekująca'}</div>`;
-      wrap.appendChild(div);
+  if (statuses && statuses.length) {
+    // PostgREST: in(...) nie lubi nulli, więc zróbmy or(...)
+    const parts = [];
+    statuses.forEach(s => {
+      if (s == null) parts.push('status.is.null');
+      else parts.push(`status.eq.${s}`);
     });
-  };
-  paint(up, upcoming);
-  paint(cf, confirmed);
+    q = q.or(parts.join(','));
+  }
+  const { data, error } = await q;
+  if (error) { console.error('[dbLoadBookingsByStatus]', error); return []; }
+
+  // Uporządkuj dane do wygodnego formatu
+  return (data || []).map(r => ({
+    id: r.id,
+    booking_no: r.booking_no || shortId(r.id),
+    status: r.status || 'pending',
+    notes: r.notes || '',
+    created_at: r.created_at,
+    when: r.slots?.when || null,
+    client: r.clients || {},      // {name,email,phone}
+    service: r.services || {},    // {title}
+    slot_id: r.slot_id
+  }));
+}
+
+// 2) Akcje: potwierdź / usuń
+async function dbConfirmBooking(id) {
+  const { error } = await sb.from('bookings').update({ status: 'Potwierdzona' }).eq('id', id);
+  if (error) { alert('Nie udało się potwierdzić.'); console.error(error); return false; }
+  return true;
+}
+
+async function dbDeleteBooking(id, slot_id) {
+  const { error } = await sb.from('bookings').delete().eq('id', id);
+  if (error) { alert('Nie udało się usunąć rezerwacji.'); console.error(error); return false; }
+  // (opcjonalnie) zwolnij slot
+  if (slot_id) {
+    await sb.from('slots').update({ taken: false }).eq('id', slot_id).then(() => {}, () => {});
+  }
+  return true;
+}
+
+// 3) Render list
+function renderBookingsList(containerId, list, isConfirmed) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!list.length) {
+    el.innerHTML = `<div class="text-sm opacity-70">Brak pozycji</div>`;
+    return;
+  }
+
+  const rows = list.map(b => {
+    const dateStr = b.when ? new Date(b.when).toLocaleString() : '(brak daty)';
+    const name = b.client?.name || '(bez imienia)';
+    const service = b.service?.title || '(usługa?)';
+
+    // Przyciski: potwierdzone nie mają zielonego
+    const btnConfirm = isConfirmed ? '' : `<button class="btn btn-green" data-act="confirm" data-id="${b.id}">Potwierdź</button>`;
+    const btnDelete = `<button class="btn btn-red" data-act="delete" data-id="${b.id}" data-slot="${b.slot_id}">Usuń</button>`;
+    const btnDetails = `<button class="btn" data-act="details" data-id="${b.id}">Szczegóły</button>`;
+
+    return `
+      <div class="card" data-row="${b.id}">
+        <div class="row-main">
+          <div><b>${name}</b></div>
+          <div>Nr: ${b.booking_no}</div>
+          <div>${dateStr}</div>
+          <div>${service}</div>
+        </div>
+        <div class="row-actions">
+          ${btnConfirm}
+          ${btnDelete}
+          ${btnDetails}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  el.innerHTML = rows;
+
+  // Handlery przycisków
+  el.querySelectorAll('button[data-act]').forEach(btn => {
+    btn.addEventListener('click', async (ev) => {
+      const act = ev.currentTarget.dataset.act;
+      const id = ev.currentTarget.dataset.id;
+      const slotId = ev.currentTarget.dataset.slot || null;
+      const booking = list.find(x => x.id === id);
+
+      if (act === 'confirm') {
+        if (!(await dbConfirmBooking(id))) return;
+        // (opcjonalnie) e-maile
+        try { await sendBookingEmailsOnConfirm(booking); } catch(e) { console.warn('Email confirm failed', e); }
+        await loadBookingsUI(); // przeładuj obie listy
+      }
+      else if (act === 'delete') {
+        if (!confirm('Usunąć rezerwację?')) return;
+        if (!(await dbDeleteBooking(id, slotId))) return;
+        await loadBookingsUI();
+      }
+      else if (act === 'details') {
+        showBookingDetails(booking);
+      }
+    });
+  });
+}
+
+// 4) Szczegóły – prosty modal
+function showBookingDetails(b) {
+  const body = document.getElementById('bookingModalBody');
+  const modal = document.getElementById('bookingModal');
+  const dateStr = b.when ? new Date(b.when).toLocaleString() : '(brak daty)';
+  body.innerHTML = `
+    <div><b>Rezerwacja nr:</b> ${b.booking_no}</div>
+    <div><b>Data/godzina:</b> ${dateStr}</div>
+    <div><b>Klient:</b> ${b.client?.name || ''} &lt;${b.client?.email || '-'}&gt;, ${b.client?.phone || ''}</div>
+    <div><b>Usługa:</b> ${b.service?.title || ''}</div>
+    <div><b>Status:</b> ${b.status}</div>
+    <div><b>Notatki:</b><br>${(b.notes || '').replace(/\n/g,'<br>')}</div>
+  `;
+  modal.classList.remove('hidden');
+}
+document.getElementById('bookingModalClose')?.addEventListener('click', () => {
+  document.getElementById('bookingModal')?.classList.add('hidden');
+});
+document.getElementById('bookingModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'bookingModal') e.currentTarget.classList.add('hidden');
+});
+
+// 5) E-mail po POTWIERDZENIU (opcjonalnie, działa z Twoją funkcją Netlify)
+async function sendBookingEmailsOnConfirm(b) {
+  if (!b) return;
+  const subject = `Potwierdzenie rezerwacji #${b.booking_no}`;
+  const html = bookingEmailHtml(b, /*confirmed*/true);
+  // do masażystki (z ustawień) i do klienta
+  const therapist = (window.APP_SETTINGS?.contactEmail) || null;
+  const recipients = [therapist, b.client?.email].filter(Boolean);
+  const SEND_ENDPOINT = '/.netlify/functions/send-email';
+  await Promise.all(recipients.map(to => fetch(SEND_ENDPOINT, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to, subject, html })
+  })));
+}
+
+// 6) HTML maila (ten sam szablon co przy tworzeniu, tylko inny tytuł)
+function bookingEmailHtml(b, confirmed) {
+  const d = b.when ? new Date(b.when).toLocaleString() : '';
+  return `
+    <h2>${confirmed ? 'Rezerwacja POTWIERDZONA' : 'Nowa rezerwacja'}</h2>
+    <p><b>Nr:</b> ${b.booking_no}</p>
+    <p><b>Data/godzina:</b> ${d}</p>
+    <p><b>Klient:</b> ${b.client?.name || ''} &lt;${b.client?.email || ''}&gt;, ${b.client?.phone || ''}</p>
+    <p><b>Usługa:</b> ${b.service?.title || ''}</p>
+    ${b.notes ? `<p><b>Notatki:</b><br>${(b.notes||'').replace(/\n/g,'<br>')}</p>` : ''}
+  `;
+}
+
+// 7) Skrót do czytelnych numerów (gdy brak booking_no)
+function shortId(id) { return String(id).slice(0, 8); }
+
+// 8) Główne odświeżenie UI
+async function loadBookingsUI() {
+  // „Niepotwierdzone” = pending/NULL/„Niepotwierdzona”
+  const pending = await dbLoadBookingsByStatus(['pending', 'Niepotwierdzona', null]);
+  // „Potwierdzone”
+  const confirmed = await dbLoadBookingsByStatus(['Potwierdzona', 'confirmed']);
+  renderBookingsList('pendingBookings', pending, /*isConfirmed*/false);
+  renderBookingsList('confirmedBookings', confirmed, /*isConfirmed*/true);
+}
+
+// 9) Start na wejściu do zakładki „Rezerwacje”
+if (document.getElementById('pendingBookings') || document.getElementById('confirmedBookings')) {
+  loadBookingsUI();
+}
+
 }
 
 /* ===========================
