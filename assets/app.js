@@ -40,12 +40,12 @@ function availableTimesFor(dateStr){
   const bookings = Store.get('bookings',[]) || [];
   const takenIds = new Set(bookings.map(b => b.slotId));
 
- return slots.filter(s => {
-  const slotKey = new Date(s.when).toISOString().slice(0,10);
-  const isFree = (s.taken === false || s.taken == null);  // ważne
+  return slots.filter(s => {
+    const slotKey = new Date(s.when).toISOString().slice(0,10); // dzień z ISO
+    const isFree = (s.taken === false || s.taken == null);
   return slotKey === dateKey && isFree && !takenIds.has(s.id);
-});
-
+  }).sort((a,b)=> new Date(a.when) - new Date(b.when));
+}
 
 // --- wypełnienie <select id="time">
 function renderTimeOptions(){
@@ -240,14 +240,12 @@ window.addEventListener('storage', (e)=>{
     // 4) rezerwacja + oznaczenie slotu jako zajęty
     const r = await dbCreateBooking({ slot_id, service_id, client_id, notes });
     if(!r.ok){ alert('Nie udało się utworzyć rezerwacji.'); return; }
-    // oznacz slot jako zajęty i odśwież listę wolnych
-    await dbMarkSlotTaken(slot_id);
-    if (window.CloudSlots) {
-      await window.CloudSlots.pull();
-    }
 
-
-    // 5) feedback dla klienta (baner „Dziękujemy” jeśli masz #bookingThanks)
+    
+// oznacz slot jako zajęty i odśwież listę wolnych
+await dbMarkSlotTaken(slot_id);
+if (window.CloudSlots) { await window.CloudSlots.pull(); }
+// 5) feedback dla klienta (baner „Dziękujemy” jeśli masz #bookingThanks)
     const thanks = document.getElementById('bookingThanks');
     if (thanks){ thanks.classList.remove('hidden'); setTimeout(()=>thanks.classList.add('hidden'), 4000); }
 
