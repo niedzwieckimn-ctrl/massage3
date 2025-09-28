@@ -4,37 +4,6 @@
 function el(sel, root = document) { return root.querySelector(sel); }
 function fmtMoney(v){ return new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(v||0); }
 function fmtDate(d){ return new Date(d).toLocaleString('pl-PL',{dateStyle:'medium', timeStyle:'short'}); }
-// === KALENDARZ: podświetlenie dni tylko z wolnych slotów w Supabase ===
-async function refreshFreeDays() {
-  if (!window.sb) return;
-  try {
-    const { data, error } = await window.sb
-      .from('slots')
-      .select('when')
-      .eq('taken', false);
-
-    if (error) { console.warn('[FREE-DAYS] ERR', error); return; }
-
-    const days = new Set(
-      (data || []).map(row => {
-        const d = new Date(row.when);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        return `${yyyy}-${mm}-${dd}`;
-      })
-    );
-
-    // DOPASUJ selektor do swoich komórek dni (masz data-date="YYYY-MM-DD")
-    document.querySelectorAll('[data-date]').forEach(el => {
-      const day = el.getAttribute('data-date');
-      if (days.has(day)) el.classList.add('has-free');
-      else el.classList.remove('has-free');
-    });
-  } catch (e) {
-    console.warn('[FREE-DAYS] exception', e);
-  }
-}
 
 // --- źródła danych
 const settings = Store.get('settings', {}); // kontakt do masażystki, tel, rodo, itp.
@@ -186,20 +155,6 @@ function handleSubmit(e){
     thanks.classList.add('show');
     setTimeout(()=>thanks.classList.remove('show'), 5000);
   }
-try {
-  const whenStr = (document.querySelector('#time')?.selectedOptions?.[0]?.dataset?.when) 
-                  || '(termin)';
-  const serviceName = document.querySelector('#service')?.selectedOptions?.[0]?.textContent || '';
-  const html = `
-    <h2>Nowa rezerwacja</h2>
-    <p><b>Termin:</b> ${whenStr}</p>
-    <p><b>Zabieg:</b> ${serviceName}</p>
-    <p><b>Klient:</b> ${name}</p>
-    <p><b>Adres / kontakt:</b><br>${address}<br>Tel: ${phone}<br>Email: ${email}</p>
-    ${notes ? `<p><b>Uwagi:</b> ${notes}</p>` : ''}
-  `;
-  await sendEmail({ subject: `Nowa rezerwacja — ${whenStr}`, html });
-} catch(e) { console.warn('[MAIL] błąd wysyłki (rezerwacja zapisana):', e); }
 
   // e-mail do masażystki (backend wysyła tylko do THERAPIST_EMAIL)
   (async () => {
@@ -230,10 +185,8 @@ try {
 document.addEventListener('DOMContentLoaded', ()=>{
   ensureServicesSeed();              // jeśli pusto – zasiej 1 usługę
   renderServicesSelect();
-  const d = el('#date')?.value;
-if (d) { fillTimesFromCloud(d); } 
-
- el('#date')?.addEventListener('change', (e)=> fillTimesFromCloud(e.target.value));
+  el('#date')?.addEventListener('change', renderTimeOptions);
+  el('#form')?.addEventListener('submit', handleSubmit);
   el('#date')?.setAttribute('min', new Date().toISOString().slice(0,10));
   // stopka kontakt
   const s = Store.get('settings',{}); el('#contact').textContent = `${s.contactEmail||''} • ${s.contactTel||''}`;
@@ -242,16 +195,12 @@ if (d) { fillTimesFromCloud(d); }
 
 // odśwież widoki, gdy Admin zmienia dane
 window.addEventListener('storage', (e)=>{
-  if (e.key === 'services') renderServicesSelect();
-  if (e.key === 'slots') {
-    const d = el('#date')?.value;
-    if (d) fillTimesFromCloud(d);
-  }
+  if(e.key==='services') renderServices();
+  if(e.key==='slots' || e.key==='bookings') renderTimeOptions();
 });
-
 // --- WYSYŁKA FORMULARZA REZERWACJI ---
 (function(){
-  const form = document.getElementById('Form');
+  const form = document.getElementById('bookingForm');
   if (!form) return;
 
   form.addEventListener('submit', async (e)=>{
@@ -290,8 +239,6 @@ window.addEventListener('storage', (e)=>{
     // 4) rezerwacja + oznaczenie slotu jako zajęty
     const r = await dbCreateBooking({ slot_id, service_id, client_id, notes });
     if(!r.ok){ alert('Nie udało się utworzyć rezerwacji.'); return; }
-	try { await dbMarkSlotTaken(slot_id);}
-	catch(_) {}
 
     // 5) feedback dla klienta (baner „Dziękujemy” jeśli masz #bookingThanks)
     const thanks = document.getElementById('bookingThanks');
