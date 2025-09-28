@@ -41,11 +41,8 @@ function availableTimesFor(dateStr){
   const takenIds = new Set(bookings.map(b => b.slotId));
 
   return slots.filter(s => {
-    const slotKey = (function(){const _d=new Date(s.when);return [_d.getFullYear(),String(_d.getMonth()+1).padStart(2,'0'),String(_d.getDate()).padStart(2,'0')].join('-');})(); // dzień z ISO
-    const d = new Date(s.when);
-  const slotKey = [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-');
-  const isFree = (s.taken === false || s.taken == null);
-  return slotKey === dateKey && isFree && !takenIds.has(s.id);
+    const slotKey = new Date(s.when).toISOString().slice(0,10); // dzień z ISO
+    const d=new Date(s.when); const slotKey=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-'); const isFree=(s.taken===false||s.taken==null); return slotKey===dateKey && isFree && !takenIds.has(s.id);
   }).sort((a,b)=> new Date(a.when) - new Date(b.when));
 }
 
@@ -244,7 +241,7 @@ window.addEventListener('storage', (e)=>{
     if(!r.ok){ alert('Nie udało się utworzyć rezerwacji.'); return; }
 
     
-// oznacz slot jako zajęty i odśwież listę wolnych
+// mark slot taken + refresh free slots
 await dbMarkSlotTaken(slot_id);
 if (window.CloudSlots) { await window.CloudSlots.pull(); }
 // 5) feedback dla klienta (baner „Dziękujemy” jeśli masz #bookingThanks)
@@ -345,19 +342,17 @@ async function dbMarkSlotTaken(slot_id) {
 
 
 
-
-/* Auto-select first available day after slots sync (robust, no locales) */
+// Auto-select first available day after cloud sync
 window.addEventListener('slots-synced', () => {
   try {
     const slots = JSON.parse(localStorage.getItem('slots') || '[]');
     if (!slots.length) return;
     const d = new Date(slots[0].when);
-    const firstDay = [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-');
+    const first = [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-');
     const dateEl = document.getElementById('date');
-    if (!dateEl) return;
-    if (!dateEl.value) {
-      dateEl.value = firstDay;
+    if (dateEl && !dateEl.value) {
+      dateEl.value = first;
       dateEl.dispatchEvent(new Event('change', { bubbles: true }));
     }
-  } catch (e) { console.warn('slots-synced handler error', e); }
+  } catch(e){ console.warn('slots-synced handler', e); }
 });
