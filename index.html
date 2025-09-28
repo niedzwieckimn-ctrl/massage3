@@ -64,16 +64,7 @@
 </div>
 <div class="footer">© Massages &amp; SPA • <span id="contact"></span></div>
 </div>
-<script>
-window.addEventListener('storage', (e) => {
-  if (e.key === 'slots') {
-    // tu wywołaj swoją funkcję, która przebudowuje mapę dat/godzin
-    // np. rebuildCalendarFromSlots();
-    // i ewentualnie przeładuj flatpickr:
-    if (window.fp && typeof window.fp.redraw === 'function') window.fp.redraw();
-  }
-});
-</script>
+
 <script>
   // SUPABASE → render #service (nadpisujemy select, więc nie będzie duplikatów)
   document.addEventListener('DOMContentLoaded', async () => {
@@ -108,7 +99,6 @@ window.addEventListener('storage', (e) => {
     }
   });
 </script>
-
 <script>
   async function dbLoadServices(){
     const { data, error } = await sb
@@ -254,8 +244,7 @@ window.addEventListener('storage', (e) => {
           .order('when', { ascending: true })
       ]);
 
-      if (!e1 && Array.isArray(svc)) {
-        localStorage.setItem('services', JSON.stringify(svc));
+      
         const sel = document.getElementById('service');
         if (sel) {
           sel.innerHTML = '<option value="">Wybierz zabieg</option>' +
