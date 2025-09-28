@@ -64,16 +64,7 @@
 </div>
 <div class="footer">© Massages &amp; SPA • <span id="contact"></span></div>
 </div>
-<script>
-window.addEventListener('storage', (e) => {
-  if (e.key === 'slots') {
-    // tu wywołaj swoją funkcję, która przebudowuje mapę dat/godzin
-    // np. rebuildCalendarFromSlots();
-    // i ewentualnie przeładuj flatpickr:
-    if (window.fp && typeof window.fp.redraw === 'function') window.fp.redraw();
-  }
-});
-</script>
+
 <script>
   // SUPABASE → render #service (nadpisujemy select, więc nie będzie duplikatów)
   document.addEventListener('DOMContentLoaded', async () => {
@@ -109,7 +100,7 @@ window.addEventListener('storage', (e) => {
   });
 </script>
 
-<script>
+script>
   async function dbLoadServices(){
     const { data, error } = await sb
       .from('services')
@@ -266,12 +257,7 @@ window.addEventListener('storage', (e) => {
         }
       }
 
-      if (!e2 && Array.isArray(slots)) {
-        localStorage.setItem('slots', JSON.stringify(slots));
-        if (typeof window.renderTimeOptions === 'function') {
-          window.renderTimeOptions();
-        }
-      }
+     
     } catch (err) {
       console.warn('[public sync] fail:', err);
     }
@@ -322,7 +308,7 @@ window.addEventListener('storage', (e) => {
     .filter(Boolean)
     // wyrzuć przeszłość (zostaw tylko przyszłe)
     .filter(s => new Date(s.when).getTime() > Date.now());
-  localStorage.setItem('slots', JSON.stringify(slots));
+
 
   // Flaga informacyjna – jeśli masz banner debug, pokaże: "klucz: slots"
   window.__SLOTS_KEY__ = 'slots';
@@ -430,6 +416,17 @@ window.addEventListener('storage', (e) => {
       return { ok: false, error: e.message };
     }
   };
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', ()=>{
+  // wymuś pobranie slotów zaraz po starcie + po chwili
+  if (window.pullPublicSlots) {
+    window.pullPublicSlots();
+    setTimeout(()=>window.pullPublicSlots(), 500);
+  }
+  // gdy karta wraca na wierzch
+  window.addEventListener('focus', ()=>window.pullPublicSlots && window.pullPublicSlots());
+});
 </script>
 
 <script src="assets/app.js"></script>
