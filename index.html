@@ -291,29 +291,7 @@ script>
 <div id="toast" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%) scale(0.98);opacity:0;z-index:9999;min-width:280px;max-width:90vw;padding:14px 18px;border-radius:12px;font:500 14px/1.4 system-ui,-apple-system,'Segoe UI',Roboto; box-shadow:0 8px 30px rgba(0,0,0,.22); transition:opacity .18s ease, transform .18s ease; pointer-events:none;">
   <span id="toast-text"></span>
 </div>
-<script>
-/* Kill legacy slot keys + normalizacja 'slots' */
-(function () {
-  const LEGACY_KEYS = [
-    'FREE_SLOTS', 'FREE_SLOTS_V2', 'freeSlotsISO', 'ms_slots_v6', 'slots_mirror'
-  ];
-  LEGACY_KEYS.forEach(k => localStorage.removeItem(k));
 
-  // Zostawiamy tylko 'slots' jako źródło prawdy i czyścimy stare/niepoprawne
-
-    .map(s => {
-      const when = s.when || (s.date && s.time ? `${s.date}T${s.time}:00` : null);
-      return when ? { id: s.id, when } : null;
-    })
-    .filter(Boolean)
-    // wyrzuć przeszłość (zostaw tylko przyszłe)
-    .filter(s => new Date(s.when).getTime() > Date.now());
-
-
-  // Flaga informacyjna – jeśli masz banner debug, pokaże: "klucz: slots"
-  window.__SLOTS_KEY__ = 'slots';
-})();
-</script>
 <script>
 window.addEventListener('storage', (e) => {
   if (e.key === 'slots') {
@@ -389,7 +367,7 @@ window.addEventListener('storage', (e) => {
 </script><script src="assets/store.js"></script>
 <!-- Supabase SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="netlify/functions/send-email.js"></script>
+
 <!-- Inicjalizacja Supabase -->
 <script>
   const SUPABASE_URL = 'https://eibzijpelnmvbtslquun.supabase.co';
