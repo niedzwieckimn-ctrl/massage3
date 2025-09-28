@@ -4,19 +4,6 @@
 function el(sel, root = document) { return root.querySelector(sel); }
 function fmtMoney(v){ return new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(v||0); }
 function fmtDate(d){ return new Date(d).toLocaleString('pl-PL',{dateStyle:'medium', timeStyle:'short'}); }
-async function dbLoadServices() {
-  const { data, error } = await window.sb
-    .from('services')
-    .select('id, name, price, duration_min, active')
-    .eq('active', true)
-    .order('name', { ascending: true });
-
-  if (error) {
-    console.warn('[SB] load services error:', error);
-    return [];
-  }
-  return data || [];
-}
 
 // --- źródła danych
 const settings = Store.get('settings', {}); // kontakt do masażystki, tel, rodo, itp.
@@ -98,65 +85,68 @@ async function sendEmail({to, subject, html}) {
 }
 
 // --- submit rezerwacji (wersja stabilna)
-async function handleSubmit(e){
+function handleSubmit(e){
   e.preventDefault();
 
-  const name    = document.querySelector('#name')?.value.trim();
-  const email   = document.querySelector('#email')?.value.trim();
-  const phone   = document.querySelector('#phone')?.value.trim();
-  const address = document.querySelector('#address')?.value.trim();
-  const notes   = document.querySelector('#notes')?.value.trim() || '';
+  // numer rezerwacji (5 cyfr)
+  const bookingNo = Math.floor(10000 + Math.random() * 90000);
 
-  const service_id = document.getElementById('service')?.value;
-  const slot_id    = document.getElementById('time')?.value;
-  const dateStr    = document.getElementById('date')?.value;
+  // pola formularza
+  const rodo      = el('#rodo').checked;
+  const name      = el('#name').value.trim();
+  const email     = el('#email').value.trim();
+  const phone     = el('#phone').value.trim();
+  const address   = el('#address').value.trim();
+  const serviceId = el('#service').value;
+  const slotId    = el('#time').value;
+  const notes     = el('#notes').value.trim();
 
-  if (!name || !email || !phone || !service_id || !slot_id || !dateStr) {
-    toast('Uzupełnij wymagane pola.'); 
-    return;
+  if(!rodo){ alert('Musisz wyrazić zgodę RODO.'); return; }
+  if(!name || !email || !phone || !serviceId || !slotId){
+    alert('Uzupełnij wszystkie wymagane pola.'); return;
   }
 
-  // 1) REWALIDACJA slota (musi istnieć i być wolny)
-  const { data: slot, error: sErr } = await window.sb
-    .from('slots')
-    .select('id, when, taken')
-    .eq('id', slot_id)
-    .single();
-
-  if (sErr || !slot) { toast('Nie znaleziono wybranego terminu.'); return; }
-  if (slot.taken)    { toast('Ten termin został już zajęty.'); 
-                       await fillTimesFromCloud(dateStr); 
-                       return; }
-
-  // 2) KLIENT: znajdź po e-mailu lub utwórz
-  let { data: cl, error: cErr } = await window.sb
-    .from('clients').select('id').eq('email', email).single();
-
-  if (cErr || !cl) {
-    const ins = await window.sb
-      .from('clients')
-      .insert({ name, email, phone, address })
-      .select('id')
-      .single();
-    cl = ins.data;
-    if (!cl) { toast('Błąd tworzenia klienta.'); return; }
+  // anty-duplikat slota
+  const bookings = Store.get('bookings', []);
+  if (bookings.some(b => b.slotId === slotId)) {
+    alert('Ten termin został już zajęty.'); renderTimeOptions(); return;
   }
 
-  // 3) BOOKING
-  const { data: b, error: bErr } = await window.sb
-    .from('bookings')
-    .insert({ client_id: cl.id, service_id, slot_id, notes })
-    .select('id')
-    .single();
+  // upsert klienta
+  let clients = Store.get('clients', []);
+  let client  = clients.find(c => c.email === email || c.phone === phone);
+  if (!client) {
+    client = {
+      id: Store.uid(), name, email, phone, address,
+      notesGeneral:'', preferences:{allergies:'',massage:'',health:'',mental:''}
+    };
+    clients.push(client);
+  } else {
+    client.name = name; client.phone = phone; client.address = address;
+  }
+  Store.set('clients', clients);
 
-  if (bErr || !b) { toast('Błąd zapisu rezerwacji.'); return; }
+  // --- policz raz i używaj dalej (NIE deklaruj ponownie niżej!)
+  const slot    = (Store.get('slots',[])||[]).find(s => s.id === slotId);
+  const whenStr = slot ? new Date(slot.when).toLocaleString('pl-PL',
+                   { dateStyle:'full', timeStyle:'short' }) : '(brak)';
+  const services = getServices();
+  const service  = services.find(s => s.id === serviceId) || { name:'(brak)', price:0 };
 
-  // 4) OZNACZ SLOT jako zajęty
-  await window.sb.from('slots').update({ taken: true }).eq('id', slot_id);
-
-  // 5) Odśwież godziny dla tej daty (żeby zniknął slot)
-  await fillTimesFromCloud(dateStr);
-
+  // zapis rezerwacji
+  const booking = {
+    id: Store.uid(),
+    clientId: client.id,
+    serviceId,
+    slotId,
+    notes,
+    createdAt: new Date().toISOString(),
+    status: 'Oczekująca',
+    bookingNo,          // numer
+    when: whenStr       // termin (dla wygody w panelu)
+  };
+  bookings.push(booking);
+  Store.set('bookings', bookings);
 
   // baner "Dziękujemy" (środek ekranu)
   const thanks = document.getElementById('bookingThanks');
@@ -258,92 +248,3 @@ window.addEventListener('storage', (e)=>{
     // jeśli masz odświeżanie listy terminów na stronie, wywołaj je tutaj
   });
 })();
-/* ===========================
-   SUPABASE – Rezerwacje
-   =========================== */
-
-
-// pobierz wolne sloty dla danej daty
-async function fillTimesFromCloud(dateStr) {
-  const timeSel = document.getElementById('time');
-  if (!timeSel) return;
-
-  timeSel.innerHTML = '';
-  const from = new Date(`${dateStr}T00:00:00`);
-  const to   = new Date(`${dateStr}T23:59:59`);
-
-  const { data: free, error } = await window.sb
-    .from('slots')
-    .select('id, when')
-    .gte('when', from.toISOString())
-    .lte('when', to.toISOString())
-    .eq('taken', false)
-    .order('when', { ascending: true });
-
-  if (error) { console.error('[slots] error:', error); return; }
-  if (!free.length) {
-    const o = document.createElement('option');
-    o.value = '';
-    o.textContent = 'Brak wolnych godzin';
-    o.disabled = true;
-    timeSel.appendChild(o);
-    return;
-  }
-
-  const ph = document.createElement('option');
-  ph.value = '';
-  ph.textContent = 'Wybierz godzinę';
-  ph.disabled = true;
-  ph.selected = true;
-  timeSel.appendChild(ph);
-
-  free.forEach(s => {
-    const o = document.createElement('option');
-    o.value = s.id;             // tu mamy ID slotu
-    o.dataset.when = s.when;    
-    o.textContent = new Date(s.when).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
-    timeSel.appendChild(o);
-  });
-}
-
-// znajdź klienta po e-mailu albo utwórz nowego
-async function dbFindOrCreateClient({ name, email, phone, address }) {
-  let { data: c } = await window.sb
-    .from('clients')
-    .select('id')
-    .eq('email', email)
-    .single();
-  if (!c) {
-    const { data: cIns, error: cErr } = await window.sb
-      .from('clients')
-      .insert([{ name, email, phone, address }])
-      .select('id')
-      .single();
-    if (cErr) throw cErr;
-    return cIns.id;
-  }
-  return c.id;
-}
-
-// zapisz booking
-async function dbCreateBooking({ client_id, service_id, slot_id, notes }) {
-  const { data, error } = await window.sb
-    .from('bookings')
-    .insert([{ client_id, service_id, slot_id, notes }])
-    .select('id, created_at')
-    .single();
-  if (error) throw error;
-  return data;
-}
-
-// oznacz slot jako zajęty
-async function dbMarkSlotTaken(slot_id) {
-  const { error } = await window.sb
-    .from('slots')
-    .update({ taken: true })
-    .eq('id', slot_id);
-  if (error) throw error;
-}
-
-
-
