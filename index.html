@@ -297,30 +297,7 @@
   <span id="toast-text"></span>
 </div>
 <script>
-/* Kill legacy slot keys + normalizacja 'slots' */
-(function () {
-  const LEGACY_KEYS = [
-    'FREE_SLOTS', 'FREE_SLOTS_V2', 'freeSlotsISO', 'ms_slots_v6', 'slots_mirror'
-  ];
-  LEGACY_KEYS.forEach(k => localStorage.removeItem(k));
 
-  // Zostawiamy tylko 'slots' jako źródło prawdy i czyścimy stare/niepoprawne
-  let slots = [];
-  try { slots = JSON.parse(localStorage.getItem('slots') || '[]'); } catch {}
-  slots = (slots || [])
-    .map(s => {
-      const when = s.when || (s.date && s.time ? `${s.date}T${s.time}:00` : null);
-      return when ? { id: s.id, when } : null;
-    })
-    .filter(Boolean)
-    // wyrzuć przeszłość (zostaw tylko przyszłe)
-    .filter(s => new Date(s.when).getTime() > Date.now());
-  localStorage.setItem('slots', JSON.stringify(slots));
-
-  // Flaga informacyjna – jeśli masz banner debug, pokaże: "klucz: slots"
-  window.__SLOTS_KEY__ = 'slots';
-})();
-</script>
 <script>
 window.addEventListener('storage', (e) => {
   if (e.key === 'slots') {
