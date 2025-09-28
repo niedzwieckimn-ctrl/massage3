@@ -4,6 +4,37 @@
 function el(sel, root = document) { return root.querySelector(sel); }
 function fmtMoney(v){ return new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(v||0); }
 function fmtDate(d){ return new Date(d).toLocaleString('pl-PL',{dateStyle:'medium', timeStyle:'short'}); }
+// === KALENDARZ: podświetlenie dni tylko z wolnych slotów w Supabase ===
+async function refreshFreeDays() {
+  if (!window.sb) return;
+  try {
+    const { data, error } = await window.sb
+      .from('slots')
+      .select('when')
+      .eq('taken', false);
+
+    if (error) { console.warn('[FREE-DAYS] ERR', error); return; }
+
+    const days = new Set(
+      (data || []).map(row => {
+        const d = new Date(row.when);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+      })
+    );
+
+    // DOPASUJ selektor do swoich komórek dni (masz data-date="YYYY-MM-DD")
+    document.querySelectorAll('[data-date]').forEach(el => {
+      const day = el.getAttribute('data-date');
+      if (days.has(day)) el.classList.add('has-free');
+      else el.classList.remove('has-free');
+    });
+  } catch (e) {
+    console.warn('[FREE-DAYS] exception', e);
+  }
+}
 
 // --- źródła danych
 const settings = Store.get('settings', {}); // kontakt do masażystki, tel, rodo, itp.
