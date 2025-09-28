@@ -194,9 +194,9 @@ async function dbLoadBookingsByStatus(statuses) {
   // statuses = tablica, np. ['pending','Niepotwierdzona', null]
   // Pobieramy od razu powiązane rekordy (slots, clients, services)
   const sel = `
-    id, booking_no, status, notes, created_at,
-    slot_id, service_id, client_id,
-    slots(when), clients(name, email, phone), services(title)
+  id, booking_no, status, notes, created_at,
+  slot_id, service_id, client_id,
+  slots(when), clients(name, email, phone), services(name)
   `;
   let q = sb.from('bookings').select(sel).order('created_at', { ascending: false });
 
@@ -387,7 +387,8 @@ function requireAuth(){
     initTabs();
     renderServices();
     renderSlots();
-    renderBookings();
+    loadBookingsUI();
+
   }else{
     loginView.style.display = 'block';
     appView.style.display   = 'none';

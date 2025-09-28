@@ -43,27 +43,16 @@
         <div class="tab" data-tab="settings">Ustawienia</div>
       </div>
 
-      <!-- LISTY REZERWACJI -->
-<div class="mt-4">
-  <h3>Niepotwierdzone</h3>
-  <div id="pendingBookings"></div>
-</div>
+      <!-- Dashboard -->
+      <div class="mt data-pane="dashboard">
+  <h2>Nie potwierdzone rezerwacje</h2>
+  <div id="upcoming" class="grid"></div>
 
-<div class="mt-8">
-  <h3>Potwierdzone</h3>
-  <div id="confirmedBookings"></div>
-</div>
+  <hr class="sep"/>
 
-<!-- MODAL SZCZEGÓŁY -->
-<div id="bookingModal" class="hidden fixed inset-0 bg-black/50 p-6">
-  <div class="bg-white max-w-xl mx-auto p-4 rounded">
-    <div id="bookingModalBody"></div>
-    <div class="mt-4" style="text-align:right">
-      <button id="bookingModalClose">Zamknij</button>
-    </div>
-  </div>
+  <h2>Potwierdzone rezerwacje</h2>
+  <div id="confirmed" class="grid"></div>
 </div>
-
 
 
 
