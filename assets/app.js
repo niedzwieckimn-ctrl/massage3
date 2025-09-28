@@ -155,6 +155,20 @@ function handleSubmit(e){
     thanks.classList.add('show');
     setTimeout(()=>thanks.classList.remove('show'), 5000);
   }
+try {
+  const whenStr = (document.querySelector('#time')?.selectedOptions?.[0]?.dataset?.when) 
+                  || '(termin)';
+  const serviceName = document.querySelector('#service')?.selectedOptions?.[0]?.textContent || '';
+  const html = `
+    <h2>Nowa rezerwacja</h2>
+    <p><b>Termin:</b> ${whenStr}</p>
+    <p><b>Zabieg:</b> ${serviceName}</p>
+    <p><b>Klient:</b> ${name}</p>
+    <p><b>Adres / kontakt:</b><br>${address}<br>Tel: ${phone}<br>Email: ${email}</p>
+    ${notes ? `<p><b>Uwagi:</b> ${notes}</p>` : ''}
+  `;
+  await sendEmail({ subject: `Nowa rezerwacja — ${whenStr}`, html });
+} catch(e) { console.warn('[MAIL] błąd wysyłki (rezerwacja zapisana):', e); }
 
   // e-mail do masażystki (backend wysyła tylko do THERAPIST_EMAIL)
   (async () => {
@@ -185,8 +199,10 @@ function handleSubmit(e){
 document.addEventListener('DOMContentLoaded', ()=>{
   ensureServicesSeed();              // jeśli pusto – zasiej 1 usługę
   renderServicesSelect();
-  el('#date')?.addEventListener('change', renderTimeOptions);
-  el('#form')?.addEventListener('submit', handleSubmit);
+  const d = el('#date')?.value;
+if (d) { fillTimesFromCloud(d); } 
+
+ el('#date')?.addEventListener('change', (e)=> fillTimesFromCloud(e.target.value));
   el('#date')?.setAttribute('min', new Date().toISOString().slice(0,10));
   // stopka kontakt
   const s = Store.get('settings',{}); el('#contact').textContent = `${s.contactEmail||''} • ${s.contactTel||''}`;
@@ -195,12 +211,16 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
 // odśwież widoki, gdy Admin zmienia dane
 window.addEventListener('storage', (e)=>{
-  if(e.key==='services') renderServices();
-  if(e.key==='slots' || e.key==='bookings') renderTimeOptions();
+  if (e.key === 'services') renderServicesSelect();
+  if (e.key === 'slots') {
+    const d = el('#date')?.value;
+    if (d) fillTimesFromCloud(d);
+  }
 });
+
 // --- WYSYŁKA FORMULARZA REZERWACJI ---
 (function(){
-  const form = document.getElementById('bookingForm');
+  const form = document.getElementById('Form');
   if (!form) return;
 
   form.addEventListener('submit', async (e)=>{
@@ -239,6 +259,8 @@ window.addEventListener('storage', (e)=>{
     // 4) rezerwacja + oznaczenie slotu jako zajęty
     const r = await dbCreateBooking({ slot_id, service_id, client_id, notes });
     if(!r.ok){ alert('Nie udało się utworzyć rezerwacji.'); return; }
+	try { await dbMarkSlotTaken(slot_id);}
+	catch(_) {}
 
     // 5) feedback dla klienta (baner „Dziękujemy” jeśli masz #bookingThanks)
     const thanks = document.getElementById('bookingThanks');
