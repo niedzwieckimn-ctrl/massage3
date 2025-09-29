@@ -20,30 +20,47 @@
   }
 
   function fillTimes(dateStr) {
-    const timeEl = document.getElementById('time');
-    if (!timeEl) return;
+  const timeEl = document.getElementById('time');
+  if (!timeEl) return;
 
-    const map = buildMap(getSlots());
-    const list = map[dateStr] || [];
+  // wyczyść poprzednie opcje
+  timeEl.innerHTML = '';
 
-    timeEl.innerHTML = '';
-    if (!list.length) {
-      const o = new Option('Brak wolnych godzin', '');
-      o.disabled = true; o.selected = true;
-      timeEl.add(o);
-      return;
-    }
-    const ph = new Option('Wybierz godzinę…', '');
-    ph.disabled = true; ph.selected = true;
-    timeEl.add(ph);
+  // pobierz sloty z cache
+  const slots = JSON.parse(localStorage.getItem('slots') || '[]');
+  const todays = slots
+    .filter(s => !s.taken && new Date(s.when).toISOString().slice(0,10) === dateStr)
+    .sort((a,b) => new Date(a.when) - new Date(b.when));
 
-    for (const s of list) {
-      const t = new Date(s.when);
-      const hh = String(t.getHours()).padStart(2,'0');
-      const mm = String(t.getMinutes()).padStart(2,'0');
-      timeEl.add(new Option(`${hh}:${mm}`, s.id));
-    }
+  if (todays.length === 0) {
+    const opt = new Option('Brak wolnych godzin', '');
+    opt.disabled = true;
+    opt.selected = true;
+    timeEl.add(opt);
+    return;
   }
+
+  // dodaj wszystkie godziny
+  todays.forEach(s => {
+    const t = new Date(s.when);
+    const hh = String(t.getHours()).padStart(2,'0');
+    const mm = String(t.getMinutes()).padStart(2,'0');
+    timeEl.add(new Option(`${hh}:${mm}`, s.id));
+  });
+
+  // jeśli tylko jedna godzina → ustaw od razu
+  if (todays.length === 1) {
+    timeEl.selectedIndex = 0;
+    timeEl.dispatchEvent(new Event('change', { bubbles: true }));
+  } else {
+    // inaczej dodaj placeholder na początek
+    const ph = new Option('Wybierz godzinę…', '');
+    ph.disabled = true;
+    timeEl.insertBefore(ph, timeEl.firstChild);
+    timeEl.selectedIndex = 0;
+  }
+}
+
 
   function mount() {
     const dateEl = document.getElementById('date');
