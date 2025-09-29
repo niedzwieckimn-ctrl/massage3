@@ -149,86 +149,6 @@
   }
 </script>
 
-
-
-<script>
-(function(){
-  const dateEl = document.getElementById('date');
-  const timeEl = document.getElementById('time');
-  if(!dateEl || !timeEl) return;
-
-  function buildMap(){
-    const slots    = Store.get('slots',[]) || [];
-    const bookings = Store.get('bookings',[]) || [];
-    const taken = new Set(bookings.map(b => b.slotId));
-    const free = slots.filter(s => !taken.has(s.id));
-
-    const map = {}; // YYYY-MM-DD -> [slotObj]
-    free.forEach(s=>{
-      const d = new Date(s.when);
-      if(isNaN(d)) return;
-      const key = d.toISOString().slice(0,10);
-      (map[key] ||= []).push(s);
-    });
-    Object.keys(map).forEach(k => map[k].sort((a,b)=> new Date(a.when)-new Date(b.when)));
-    return map;
-  }
-
-  function fillTimes(dateStr,map){
-    timeEl.innerHTML='';
-    const arr = map[dateStr]||[];
-    if(!arr.length){
-      const o=document.createElement('option');
-      o.value=''; o.textContent='Brak wolnych godzin'; o.disabled=true; o.selected=true;
-      timeEl.appendChild(o); timeEl.disabled=true; return;
-    }
-    const ph=document.createElement('option');
-    ph.value=''; ph.textContent='Wybierz godzinę…'; ph.disabled=true; ph.selected=true;
-    timeEl.appendChild(ph);
-    arr.forEach(s=>{
-      const o=document.createElement('option');
-      o.value = s.id;
-      o.textContent = new Date(s.when).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
-      timeEl.appendChild(o);
-    });
-    timeEl.disabled=false;
-  }
-
-  function fmt(d){const z=n=>('0'+n).slice(-2);return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());}
-
-  function init(){
-    const map = buildMap();
-    if(typeof flatpickr==='function'){
-      window.fp = flatpickr(dateEl,{
-        dateFormat:'Y-m-d',
-        disableMobile:true,
-        enable:Object.keys(map),
-        onChange:(_,str)=>{ if(str) fillTimes(str,map); },
-        onDayCreate:(_,__,___,dayElem)=>{
-          const key=fmt(dayElem.dateObj);
-          if(map[key]) dayElem.classList.add('fp-has-slot');
-        }
-      });
-      // auto ustaw pierwszy dostępny dzień
-      const days = Object.keys(map);
-      if(days.length){ window.fp.setDate(days[0],true); fillTimes(days[0],map); }
-      const s=document.createElement('style');
-      s.textContent='.flatpickr-day.fp-has-slot{box-shadow:inset 0 0 0 2px rgba(99,255,185,.9);border-radius:8px}';
-      document.head.appendChild(s);
-    }else{
-      dateEl.addEventListener('change',()=>fillTimes(dateEl.value,map),{once:true});
-    }
-  }
-
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init);
-  else init();
-
-  // na żywo – jak admin doda slot
-  window.addEventListener('storage',(e)=>{
-    if(e.key==='slots' || e.key==='bookings') init();
-  });
-})();
-</script>
 <script>
   // SUPABASE → LocalStorage: services + slots, potem odśwież UI
   document.addEventListener('DOMContentLoaded', async () => {
@@ -426,6 +346,8 @@ window.addEventListener('storage', (e) => {
 </script>
 
 <script src="assets/app.js"></script>
+<script src="assets/app.calendar.js"></script>
+
 <!-- Prosty adapter na stronie publicznej -->
 </body>
 </html>
