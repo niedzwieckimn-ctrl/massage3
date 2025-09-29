@@ -80,6 +80,14 @@
       if (timeEl) { timeEl.innerHTML = ''; timeEl.add(new Option('Brak wolnych godzin','')); }
     }
   }
+function mount() {
+  const dateEl = document.getElementById('date');
+  if (dateEl) {
+    dateEl.addEventListener('change', e => {
+      fillTimes(e.target.value);
+    });
+  }
+}
 
   document.addEventListener('DOMContentLoaded', mount);
   document.addEventListener('change', (e) => {
