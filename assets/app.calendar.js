@@ -1,76 +1,132 @@
 (function (global) {
-  function fillTimes() {
-    const dateEl = document.getElementById('date');
-    const timeSel = document.getElementById('time');
-    if (!dateEl || !timeSel) return;
+  // --- utils ---
+  function ymd(d) {
+    const x = new Date(d);
+    return [x.getFullYear(), String(x.getMonth() + 1).padStart(2, '0'), String(x.getDate()).padStart(2, '0')].join('-');
+  }
+  function byTime(a, b) { return new Date(a.when) - new Date(b.when); }
 
-    const slots = global.CloudSlots.get() || [];
-    const dateKey = dateEl.value;
+  // Pobierz sloty z localStorage (jeśli są) albo z Supabase (fallback)
+  async function getSlots() {
+    try {
+      const cached = JSON.parse(localStorage.getItem('slots') || '[]');
+      if (Array.isArray(cached) && cached.length) return cached;
+    } catch (_) {}
+    if (!global.sb) return [];
+    // fallback – tylko wolne i w przyszłości
+    const today = new Date(); today.setHours(0,0,0,0);
+    const { data, error } = await sb
+      .from('free_slots')
+      .select('id, when, taken')
+      .order('when', { ascending: true });
+    if (error) { console.warn('[calendar] free_slots error:', error); return []; }
+    return (data || []).filter(s => !s.taken && new Date(s.when) >= today);
+  }
 
-    // wybieramy tylko sloty na wybraną datę
-    const times = slots
-      .filter((s) => global.Helpers.ymd(s.when) === dateKey)
-      .sort((a, b) => new Date(a.when) - new Date(b.when));
+  // Zbuduj mapę: YYYY-MM-DD -> [sloty]
+  function buildMap(slots) {
+    const map = {};
+    (slots || []).forEach(s => {
+      const key = ymd(s.when);
+      (map[key] ||= []).push(s);
+    });
+    Object.values(map).forEach(arr => arr.sort(byTime));
+    return map;
+  }
 
-    // czyścimy select z godzinami
-    timeSel.innerHTML = '';
-
-    if (!times.length) {
+  // Wypełnij select z godzinami
+  function fillTimes(dateStr, map) {
+    const timeEl = document.getElementById('time');
+    if (!timeEl) return;
+    timeEl.innerHTML = '';
+    const arr = map[dateStr] || [];
+    if (!arr.length) {
       const o = document.createElement('option');
-      o.value = '';
-      o.textContent = 'Brak wolnych godzin';
-      timeSel.appendChild(o);
+      o.value = ''; o.textContent = 'Brak wolnych godzin'; o.disabled = true; o.selected = true;
+      timeEl.appendChild(o);
       return;
     }
+    const ph = document.createElement('option');
+    ph.value = ''; ph.textContent = 'Wybierz godzinę…'; ph.disabled = true; ph.selected = true;
+    timeEl.appendChild(ph);
 
-    // wstawiamy dostępne godziny
-    times.forEach((s) => {
+    arr.forEach(s => {
       const t = new Date(s.when);
+      const hh = String(t.getHours()).padStart(2, '0');
+      const mm = String(t.getMinutes()).padStart(2, '0');
       const o = document.createElement('option');
       o.value = s.id;
-      o.textContent = `${String(t.getHours()).padStart(2, '0')}:${String(
-        t.getMinutes()
-      ).padStart(2, '0')}`;
-      timeSel.appendChild(o);
+      o.textContent = `${hh}:${mm}`;
+      timeEl.appendChild(o);
     });
   }
 
-  function highlightDays() {
+  // Ustawienia i zdarzenia flatpickr / <input type="date">
+  function mountCalendar(map) {
     const dateEl = document.getElementById('date');
     if (!dateEl) return;
 
-    const slots = global.CloudSlots.get() || [];
-    if (!slots.length) return;
+    const days = Object.keys(map).sort();
+    if (!days.length) return;
 
-    const days = [...new Set(slots.map((s) => global.Helpers.ymd(s.when)))];
-
-    // minimalna data to pierwszy wolny dzień
+    // input[type=date]
     dateEl.min = days[0];
-    // maksymalna data to ostatni wolny dzień
     dateEl.max = days[days.length - 1];
+    if (!dateEl.value) dateEl.value = days[0];
 
-    // jeżeli nic nie wybrane → ustaw pierwszy wolny dzień
-    if (!dateEl.value) {
-      dateEl.value = days[0];
+    // flatpickr – jeśli jest załadowany
+    if (typeof global.flatpickr === 'function') {
+      // odśwież istniejący instancję albo twórz nową
+      if (global.fp && typeof global.fp.destroy === 'function') {
+        try { global.fp.destroy(); } catch(_) {}
+      }
+      global.fp = flatpickr(dateEl, {
+        dateFormat: 'Y-m-d',
+        disableMobile: true,
+        enable: days,
+        defaultDate: dateEl.value,
+        onChange: (_, str) => { if (str) fillTimes(str, map); }
+
+      });
+      // styl podświetlenia dni z wolnymi terminami
+      const styleId = 'fp-has-slot-style';
+      if (!document.getElementById(styleId)) {
+        const s = document.createElement('style'); s.id = styleId;
+        s.textContent = '.flatpickr-day.fp-has-slot{box-shadow:inset 0 0 0 2px rgba(99,255,185,.9);border-radius:8px}';
+        document.head.appendChild(s);
+      }
     }
+
+    // Po ustawieniu daty – wypełnij godziny
+    fillTimes(dateEl.value, map);
+
+    // Reakcja na ręczne przestawienie daty (gdy brak flatpickr)
+    dateEl.addEventListener('change', () => fillTimes(dateEl.value, map));
   }
 
-  function refreshCalendar() {
-    highlightDays();
-    fillTimes();
+  async function refreshFromStorageOrDb() {
+    const slots = await getSlots();
+    const map = buildMap(slots);
+    mountCalendar(map);
   }
 
-  // nasłuch na zdarzenia
-  global.addEventListener('slots-synced', refreshCalendar);
-  document.addEventListener('DOMContentLoaded', () => {
-    refreshCalendar();
-  });
-  document.addEventListener('change', (e) => {
-    if (e.target && e.target.id === 'date') {
-      fillTimes();
-    }
+  // Główne wejście
+  async function init() {
+    await refreshFromStorageOrDb();
+  }
+
+  // Reaguj, gdy inny kod nadpisze localStorage 'slots' (np. sync po stronie public)
+  global.addEventListener('storage', (e) => {
+    if (e.key === 'slots') refreshFromStorageOrDb();
   });
 
-  // eksport
-  global.ModCalendar = { refreshCalendar };
+  // Reaguj na nasz event (jeśli kiedyś dodasz CloudSlots.pull())
+  global.addEventListener('slots-synced', refreshFromStorageOrDb);
+
+  // Start
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+
+  // eksport opcjonalny
+  global.ModCalendar = { refresh: refreshFromStorageOrDb };
 })(window);
