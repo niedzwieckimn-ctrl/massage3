@@ -1,14 +1,7 @@
-// netlify/functions/send-email.js
 export async function handler(event) {
   try {
     const { subject, html } = JSON.parse(event.body || '{}');
-
-    if (!subject || !html) {
-      return {
-        statusCode: 400,
-        body: 'Missing fields'
-      };
-    }
+    if (!subject || !html) return { statusCode: 400, body: 'Missing fields' };
 
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -20,24 +13,13 @@ export async function handler(event) {
         from: process.env.FROM_EMAIL,
         to: process.env.THERAPIST_EMAIL,
         subject,
-        html
+        html,
       }),
     });
 
-    if (!r.ok) {
-      const text = await r.text();
-      return { statusCode: r.status, body: text };
-    }
-
-    const data = await r.json();
-    return {
-      statusCode: 200,
-      body: JSON.stringify(data),
-    };
+    if (!r.ok) return { statusCode: r.status, body: await r.text() };
+    return { statusCode: 200, body: JSON.stringify(await r.json()) };
   } catch (err) {
-    return {
-      statusCode: 500,
-      body: 'Server error: ' + err.message,
-    };
+    return { statusCode: 500, body: 'Server error: ' + err.message };
   }
 }
