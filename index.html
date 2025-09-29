@@ -317,11 +317,7 @@ window.addEventListener('storage', (e) => {
 <!-- Supabase SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- Inicjalizacja Supabase -->
-<script>
-  const SUPABASE_URL = 'https://eibzijpelnmvbtslquun.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpYnppanBlbG5tdmJ0c2xxdXVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MTE1OTcsImV4cCI6MjA3NDE4NzU5N30.Dp4u9PlhP-_pGmiNTHp5zSjrMUDfA_k2i85_71_9koo';
-  window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-</script>
+
 <script>
   // Klient: wywołanie Netlify Function z przeglądarki
   window.sendEmail = async ({ subject, html }) => {
@@ -345,10 +341,11 @@ window.addEventListener('storage', (e) => {
 </script>
 
 <script src="assets/app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/supabase-client.js"></script>
 <script src="assets/cloud-slots-adapter.js"></script>
-<script src="assets/app.helpers.js"></script>
 <script src="assets/app.calendar.js"></script>
+<script src="assets/app.helpers.js"></script>
 <script src="assets/send-email.js"></script> <!-- helper frontowy do maili -->
 <script src="assets/app.booking.js"></script>
 
