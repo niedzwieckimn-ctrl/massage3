@@ -1,7 +1,7 @@
 // assets/app.calendar.js
 (function (global) {
-  const byTime = (a,b) => new Date(a.when) - new Date(b.when);
   const ymd = d => new Date(d).toISOString().slice(0,10);
+  const byTime = (a,b) => new Date(a.when) - new Date(b.when);
 
   function getSlots() {
     try { return JSON.parse(localStorage.getItem('slots') || '[]') || []; }
@@ -11,11 +11,11 @@
   function buildMap(slots) {
     const map = {};
     for (const s of slots) {
-      if (s.taken === true) continue;         // pokazuj tylko wolne
+      if (s.taken) continue;
       const k = ymd(s.when);
       (map[k] ||= []).push(s);
     }
-    for (const k in map) map[k].sort(byTime);
+    Object.values(map).forEach(arr => arr.sort(byTime));
     return map;
   }
 
@@ -33,7 +33,6 @@
       timeEl.add(o);
       return;
     }
-
     const ph = new Option('Wybierz godzinę…', '');
     ph.disabled = true; ph.selected = true;
     timeEl.add(ph);
@@ -42,7 +41,7 @@
       const t = new Date(s.when);
       const hh = String(t.getHours()).padStart(2,'0');
       const mm = String(t.getMinutes()).padStart(2,'0');
-      timeEl.add(new Option(`${hh}:${mm}`, s.id));  // value = id slota
+      timeEl.add(new Option(`${hh}:${mm}`, s.id));
     }
   }
 
@@ -53,33 +52,23 @@
     const map = buildMap(getSlots());
     const days = Object.keys(map).sort();
 
-    // ustaw zakres i domyślną datę
     if (days.length) {
       dateEl.min = days[0];
-      dateEl.max = days[days.length-1];
+      dateEl.max = days[days.length - 1];
       if (!dateEl.value || !map[dateEl.value]) dateEl.value = days[0];
+      fillTimes(dateEl.value);
     } else {
       dateEl.removeAttribute('min'); dateEl.removeAttribute('max');
-    }
-
-    if (dateEl.value) fillTimes(dateEl.value);
-    else {
       const timeEl = document.getElementById('time');
       if (timeEl) { timeEl.innerHTML = ''; timeEl.add(new Option('Brak wolnych godzin','')); }
     }
   }
 
-  // zmiana daty -> odśwież godziny
+  document.addEventListener('DOMContentLoaded', mount);
   document.addEventListener('change', (e) => {
     if (e.target && e.target.id === 'date') fillTimes(e.target.value);
   });
+  window.addEventListener('slots-synced', mount);
 
-  // pierwszy render po starcie
-  document.addEventListener('DOMContentLoaded', mount);
-
-  // po synchronizacji slotów (CloudSlots.pull) – przerysuj
-  global.addEventListener('slots-synced', mount);
-
-  // opcjonalny ręczny refresh
   global.ModCalendar = { refresh: mount, fillTimes };
 })(window);
