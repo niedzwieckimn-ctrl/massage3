@@ -1,12 +1,201 @@
-<!DOCTYPE html>
-<html lang="pl"><head><meta charset="UTF-8"><title>Admin Massage SPA</title></head>
+
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Massage & SPA — Panel Admin</title>
+  <link rel="stylesheet" href="assets/style.css"/>
+</head>
 <body>
-<div id="bookingsPending"></div>
-<div id="bookingsConfirmed"></div>
-<div id="clientsList"></div>
-<script src="assets/supabase-client.js"></script>
-<script src="assets/cloud-slots-adapter.js"></script>
-<script src="assets/app.helpers.js"></script>
-<script src="assets/app.clients.js"></script>
+  <div class="container">
+    <div class="header">
+      <div class="brand">
+        <img class="logo" src="assets/logo.svg" alt="logo"/>
+      </div>
+      <div class="inline">
+        <span class="kbd">Dostęp chroniony PIN</span>
+        <button id="logoutBtn" class="btn secondary">Wyloguj</button>
+      </div>
+    </div>
+
+    <!-- Login -->
+    <div id="loginView" class="card" style="display:none;max-width:520px;margin:40px auto">
+      <h2>Wejście do panelu</h2>
+      <div class="grid two">
+        <div style="grid-column:1/-1">
+          <label>PIN</label>
+          <input id="pin" class="input" type="password" placeholder="np. 2505"/>
+        </div>
+        <div style="grid-column:1/-1">
+          <button id="loginBtn" class="btn">Zaloguj</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- App -->
+    <div id="appView" style="display:none">
+      <div class="tabbar">
+        <div class="tab active" data-tab="dashboard">Rezerwacje</div>
+        <div class="tab" data-tab="slots">Wolne Terminy</div>
+        <div class="tab" data-tab="services">Usługi & Cennik</div>
+        <div class="tab" data-tab="clients">Klienci</div>
+        <div class="tab" data-tab="settings">Ustawienia</div>
+      </div>
+
+      <!-- Dashboard -->
+      <div class="card tabpane" data-pane="dashboard">
+  <h2>Nie potwierdzone rezerwacje</h2>
+  <div id="upcoming" class="grid"></div>
+
+  <hr class="sep"/>
+
+  <h2>Potwierdzone rezerwacje</h2>
+  <div id="confirmed" class="grid"></div>
+</div>
+
+
+
+      <!-- Slots -->
+      <div class="card tabpane" data-pane="slots" style="display:none">
+        <h2>Wolne Terminy</h2>
+        <div class="grid two">
+          <div>
+            <label>Data</label>
+            <input id="slotDate" type="date" class="input"/>
+          </div>
+          <div>
+            <label>Godzina</label>
+            <input id="slotTime" type="time" class="input"/>
+          </div>
+          <div style="grid-column:1/-1">
+            <button id="addSlot" class="btn">Dodaj termin</button>
+          </div>
+        </div>
+        <hr class="sep"/>
+        <div id="slotsList" class="grid"></div>
+      </div>
+
+      <!-- Services -->
+      <div class="card tabpane" data-pane="services" style="display:none">
+        <h2>Usługi & Cennik</h2>
+        <div style="margin:10px 0"><button id="addService" class="btn">Dodaj usługę</button></div>
+        <table class="table">
+          <thead><tr><th>Usługa</th><th>Czas</th><th>Cena</th><th>Akcje</th></tr></thead>
+          <tbody id="servicesBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Clients -->
+      <div class="card tabpane" data-pane="clients" style="display:none">
+        <h2>Klienci</h2>
+        <div id="clientsList" class="grid"></div>
+      </div>
+
+      <!-- Settings -->
+      <div class="card tabpane" data-pane="settings" style="display:none">
+        <h2>Ustawienia</h2>
+        <div class="grid two">
+          <div>
+            <label>Email kontaktowy</label>
+            <input id="setEmail" class="input" type="email"/>
+          </div>
+          <div>
+            <label>Telefon kontaktowy</label>
+            <input id="setTel" class="input" type="tel"/>
+          </div>
+          <div style="grid-column:1/-1">
+            <label>Treść zgody RODO</label>
+            <textarea id="setRodo" class="input" rows="3"></textarea>
+          </div>
+          <div>
+            <label>PIN do panelu</label>
+            <input id="setPIN" class="input" type="text"/>
+          </div>
+          <div style="grid-column:1/-1">
+            <button id="saveSettingsBtn" class="btn">Zapisz ustawienia</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">© Massage &amp; SPA</div>
+  </div>
+
+  <!-- Client modal -->
+  <div id="clientModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);padding:30px;overflow:auto">
+    <div class="card" style="max-width:900px;margin:40px auto">
+      <div class="inline" style="justify-content:space-between">
+        <h2 id="clientName">Klient</h2>
+        <div class="inline">
+          <button id="saveClientBtn" class="btn success">Zapisz</button>
+          <button id="closeClientBtn" class="btn danger">Zamknij</button>
+        </div>
+      </div>
+      <div class="grid two">
+        <div>
+          <label>Email</label><input id="cEmail" class="input" type="email"/>
+        </div>
+        <div>
+          <label>Telefon</label><input id="cPhone" class="input" type="tel"/>
+        </div>
+        <div style="grid-column:1/-1">
+          <label>Adres</label><input id="cAddress" class="input"/>
+        </div>
+        <div style="grid-column:1/-1">
+          <label>Notatka ogólna</label>
+          <textarea id="cNotes" class="input" rows="3"></textarea>
+        </div>
+        <div>
+          <label>Uczulenia</label><input id="cPrefAll" class="input"/>
+        </div>
+        <div>
+          <label>Preferencje masażu</label><input id="cPrefMassage" class="input"/>
+        </div>
+        <div>
+          <label>Stan zdrowia</label><input id="cPrefHealth" class="input"/>
+        </div>
+        <div>
+          <label>Stan psychiczny</label><input id="cPrefMental" class="input"/>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Sugestie terapeutyczne</h2>
+        <div id="clientSuggestion" class="small"></div>
+      </div>
+      <div class="card">
+        <h2>Historia zabiegów</h2>
+        <table class="table">
+          <thead><tr><th>Data</th><th>Zabieg</th><th>Uwagi</th><th>Status</th></tr></thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+ 
+<script src="assets/store.js"></script>
+
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // WSTAW swoje dane:
+  const SUPABASE_URL = 'https://eibzijpelnmvbtslquun.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpYnppanBlbG5tdmJ0c2xxdXVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MTE1OTcsImV4cCI6MjA3NDE4NzU5N30.Dp4u9PlhP-_pGmiNTHp5zSjrMUDfA_k2i85_71_9koo'; 
+  window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  console.log('[admin] sb ready=',!! window.sb);
+</script>
+
+<!-- Adapter chmury (UWAGA: poprawna nazwa pliku) -->
+<script src="assets/cloud-slots-adapter.js?v=4"></script>
+<script>
+  if (window.sb && window.CloudSlots) {
+    CloudSlots.init(window.sb);
+    CloudSlots.startAutoSync(5000); // co 5s odświeża z chmury
+  }
+</script>
+
+<!-- Kod panelu admin – NA KOŃCU i tylko raz -->
 <script src="assets/admin.js"></script>
-</body></html>
+</body>
+</html>
+
