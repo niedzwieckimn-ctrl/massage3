@@ -380,8 +380,3 @@ async function sendEmail(subject, html) {
     throw err;
   }
 }
-
-// przykładowy test:
-sendEmail('Test z formularza', '<b>Działa?</b>')
-  .then(console.log)
-  .catch(console.error);
