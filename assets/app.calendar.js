@@ -1,30 +1,33 @@
+// assets/app.calendar.js
 (function (global) {
-  const ymd = d => new Date(d).toISOString().slice(0,10);
   const byTime = (a,b) => new Date(a.when) - new Date(b.when);
+  const ymd = d => new Date(d).toISOString().slice(0,10);
 
-  function getCache() {
-    try { return JSON.parse(localStorage.getItem('slots')||'[]') || []; }
+  function getSlots() {
+    try { return JSON.parse(localStorage.getItem('slots') || '[]') || []; }
     catch { return []; }
   }
 
   function buildMap(slots) {
     const map = {};
-    (slots||[]).forEach(s => {
-      if (s.taken) return;
+    for (const s of slots) {
+      if (s.taken === true) continue;         // pokazuj tylko wolne
       const k = ymd(s.when);
       (map[k] ||= []).push(s);
-    });
-    Object.values(map).forEach(arr => arr.sort(byTime));
+    }
+    for (const k in map) map[k].sort(byTime);
     return map;
   }
 
-  function fillTimes(dateStr, map) {
+  function fillTimes(dateStr) {
     const timeEl = document.getElementById('time');
     if (!timeEl) return;
-    timeEl.innerHTML = '';
 
-    const arr = map[dateStr] || [];
-    if (!arr.length) {
+    const map = buildMap(getSlots());
+    const list = map[dateStr] || [];
+
+    timeEl.innerHTML = '';
+    if (!list.length) {
       const o = new Option('Brak wolnych godzin', '');
       o.disabled = true; o.selected = true;
       timeEl.add(o);
@@ -35,50 +38,48 @@
     ph.disabled = true; ph.selected = true;
     timeEl.add(ph);
 
-    arr.forEach(s => {
+    for (const s of list) {
       const t = new Date(s.when);
       const hh = String(t.getHours()).padStart(2,'0');
       const mm = String(t.getMinutes()).padStart(2,'0');
-      timeEl.add(new Option(`${hh}:${mm}`, s.id));
-    });
+      timeEl.add(new Option(`${hh}:${mm}`, s.id));  // value = id slota
+    }
   }
 
-  function mountCalendar() {
+  function mount() {
     const dateEl = document.getElementById('date');
     if (!dateEl) return;
 
-    const map = buildMap(getCache());
+    const map = buildMap(getSlots());
     const days = Object.keys(map).sort();
-    if (!days.length) {
-      // brak slotów — wyczyść godziny i wyjdź
-      const timeEl = document.getElementById('time');
-      if (timeEl) { timeEl.innerHTML = ''; timeEl.add(new Option('Brak wolnych godzin','')); }
-      return;
-    }
 
     // ustaw zakres i domyślną datę
-    dateEl.min = days[0];
-    dateEl.max = days[days.length - 1];
-    if (!dateEl.value || !map[dateEl.value]) dateEl.value = days[0];
+    if (days.length) {
+      dateEl.min = days[0];
+      dateEl.max = days[days.length-1];
+      if (!dateEl.value || !map[dateEl.value]) dateEl.value = days[0];
+    } else {
+      dateEl.removeAttribute('min'); dateEl.removeAttribute('max');
+    }
 
-    // wypełnij godziny
-    fillTimes(dateEl.value, map);
+    if (dateEl.value) fillTimes(dateEl.value);
+    else {
+      const timeEl = document.getElementById('time');
+      if (timeEl) { timeEl.innerHTML = ''; timeEl.add(new Option('Brak wolnych godzin','')); }
+    }
   }
 
-  function onDateChange() {
-    const dateEl = document.getElementById('date');
-    if (!dateEl) return;
-    const map = buildMap(getCache());
-    fillTimes(dateEl.value, map);
-  }
-
-  // start + reakcje
-  document.addEventListener('DOMContentLoaded', mountCalendar);
+  // zmiana daty -> odśwież godziny
   document.addEventListener('change', (e) => {
-    if (e.target && e.target.id === 'date') onDateChange();
+    if (e.target && e.target.id === 'date') fillTimes(e.target.value);
   });
-  global.addEventListener('slots-synced', mountCalendar); // np. po dodaniu slota
 
-  // eksport opcjonalny
-  global.ModCalendar = { refresh: mountCalendar };
+  // pierwszy render po starcie
+  document.addEventListener('DOMContentLoaded', mount);
+
+  // po synchronizacji slotów (CloudSlots.pull) – przerysuj
+  global.addEventListener('slots-synced', mount);
+
+  // opcjonalny ręczny refresh
+  global.ModCalendar = { refresh: mount, fillTimes };
 })(window);
