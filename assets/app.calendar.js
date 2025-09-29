@@ -97,3 +97,41 @@ function mount() {
 
   global.ModCalendar = { refresh: mount, fillTimes };
 })(window);
+// === Uzupełnianie listy godzin dla wybranego dnia ===
+function fillTimes(dateStr) {
+  const timeEl = document.getElementById('time');
+  if (!timeEl) return;
+
+  // wyczyść poprzednie opcje
+  timeEl.innerHTML = '';
+
+  // pobierz sloty z cache
+  const slots = JSON.parse(localStorage.getItem('slots') || '[]');
+  const todays = slots
+    .filter(s => !s.taken && new Date(s.when).toISOString().slice(0,10) === dateStr)
+    .sort((a,b) => new Date(a.when) - new Date(b.when));
+
+  if (todays.length === 0) {
+    const opt = new Option('Brak wolnych godzin', '');
+    opt.disabled = true;
+    opt.selected = true;
+    timeEl.add(opt);
+    return;
+  }
+
+  // dodaj wszystkie godziny
+  todays.forEach(s => {
+    const t = new Date(s.when);
+    const hh = String(t.getHours()).padStart(2,'0');
+    const mm = String(t.getMinutes()).padStart(2,'0');
+    timeEl.add(new Option(`${hh}:${mm}`, s.id));
+  });
+
+  // jeśli więcej niż 1 → dodaj placeholder
+  if (todays.length > 1) {
+    const ph = new Option('Wybierz godzinę…', '');
+    ph.disabled = true;
+    timeEl.insertBefore(ph, timeEl.firstChild);
+    timeEl.selectedIndex = 0;
+  }
+}
