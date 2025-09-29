@@ -37,6 +37,6 @@
 })(window);
 
 // assets/supabase-client.js
-const URL  = 'https://TWÓJ-PROJEKT.supabase.co';
-const ANON = 'TWÓJ_PUBLICZNY_ANON_KEY';
+const URL  = 'https://eibzijpelnmvbtslquun.supabase.co';
+const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpYnppanBlbG5tdmJ0c2xxdXVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MTE1OTcsImV4cCI6MjA3NDE4NzU5N30.Dp4u9PlhP-_pGmiNTHp5zSjrMUDfA_k2i85_71_9koo';
 window.sb = supabase.createClient(URL, ANON);
