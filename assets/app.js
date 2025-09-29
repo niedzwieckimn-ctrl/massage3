@@ -361,3 +361,27 @@ window.addEventListener('slots-synced', () => {
     }
   } catch (e) { console.warn('slots-synced handler error', e); }
 });
+async function sendEmail(subject, html) {
+  try {
+    const r = await fetch('/.netlify/functions/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject, html })
+    });
+
+    if (!r.ok) {
+      const text = await r.text();
+      throw new Error('Email HTTP ' + r.status + ' - ' + text);
+    }
+
+    return await r.json();
+  } catch (err) {
+    console.error('sendEmail error:', err);
+    throw err;
+  }
+}
+
+// przykładowy test:
+sendEmail('Test z formularza', '<b>Działa?</b>')
+  .then(console.log)
+  .catch(console.error);
