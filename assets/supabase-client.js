@@ -35,3 +35,8 @@
   }
   global.ModClients = global.ModClients || { load, saveDetails, addSessionNote, addSuggestion, buildSuggestion };
 })(window);
+
+// assets/supabase-client.js
+const URL  = 'https://TWÓJ-PROJEKT.supabase.co';
+const ANON = 'TWÓJ_PUBLICZNY_ANON_KEY';
+window.sb = supabase.createClient(URL, ANON);
