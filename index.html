@@ -337,10 +337,39 @@ window.addEventListener('storage', (e) => {
     }
   };
 </script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const dateInput = document.getElementById('date');
+    if (!dateInput) return;
+
+    const fp = flatpickr(dateInput, {
+      dateFormat: 'Y-m-d',
+      minDate: 'today',
+      onChange: (selectedDates) => {
+        if (selectedDates && selectedDates[0]) {
+          const d = selectedDates[0];
+          const y = d.getFullYear();
+          const m = String(d.getMonth()+1).padStart(2,'0');
+          const dd = String(d.getDate()).padStart(2,'0');
+          const ymdSel = `${y}-${m}-${dd}`;
+          if (window.ModCalendar && typeof window.ModCalendar.fillTimes === 'function') {
+            window.ModCalendar.fillTimes(ymdSel);
+          }
+        }
+      }
+    });
+
+    // opcjonalnie: wstępne wypełnienie jeśli input ma wartość startową
+    if (dateInput.value && window.ModCalendar?.fillTimes) {
+      window.ModCalendar.fillTimes(dateInput.value);
+    }
+  });
+</script>
 
 <script src="assets/app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/supabase-client.js"></script>
+<script src="assets/app.calendar.js"></script>
 <script src="assets/cloud-slots-adapter.js"></script>
 <script src="assets/app.helpers.js"></script>
 <script src="assets/send-email.js"></script> <!-- helper frontowy do maili -->
