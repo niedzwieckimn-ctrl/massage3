@@ -109,21 +109,33 @@ function renderTimeOptions() {
       // 1) klient: znajdź/utwórz (funkcja jest w index.html)
       const client_id = await dbEnsureClient({ name, email, phone, address });
       if (!client_id) throw new Error('Nie udało się zapisać klienta.');
-     const services = await dbLoadServices();
-const service  = (services || []).find(s => s.id === serviceId) || { name:'(brak)' };
+     // przed wywołaniem dbCreateBooking dopisz / upewnij się, że masz:
+const services = await dbLoadServices();
+const service  = (services || []).find(s => s.id === serviceId) || { name: '(brak)' };
 
+// wyciągnij ISO terminu (z <option data-when>, a jakby go brakło – z cache slots)
+const opt     = document.querySelector('#time option:checked');
+const whenISO = (opt && opt.dataset && opt.dataset.when)
+  || ((Store.get('slots',[])||[]).find(s => s.id === slotId)?.when)
+  || null;
+
+// >>> PODMIEŃ OBIEKT W WYWOŁANIU <<<
 const r = await dbCreateBooking({
-  slot_id: slotId,
-  service_id: serviceId,
-  client_id,
-  notes,
-  service_name: service.name,
-  client_name: name,
-  client_email: email,
-  phone,
-  address,
-  booking_no: String(bookingNo)   // <— DODANE
+   slot_id: slotId,
+   service_id: serviceId,
+   client_id,
+   notes,
+   service_name: service.name,
+   client_name: name,
+   client_email: email,
+   phone,
+   address,
+-  booking_no: String(bookingNo)
++  booking_no: String(bookingNo),
++  slot_when: whenISO   // <— dopisane
 });
+
+
 
 
       if (!r || !r.ok) throw new Error('Nie udało się utworzyć rezerwacji.');

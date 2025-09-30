@@ -70,7 +70,8 @@ function ymd(d) {
     const hh = String(t.getHours()).padStart(2,'0');
     const mm = String(t.getMinutes()).padStart(2,'0');
     // value: ID slota — reszta logiki (zapisywanie rezerwacji) zakłada ID
-    return `<option value="${s.id}" data-when=">${hh}:${mm}</option>`;
+   return `<option value="${s.id}" data-when="${s.when}">${hh}:${mm}</option>`;
+
   }).join('');
 }
 
