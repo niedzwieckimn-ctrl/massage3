@@ -289,3 +289,8 @@ textarea:-webkit-autofill:focus {
     max-width: 200px;   /* np. 160px na mobile */
   }
 }
+:root { --success: #16a34a; } /* zielony fallback */
+
+.flatpickr-day.has-slots{ box-shadow: inset 0 -2px 0 0 currentColor; color: var(--success); border-color: var(--success); }
+.flatpickr-day.no-slots{ opacity:.45; }
+.flatpickr-day.has-slots::after{ content: attr(data-count); position:absolute; bottom:2px; right:4px; font-size:10px; }

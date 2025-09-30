@@ -44,6 +44,8 @@
 <div>
 <label>Data *</label>
 <input class="input" id="date" required="" type="text"/>
+<input class="input" id="date" required type="text" readonly />
+
 </div>
 <div>
 <label>Godzina *</label>
@@ -427,6 +429,9 @@ window.addEventListener('storage', (e) => {
     window.fp = flatpickr(dateInput, {
       dateFormat: 'Y-m-d',
       minDate: 'today',
+	  disableMobile: true,   // wymuś nasz kalendarz zamiast natywnego
+      static: true,          // poprawne pozycjonowanie na mobilnych
+
       onDayCreate: function(dObj, dStr, inst, dayElem){
         var key = ymd(dayElem.dateObj || dObj);
         dayElem.classList.remove('has-slots','no-slots');
