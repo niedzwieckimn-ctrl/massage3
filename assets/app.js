@@ -157,8 +157,7 @@ const r = await dbCreateBooking({
       renderTimeOptions();
       if (window.fp?.redraw) window.fp.redraw();
 
-     // 5) e-mail do masażystki (nie blokuje sukcesu rezerwacji)
-try {
+     
   // 5a) wyciągnij ISO terminu z <option data-when> albo z cache slots
   const opt = document.querySelector('#time option:checked');
   const whenISO =
@@ -190,7 +189,7 @@ try {
   `;
 
   if (window.sendEmail) {
-    await window.sendEmail(`Nowa rezerwacja Nr: ${bookingNo} Termin: ${whenStr}`, html);
+    await window.sendEmail(`Masz nową rezerwację! Nr: ${bookingNo} Termin: ${whenStr}`, html);
   }
 } catch (e) {
   console.warn('email error', e);
