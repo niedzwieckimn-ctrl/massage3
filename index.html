@@ -9,13 +9,17 @@
 <link href="assets/style.css" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<a href="https://www.massagesandspa.pl" class="back-home">← Wróć do strony głównej</a>
 
 </head>
 <body>
 <div class="container">
 <div class="header">
 <div class="brand">
-<img class="logo" alt="Massage &amp; SPA" src="assets/logo.svg"/>
+<a href="https://www.massagesandspa.pl">
+  <img src="logo.png" alt="Massage & SPA" class="logo">
+</a>
+
 </div>
 </div>
 <div class="card">
@@ -64,6 +68,7 @@
 </div>
 <div class="footer">© Massages &amp; SPA • <span id="contact"></span></div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pl.js"></script>
 
 <script>
   // SUPABASE → render #service (nadpisujemy select, więc nie będzie duplikatów)
@@ -338,6 +343,7 @@ window.addEventListener('storage', (e) => {
     if (!dateInput) return;
 
     const fp = flatpickr(dateInput, {
+	  locale: 'pl' ,
       dateFormat: 'Y-m-d',
       minDate: 'today',
       onChange: (selectedDates) => {
@@ -441,6 +447,7 @@ window.addEventListener('storage', (e) => {
 
     // inicjalizacja flatpickr
     window.fp = flatpickr(dateInput, {
+	  locale: 'pl',
       dateFormat: 'Y-m-d',
       minDate: 'today',
 	  disableMobile: true,   // wymuś nasz kalendarz zamiast natywnego
