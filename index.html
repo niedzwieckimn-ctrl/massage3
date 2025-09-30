@@ -7,8 +7,13 @@
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>Massages &amp; SPA — Rezerwacja</title>
 <link href="assets/style.css" rel="stylesheet"/>
+<!-- Flatpickr CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<!-- Flatpickr JS z lokalizacjami -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pl.js"></script>
+
 <a href="https://www.massagesandspa.pl" class="back-home">← Powrót</a>
 
 </head>
@@ -65,14 +70,7 @@
 </div>
 <div class="footer">© Massages &amp; SPA • <span id="contact"></span></div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pl.js"></script>
-<script>
-  // globalnie ustaw polski + poniedziałek
-  if (window.flatpickr?.l10ns?.pl) {
-    window.flatpickr.localize(window.flatpickr.l10ns.pl);
-  }
-</script>
+
 
 
 <script>
