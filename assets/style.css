@@ -303,8 +303,8 @@ flatpickr('#date', {
 .flatpickr-calendar .dayContainer .flatpickr-day.selected:focus,
 .flatpickr-calendar .dayContainer .flatpickr-day.startRange:focus,
 .flatpickr-calendar .dayContainer .flatpickr-day.endRange:focus {
-  background: #8B4513 !important;   /* ← podmień na swój kolor */
-  border-color: #8B4513 !important;  /* ← j.w. */
+  background: E0FFFF !important;   /* ← podmień na swój kolor */
+  border-color: E0FFFF !important;  /* ← j.w. */
   color: #fff !important;
   background-image: none !important; /* na wypadek globalnych gradientów */
   box-shadow: none !important;       /* na wypadek globalnych cieni dla .selected */
