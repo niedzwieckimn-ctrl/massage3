@@ -200,20 +200,20 @@ tbody tr td:last-child {border-top-right-radius:10px;border-bottom-right-radius:
 
 .flatpickr-day.free {
   border: 2px solid var(--brand);
-  color: var(--brand);
+  color: var(E0FFFF);
   font-weight: 500;
 }
 .flatpickr-day.selected,
 .flatpickr-day.startRange,
 .flatpickr-day.endRange {
-  background: var(--brand);
-  border-color: var(--brand);
+  background: var(E0FFFF);
+  border-color: var(E0FFFF);
   color: #fff;
 }
 .flatpickr-day:hover {
-  border-color: E0FFFF;
-  background: E0FFFF;
-  color: var(--brand);
+  border-color: var(E0FFFF);
+  background: rgba(160, 120, 40, 0.1);
+  color: var(E0FFFF);
 }
 
 /* =======================
