@@ -132,27 +132,55 @@
 
 </script>
 <script>
-  async function dbCreateBooking({slot_id, service_id, client_id, notes, service_name, client_name, client_email, phone}){
-    const { data: booking, error: e1 } = await sb
-      .from('bookings')
-      .insert({
-        slot_id,
-        service_id,
-        client_id,
-        notes: notes || null,
-        service_name: service_name || null,
-        client_name: client_name || null,
-        client_email: client_email || null,
-        phone: phone || null
-      })
-      .select('id, created_at')
-      .single();
-    if(e1){ console.warn('[public] booking insert error:', e1); return { ok:false, error:e1 }; }
+  async function dbCreateBooking({
+    slot_id, service_id, client_id, notes,
+    service_name, client_name, client_email, phone,
+    address, booking_no, slot_when
+  }){
+    // pakiet do inserta
+    let ins = {
+      slot_id,
+      service_id,
+      client_id,
+      notes: notes || null,
+      service_name: service_name || null,
+      client_name: client_name || null,
+      client_email: client_email || null,
+      phone: phone || null,
+      address: address || null,       // kolumna 'address' (text)
+      booking_no: booking_no || null, // kolumna 'booking_no' (text)
+      slot_when: slot_when || null    // kolumna 'slot_when' (timestamptz)
+    };
 
-    // (slots.taken ustawiasz w app.js — zostaw jak jest)
-    return { ok:true, booking };
+    // podejście 1: z pełnym zestawem pól
+    let res = await sb
+      .from('bookings')
+      .insert(ins)
+      .select('id, created_at, booking_no, slot_when')
+      .single();
+
+    // fallback, gdyby któraś kolumna nie istniała (kod 42703)
+    if (res.error && String(res.error.code) === '42703') {
+      if (res.error.message.includes('address'))    delete ins.address;
+      if (res.error.message.includes('booking_no')) delete ins.booking_no;
+      if (res.error.message.includes('slot_when'))  delete ins.slot_when;
+
+      res = await sb
+        .from('bookings')
+        .insert(ins)
+        .select('id, created_at, booking_no, slot_when')
+        .single();
+    }
+
+    if (res.error) {
+      console.warn('[public] booking insert error:', res.error);
+      return { ok: false, error: res.error };
+    }
+    return { ok: true, booking: res.data };
   }
 </script>
+
+
 
 
 

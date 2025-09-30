@@ -7,7 +7,7 @@ function ymd(d) {
   const y = x.getFullYear();
   const m = String(x.getMonth() + 1).padStart(2, '0');
   const dd = String(x.getDate()).padStart(2, '0');
-  return `${y}-${m}-${dd}`;
+    `${y}-${m}-${dd}`;
 }
 
   function byTime(a,b){ return new Date(a.when) - new Date(b.when); }
@@ -70,7 +70,7 @@ function ymd(d) {
     const hh = String(t.getHours()).padStart(2,'0');
     const mm = String(t.getMinutes()).padStart(2,'0');
     // value: ID slota — reszta logiki (zapisywanie rezerwacji) zakłada ID
-    return `<option value="${s.id}">${hh}:${mm}</option>`;
+    return `<option value="${s.id}" data-when=">${hh}:${mm}</option>`;
   }).join('');
 }
 
