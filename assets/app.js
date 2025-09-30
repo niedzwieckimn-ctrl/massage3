@@ -109,11 +109,10 @@ function renderTimeOptions() {
       // 1) klient: znajdź/utwórz (funkcja jest w index.html)
       const client_id = await dbEnsureClient({ name, email, phone, address });
       if (!client_id) throw new Error('Nie udało się zapisać klienta.');
-      const services = await dbLoadServices();
-      const service  = (services || []).find(s => s.id === serviceId) || { name:'(brak)' };
+     const services = await dbLoadServices();
+const service  = (services || []).find(s => s.id === serviceId) || { name:'(brak)' };
 
-      // 2) rezerwacja (funkcja jest w index.html)
-     const r = await dbCreateBooking({
+const r = await dbCreateBooking({
   slot_id: slotId,
   service_id: serviceId,
   client_id,
@@ -121,8 +120,11 @@ function renderTimeOptions() {
   service_name: service.name,
   client_name: name,
   client_email: email,
-  phone
+  phone,
+  address,
+  booking_no: String(bookingNo)   // <— DODANE
 });
+
 
       if (!r || !r.ok) throw new Error('Nie udało się utworzyć rezerwacji.');
 
