@@ -135,7 +135,6 @@ const r = await dbCreateBooking({
    client_email: email,
    phone,
    address,
-   booking_no: String(bookingNo)
    booking_no: String(bookingNo),
    slot_when: whenISO   // <— dopisane
 });
