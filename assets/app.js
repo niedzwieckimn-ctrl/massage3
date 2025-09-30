@@ -126,19 +126,19 @@ const whenISO = (opt && opt.dataset && opt.dataset.when)
 
 // >>> PODMIEŃ OBIEKT W WYWOŁANIU <<<
 const r = await dbCreateBooking({
-   slot_id: slotId,
-   service_id: serviceId,
-   client_id,
-   notes,
-   service_name: service.name,
-   client_name: name,
-   client_email: email,
-   phone,
-   address,
-   booking_no: String(bookingNo)
-   booking_no: String(bookingNo),
-   slot_when: whenISO   // <— dopisane
+  slot_id: slotId,
+  service_id: serviceId,
+  client_id,
+  notes,
+  service_name: service.name,
+  client_name: name,
+  client_email: email,
+  phone,
+  address,
+  booking_no: String(bookingNo),
+  slot_when: whenISO
 });
+
 
 
 
