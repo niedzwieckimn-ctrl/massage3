@@ -301,7 +301,17 @@ flatpickr('#date', {
 .flatpickr-calendar .dayContainer .flatpickr-day.selected,
 .flatpickr-calendar .dayContainer .flatpickr-day.selected:focus,
 .flatpickr-calendar .dayContainer .flatpickr-day.selected:hover {
-  background: ##E0FFFF !important;   /* <- Twój HEX/RGB */
+  background: #E0FFFF !important;   /* <- Twój HEX/RGB */
+  border-color: #8B4513 !important;
+  color: #fff !important;
+}
+.flatpickr-calendar .dayContainer .flatpickr-day.startRange,
+.flatpickr-calendar .dayContainer .flatpickr-day.endRange,
+.flatpickr-calendar .dayContainer .flatpickr-day.startRange:hover,
+.flatpickr-calendar .dayContainer .flatpickr-day.endRange:hover,
+.flatpickr-calendar .dayContainer .flatpickr-day.startRange:focus,
+.flatpickr-calendar .dayContainer .flatpickr-day.endRange:focus {
+  background: #E0FFFF !important;
   border-color: #8B4513 !important;
   color: #fff !important;
 }
