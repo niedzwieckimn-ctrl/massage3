@@ -43,9 +43,7 @@
 </div>
 <div>
 <label>Data *</label>
-<input class="input" id="date" required="" type="text"/>
-<input class="input" id="date" required type="text" readonly />
-
+<input class="input" id="date" required="" type="text" readonly />
 </div>
 <div>
 <label>Godzina *</label>
@@ -151,45 +149,7 @@
   }
 </script>
 
-<script>
-  // SUPABASE → LocalStorage: services + slots, potem odśwież UI
-  document.addEventListener('DOMContentLoaded', async () => {
-    if (!window.sb) return;
-    try {
-      const [{ data: svc, error: e1 }, { data: slots, error: e2 }] = await Promise.all([
-        window.sb.from('services')
-          .select('id, name, price, duration_min, active')
-          .eq('active', true)
-          .order('name', { ascending: true }),
-        window.sb.from('slots')
-          .select('id, when, taken')
-          .eq('taken', false)
-          .order('when', { ascending: true })
-      ]);
 
-      if (!e1 && Array.isArray(svc)) {
-        localStorage.setItem('services', JSON.stringify(svc));
-        const sel = document.getElementById('service');
-        if (sel) {
-          sel.innerHTML = '<option value="">Wybierz zabieg</option>' +
-            svc.map(s => {
-              const price = (Number(s.price) || 0).toFixed(2).replace('.', ',');
-              return `<option value="${s.id}" data-name="${s.name}">${s.name} — ${price} zł</option>`;
-            }).join('');
-        }
-      }
-
-      if (!e2 && Array.isArray(slots)) {
-        localStorage.setItem('slots', JSON.stringify(slots));
-        if (typeof window.renderTimeOptions === 'function') {
-          window.renderTimeOptions();
-        }
-      }
-    } catch (err) {
-      console.warn('[public sync] fail:', err);
-    }
-  });
-</script>
 
 <!-- Poprawny baner "dziękujemy" (poza <script>) -->
 <style>
@@ -373,6 +333,27 @@ window.addEventListener('storage', (e) => {
 <script src="assets/supabase-client.js"></script>
 <script src="assets/app.calendar.js"></script>
 <script src="assets/cloud-slots-adapter.js"></script>
+<script>
+  // start: ściągnij sloty i odśwież kalendarz
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (window.CloudSlots) {
+      await window.CloudSlots.pull();
+      if (window.fp?.redraw) window.fp.redraw();
+      // ustaw pierwszy dzień z wolnymi terminami
+      const slots = CloudSlots.get();
+      if (slots.length) {
+        const d = new Date(slots[0].when);
+        const ymd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const dateEl = document.getElementById('date');
+        if (dateEl && !dateEl.value) {
+          dateEl.value = ymd;
+          dateEl.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+    }
+  });
+</script>
+
 <script>
   // proste YYYY-MM-DD z czasu lokalnego
   function ymd(d){
