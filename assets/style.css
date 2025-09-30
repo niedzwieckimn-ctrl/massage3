@@ -294,7 +294,9 @@ textarea:-webkit-autofill:focus {
 .flatpickr-day.has-slots{ box-shadow: inset 0 -2px 0 0 currentColor; color: var(--success); border-color: var(--success); }
 .flatpickr-day.no-slots{ opacity:.45; }
 .flatpickr-day.has-slots::after{ content: attr(data-count); position:absolute; bottom:2px; right:4px; font-size:10px; }
-/* Kolor tła wybranego dnia w kalendarzu */
+flatpickr('#date', {
+  // …
+  /* Nadpisanie koloru zaznaczonego dnia w Flatpickr */
 .flatpickr-day.selected,
 .flatpickr-day.startRange,
 .flatpickr-day.endRange,
@@ -305,3 +307,6 @@ textarea:-webkit-autofill:focus {
   border-color: #008000; /* obramowanie takie samo */
   color: #000000;           /* tekst biały */
 }
+ // fallback: poniedziałek
+  // (jeśli wolisz, możesz użyć: locale: 'pl')
+});
