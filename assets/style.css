@@ -206,7 +206,7 @@ tbody tr td:last-child {border-top-right-radius:10px;border-bottom-right-radius:
 .flatpickr-day.selected,
 .flatpickr-day.startRange,
 .flatpickr-day.endRange {
-  background: E0FFFF;
+  background: var(--brand);
   border-color: var(--brand);
   color: #fff;
 }
@@ -303,7 +303,7 @@ flatpickr('#date', {
 .flatpickr-calendar .dayContainer .flatpickr-day.selected:focus,
 .flatpickr-calendar .dayContainer .flatpickr-day.startRange:focus,
 .flatpickr-calendar .dayContainer .flatpickr-day.endRange:focus {
-  background: E0FFFF !important;   /* ← podmień na swój kolor */
+  background: #8B4513 !important;   /* ← podmień na swój kolor */
   border-color: #8B4513 !important;  /* ← j.w. */
   color: #fff !important;
   background-image: none !important; /* na wypadek globalnych gradientów */
@@ -313,4 +313,3 @@ flatpickr('#date', {
  // fallback: poniedziałek
   // (jeśli wolisz, możesz użyć: locale: 'pl')
 });
-
