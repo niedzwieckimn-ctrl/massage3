@@ -65,7 +65,15 @@
 </div>
 <div class="footer">© Massages &amp; SPA • <span id="contact"></span></div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pl.js"></script>
+<script>
+  // globalnie ustaw polski + poniedziałek
+  if (window.flatpickr?.l10ns?.pl) {
+    window.flatpickr.localize(window.flatpickr.l10ns.pl);
+  }
+</script>
+
 
 <script>
   // SUPABASE → render #service (nadpisujemy select, więc nie będzie duplikatów)
@@ -341,6 +349,7 @@ window.addEventListener('storage', (e) => {
 
     const fp = flatpickr(dateInput, {
 	  locale: 'pl' ,
+	  locale: { firstDayOfWeek: 1 },
       dateFormat: 'Y-m-d',
       minDate: 'today',
       onChange: (selectedDates) => {
@@ -445,6 +454,7 @@ window.addEventListener('storage', (e) => {
     // inicjalizacja flatpickr
     window.fp = flatpickr(dateInput, {
 	  locale: 'pl',
+	  locale: { firstDayOfWeek: 1 },
       dateFormat: 'Y-m-d',
       minDate: 'today',
 	  disableMobile: true,   // wymuś nasz kalendarz zamiast natywnego
