@@ -206,7 +206,7 @@ tbody tr td:last-child {border-top-right-radius:10px;border-bottom-right-radius:
 .flatpickr-day.selected,
 .flatpickr-day.startRange,
 .flatpickr-day.endRange {
-  background: transparent !important;  /* bez ciemnego tła */
+  background: E0FFFF !important;  /* bez ciemnego tła */
   border-color: currentColor !important; /* zostaje zielona ramka */
   color: inherit !important;            /* numer dnia normalny */
 }
