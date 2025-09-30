@@ -206,10 +206,11 @@ tbody tr td:last-child {border-top-right-radius:10px;border-bottom-right-radius:
 .flatpickr-day.selected,
 .flatpickr-day.startRange,
 .flatpickr-day.endRange {
-  background: var(--brand);
-  border-color: E0FFFF;
-  color: #fff;
+  background: transparent !important;  /* bez ciemnego tła */
+  border-color: currentColor !important; /* zostaje zielona ramka */
+  color: inherit !important;            /* numer dnia normalny */
 }
+
 .flatpickr-day:hover {
   border-color: var(--brand);
   background: rgba(160, 120, 40, 0.1);
