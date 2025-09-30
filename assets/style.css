@@ -206,7 +206,7 @@ tbody tr td:last-child {border-top-right-radius:10px;border-bottom-right-radius:
 .flatpickr-day.selected,
 .flatpickr-day.startRange,
 .flatpickr-day.endRange {
-  background: var(--brand);
+  background: E0FFFF(--brand);
   border-color: var(--brand);
   color: #fff;
 }
@@ -296,28 +296,3 @@ textarea:-webkit-autofill:focus {
 .flatpickr-day.has-slots::after{ content: attr(data-count); position:absolute; bottom:2px; right:4px; font-size:10px; }
 flatpickr('#date', {
   // …
-/* TYLKO Flatpickr: kolor wybranego dnia (odcina od globalnej .selected/.btn itp.) */
-.flatpickr-calendar .dayContainer .flatpickr-day.selected,
-.flatpickr-calendar .dayContainer .flatpickr-day.startRange,
-.flatpickr-calendar .dayContainer .flatpickr-day.endRange,
-.flatpickr-calendar .dayContainer .flatpickr-day.selected:focus,
-.flatpickr-calendar .dayContainer .flatpickr-day.startRange:focus,
-.flatpickr-calendar .dayContainer .flatpickr-day.endRange:focus {
-  background: E0FFFF !important;   /* ← podmień na swój kolor */
-  border-color: E0FFFF !important;  /* ← j.w. */
-  color: #fff !important;
-  background-image: none !important; /* na wypadek globalnych gradientów */
-  box-shadow: none !important;       /* na wypadek globalnych cieni dla .selected */
-}
-
- // fallback: poniedziałek
-  // (jeśli wolisz, możesz użyć: locale: 'pl')
-});
-/* Nadpisanie koloru WYBRANEGO dnia */
-.flatpickr-calendar .dayContainer .flatpickr-day.selected,
-.flatpickr-calendar .dayContainer .flatpickr-day.startRange,
-.flatpickr-calendar .dayContainer .flatpickr-day.endRange {
-  background: #006400 !important;   /* Twój kolor tła */
-  border-color: #006400 !important; /* Ten sam kolor ramki */
-  color: #fff !important;           /* Tekst biały */
-}
