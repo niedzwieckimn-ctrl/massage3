@@ -170,16 +170,32 @@ const whenStr = whenISO
 
         const services = await dbLoadServices();
         const service = (services || []).find(s => s.id === serviceId) || { name: '(brak)' };
+// Formatowanie daty i godziny z whenISO
+let whenStr = '';
+if (whenISO) {
+  try {
+    whenStr = new Date(whenISO).toLocaleString('pl-PL', {
+      dateStyle: 'full',
+      timeStyle: 'short'
+    });
+  } catch (e) {
+    console.error('Błąd przy formacie daty:', e);
+  }
+}
 
-        const html = `
-          <h2>Nowa rezerwacja</h2>
-          <p><b>Nr rezerwacji:</b> ${bookingNo}</p>
-          <p><b>Termin:</b> ${whenStr}</p>
-          <p><b>Zabieg:</b> ${service.name}</p>
-          <p><b>Klient:</b> ${name}</p>
-          <p><b>Adres / kontakt:</b><br>${address}<br>Tel: ${phone}<br>Email: ${email}</p>
-          ${notes ? `<p><b>Uwagi:</b> ${notes}</p>` : ''}
-        `;
+const html = `
+  <h3>Nowa rezerwacja</h3>
+  <p><b>Nr rezerwacji:</b> ${bookingNo || ''}</p>
+  <p><b>Termin:</b> ${whenStr}</p>
+  <p><b>Zabieg:</b> ${service?.name || ''}</p>
+  <p><b>Klient:</b> ${name || ''}</p>
+  <p><b>Adres / kontakt:</b><br>
+    ${address || ''}<br>
+    Tel: ${phone || ''}<br>
+    Email: ${email || ''}
+  </p>
+`;
+
         if (window.sendEmail) {
           await window.sendEmail({ subject: `Nowa rezerwacja — ${whenStr}`, html });
         }
