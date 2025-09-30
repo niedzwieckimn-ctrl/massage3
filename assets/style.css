@@ -313,3 +313,11 @@ flatpickr('#date', {
  // fallback: poniedziałek
   // (jeśli wolisz, możesz użyć: locale: 'pl')
 });
+/* Nadpisanie koloru WYBRANEGO dnia */
+.flatpickr-calendar .dayContainer .flatpickr-day.selected,
+.flatpickr-calendar .dayContainer .flatpickr-day.startRange,
+.flatpickr-calendar .dayContainer .flatpickr-day.endRange {
+  background: #006400 !important;   /* Twój kolor tła */
+  border-color: #006400 !important; /* Ten sam kolor ramki */
+  color: #fff !important;           /* Tekst biały */
+}
