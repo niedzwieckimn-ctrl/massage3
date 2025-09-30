@@ -7,8 +7,9 @@ function ymd(d) {
   const y = x.getFullYear();
   const m = String(x.getMonth() + 1).padStart(2, '0');
   const dd = String(x.getDate()).padStart(2, '0');
-    `${y}-${m}-${dd}`;
+  return `${y}-${m}-${dd}`;   // ⬅︎ ten return był brakujący
 }
+
 
   function byTime(a,b){ return new Date(a.when) - new Date(b.when); }
 

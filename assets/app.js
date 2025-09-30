@@ -48,16 +48,15 @@ function availableTimesFor(dateStr) {
 }
 
 // wypełnia <select id="time">
-function renderTimeOptions() {
-  const dateVal = el('#date')?.value;
-  const timeSel = el('#time');
-  if (!timeSel) return;
+timeSel.innerHTML = '<option value="" disabled selected>Wybierz godzinę…</option>' +
+  opts.map(s => {
+    const d = new Date(s.when);
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    return `<option value="${s.id}" data-when="${s.when}">${hh}:${mm}</option>`;
+  }).join('');
+timeSel.disabled = false;
 
-  if (!dateVal) {
-    timeSel.innerHTML = '<option value="">Najpierw wybierz datę…</option>';
-    timeSel.disabled = true;
-    return;
-  }
 
   const opts = availableTimesFor(dateVal);
   if (!opts.length) {
