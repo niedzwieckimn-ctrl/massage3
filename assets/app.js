@@ -109,9 +109,21 @@ function renderTimeOptions() {
       // 1) klient: znajdź/utwórz (funkcja jest w index.html)
       const client_id = await dbEnsureClient({ name, email, phone, address });
       if (!client_id) throw new Error('Nie udało się zapisać klienta.');
+      const services = await dbLoadServices();
+      const service  = (services || []).find(s => s.id === serviceId) || { name:'(brak)' };
 
       // 2) rezerwacja (funkcja jest w index.html)
-      const r = await dbCreateBooking({ slot_id: slotId, service_id: serviceId, client_id, notes });
+     const r = await dbCreateBooking({
+  slot_id: slotId,
+  service_id: serviceId,
+  client_id,
+  notes,
+  service_name: service.name,
+  client_name: name,
+  client_email: email,
+  phone
+});
+
       if (!r || !r.ok) throw new Error('Nie udało się utworzyć rezerwacji.');
 
       // 3) oznacz slot jako zajęty (w bazie)
@@ -129,9 +141,14 @@ function renderTimeOptions() {
       // 5) e-mail do masażystki (nie blokuje sukcesu rezerwacji)
       try {
         const opt = el('#time')?.selectedOptions?.[0];
-        const whenStr = opt?.dataset?.when
-          ? new Date(opt.dataset.when).toLocaleString('pl-PL', { dateStyle: 'full', timeStyle: 'short' })
-          : '';
+const whenISO =
+  opt?.dataset?.when
+  || ((Store.get('slots',[])||[]).find(s=>s.id===slotId)?.when) // fallback z cache
+  || null;
+const whenStr = whenISO
+  ? new Date(whenISO).toLocaleString('pl-PL',{dateStyle:'full', timeStyle:'short'})
+  : '';
+
         const services = await dbLoadServices();
         const service = (services || []).find(s => s.id === serviceId) || { name: '(brak)' };
 
