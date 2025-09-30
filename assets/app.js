@@ -69,7 +69,8 @@ function renderTimeOptions() {
   timeSel.innerHTML = '<option value="" disabled selected>Wybierz godzinę…</option>' +
     opts.map(s => {
       const t = new Date(s.when).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
-      return `<option value="${s.id}" data-when="${s.when}">${t}</option>`;
+      return `<option value="${s.id}" data-when="${s.when}">${hh}:${mm}</option>`;
+
     }).join('');
   timeSel.disabled = false;
 }
@@ -155,7 +156,7 @@ function renderTimeOptions() {
       if (thanks) { thanks.classList.add('show'); setTimeout(() => thanks.classList.remove('show'), 4000); }
       form.reset();
       renderTimeOptions();
-      alert('Dziękujemy! Rezerwacja złożona — poczekaj na potwierdzenie.');
+     
 
     } catch (err) {
       console.error('[booking] błąd', err);
