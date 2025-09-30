@@ -49,33 +49,36 @@ function availableTimesFor(dateStr) {
 
 // wypełnia <select id="time">
 function renderTimeOptions() {
-  const dateVal = el('#date')?.value;
-  const timeSel = el('#time');
-  if (!timeSel) return;
+  const dateEl = document.getElementById('date');
+  const timeSel = document.getElementById('time');
+  if (!dateEl || !timeSel) return;
 
+  const dateVal = dateEl.value;
   if (!dateVal) {
     timeSel.innerHTML = '<option value="">Najpierw wybierz datę…</option>';
     timeSel.disabled = true;
     return;
   }
 
-  const opts = availableTimesFor(dateVal);
+  const opts = availableTimesFor(dateVal); // masz tę funkcję wyżej
   if (!opts.length) {
     timeSel.innerHTML = '<option value="">Brak wolnych godzin</option>';
     timeSel.disabled = true;
     return;
   }
 
-  timeSel.innerHTML = '<option value="" disabled selected>Wybierz godzinę…</option>' +
-  opts.map(s => {
-    const d = new Date(s.when);
-    const hh = String(d.getHours()).padStart(2,'0');
-    const mm = String(d.getMinutes()).padStart(2,'0');
-    return `<option value="${s.id}" data-when="${s.when}">${hh}:${mm}</option>`;
-  }).join('');
-timeSel.disabled = false;
+  timeSel.innerHTML =
+    '<option value="" disabled selected>Wybierz godzinę…</option>' +
+    opts.map(s => {
+      const d = new Date(s.when);
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      return `<option value="${s.id}" data-when="${s.when}">${hh}:${mm}</option>`;
+    }).join('');
 
+  timeSel.disabled = false;
 }
+
 
 // ===== SUBMIT (Supabase flow) =====
 
