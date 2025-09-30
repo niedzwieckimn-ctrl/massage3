@@ -69,7 +69,7 @@ function renderTimeOptions() {
   timeSel.innerHTML = '<option value="" disabled selected>Wybierz godzinę…</option>' +
     opts.map(s => {
       const t = new Date(s.when).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
-      return `<option value="${s.id}" data-when="${s.when}">${hh}:${mm}</option>`;
+
 
     }).join('');
   timeSel.disabled = false;
