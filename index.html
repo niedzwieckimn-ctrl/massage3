@@ -349,7 +349,6 @@ window.addEventListener('storage', (e) => {
 
     const fp = flatpickr(dateInput, {
 	  locale: { ...flatpickr.l10ns.pl, firstDayOfWeek: 1 },
-	  locale: { firstDayOfWeek: 1 },
       dateFormat: 'Y-m-d',
       minDate: 'today',
       onChange: (selectedDates) => {
@@ -454,7 +453,6 @@ window.addEventListener('storage', (e) => {
     // inicjalizacja flatpickr
     window.fp = flatpickr(dateInput, {
 	  locale: { ...flatpickr.l10ns.pl, firstDayOfWeek: 1 },
-	  locale: { firstDayOfWeek: 1 },
       dateFormat: 'Y-m-d',
       minDate: 'today',
 	  disableMobile: true,   // wymuś nasz kalendarz zamiast natywnego
