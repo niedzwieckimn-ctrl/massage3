@@ -150,3 +150,19 @@
     clear: clear
   };
 })(window);
+// Zwraca Mapę: YYYY-MM-DD -> liczba wolnych slotów tego dnia (z uwzględnieniem "dziś" > teraz)
+export function getFreeDaysMap() {
+  const now = new Date();
+  const today = ymdLocal(now);
+  const all = loadFromCache() || [];
+
+  const map = new Map();
+  for (const s of all) {
+    if (s.taken || !s.when) continue;
+    const d = new Date(s.when);
+    if (ymdLocal(d) === today && d.getTime() <= now.getTime()) continue; // odfiltruj przeszłe godziny dziś
+    const key = ymdLocal(d);
+    map.set(key, (map.get(key) || 0) + 1);
+  }
+  return map;
+}

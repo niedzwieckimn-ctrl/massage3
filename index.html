@@ -43,7 +43,7 @@
 </div>
 <div>
 <label>Data *</label>
-<input class="input" id="date" required="" type="date"/>
+<input class="input" id="date" required="" type="text"/>
 </div>
 <div>
 <label>Godzina *</label>
@@ -371,6 +371,100 @@ window.addEventListener('storage', (e) => {
 <script src="assets/supabase-client.js"></script>
 <script src="assets/app.calendar.js"></script>
 <script src="assets/cloud-slots-adapter.js"></script>
+<script>
+  // proste YYYY-MM-DD z czasu lokalnego
+  function ymd(d){
+    var x = new Date(d);
+    var y = x.getFullYear();
+    var m = String(x.getMonth()+1).padStart(2,'0');
+    var dd= String(x.getDate()).padStart(2,'0');
+    return y+'-'+m+'-'+dd;
+  }
+
+  function readSlotsFromLS(){
+    try { return JSON.parse(localStorage.getItem('slots')||'[]')||[]; }
+    catch(_) { return []; }
+  }
+
+  // zlicza wolne sloty per dzień (uwzględnia „dziś” > teraz)
+  function buildFreeDaysMap(){
+    var now = new Date();
+    var today = ymd(now);
+    var all = (window.CloudSlots && typeof CloudSlots.get==='function')
+      ? CloudSlots.get()
+      : readSlotsFromLS();
+
+    var map = {};
+    for (var i=0;i<all.length;i++){
+      var s = all[i];
+      if (!s || s.taken || !s.when) continue;
+      var d = new Date(s.when);
+      var k = ymd(d);
+      if (k===today && d.getTime()<=now.getTime()) continue; // przeszłe godziny dziś – pomiń
+      map[k] = (map[k]||0) + 1;
+    }
+    return map;
+  }
+
+  // lekki styl do podświetlania
+  (function injectCalendarStyles(){
+    var style = document.createElement('style');
+    style.textContent = `
+      .flatpickr-day.has-slots{ box-shadow: inset 0 -2px 0 0 currentColor; color: var(--success); border-color: var(--success); }
+      .flatpickr-day.no-slots{ opacity:.45; }
+      .flatpickr-day.has-slots::after{ content: attr(data-count); position:absolute; bottom:2px; right:4px; font-size:10px; }
+    `;
+    document.head.appendChild(style);
+  })();
+
+  document.addEventListener('DOMContentLoaded', function(){
+    var dateInput = document.getElementById('date');
+    if(!dateInput || !window.flatpickr) return;
+
+    var freeMap = buildFreeDaysMap();
+
+    // inicjalizacja flatpickr
+    window.fp = flatpickr(dateInput, {
+      dateFormat: 'Y-m-d',
+      minDate: 'today',
+      onDayCreate: function(dObj, dStr, inst, dayElem){
+        var key = ymd(dayElem.dateObj || dObj);
+        dayElem.classList.remove('has-slots','no-slots');
+        if (freeMap[key]){
+          dayElem.classList.add('has-slots');
+          dayElem.setAttribute('data-count', freeMap[key]);
+        } else {
+          dayElem.classList.add('no-slots');
+          dayElem.removeAttribute('data-count');
+        }
+      },
+      onMonthChange: function(){ freeMap = buildFreeDaysMap(); },
+      onYearChange:  function(){ freeMap = buildFreeDaysMap(); },
+      onOpen:        function(){ freeMap = buildFreeDaysMap(); },
+      onChange: function(selectedDates){
+        var d = selectedDates && selectedDates[0];
+        if(!d) return;
+        // jeśli masz już działające odświeżanie godzin po zmianie #date — nic nie rób
+        // (input dostaje wartość Y-m-d automatycznie)
+      }
+    });
+
+    // gdy sloty się zaktualizują – przerysuj kalendarz
+    window.addEventListener('slots-synced', function(){
+      freeMap = buildFreeDaysMap();
+      if(window.fp && window.fp.redraw) window.fp.redraw();
+    });
+
+    // oraz gdy LS zmieni 'slots' (np. inna karta)
+    window.addEventListener('storage', function(e){
+      if(e.key==='slots'){
+        freeMap = buildFreeDaysMap();
+        if(window.fp && window.fp.redraw) window.fp.redraw();
+      }
+    });
+  });
+</script>
+
 <script src="assets/app.helpers.js"></script>
 <script src="assets/send-email.js"></script> <!-- helper frontowy do maili -->
 <script src="assets/app.booking.js"></script>
