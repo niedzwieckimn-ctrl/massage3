@@ -157,34 +157,43 @@ const r = await dbCreateBooking({
       if (window.fp?.redraw) window.fp.redraw();
 
       // 5) e-mail do masażystki (nie blokuje sukcesu rezerwacji)
-      try {
-        const opt = el('#time')?.selectedOptions?.[0];
-const whenISO =
-  opt?.dataset?.when
-  || ((Store.get('slots',[])||[]).find(s=>s.id===slotId)?.when) // fallback z cache
-  || null;
-const whenStr = whenISO
-  ? new Date(whenISO).toLocaleString('pl-PL',{dateStyle:'full', timeStyle:'short'})
-  : '';
+try {
+  // 5a) wyciągnij ISO terminu z <option data-when> albo z cache slots
+  const opt = document.querySelector('#time option:checked');
+  const whenISO =
+    opt?.dataset?.when ||
+    ((Store.get('slots', []) || []).find(s => s.id === slotId)?.when) ||
+    null;
 
-        const services = await dbLoadServices();
-        const service = (services || []).find(s => s.id === serviceId) || { name: '(brak)' };
+  // 5b) ładny format PL
+  const whenStr = whenISO
+    ? new Date(whenISO).toLocaleString('pl-PL', { dateStyle: 'full', timeStyle: 'short' })
+    : '';
 
-        const html = `
-          <h2>Nowa rezerwacja</h2>
-          <p><b>Nr rezerwacji:</b> ${bookingNo}</p>
-          <p><b>Termin:</b> ${whenStr}</p>
-          <p><b>Zabieg:</b> ${service.name}</p>
-          <p><b>Klient:</b> ${name}</p>
-          <p><b>Adres / kontakt:</b><br>${address}<br>Tel: ${phone}<br>Email: ${email}</p>
-          ${notes ? `<p><b>Uwagi:</b> ${notes}</p>` : ''}
-        `;
-        if (window.sendEmail) {
-          await window.sendEmail({ subject: `Nowa rezerwacja — ${whenStr}`, html });
-        }
-      } catch (mailErr) {
-        console.warn('[email] nie wysłano (nie blokuje):', mailErr);
-      }
+  // 5c) nazwa usługi
+  const services = await dbLoadServices();
+  const service = (services || []).find(s => s.id === serviceId) || { name: '' };
+
+  // 5d) treść maila
+  const html = `
+    <h3>Nowa rezerwacja</h3>
+    <p><b>Nr rezerwacji:</b> ${bookingNo || ''}</p>
+    <p><b>Termin:</b> ${whenStr}</p>
+    <p><b>Zabieg:</b> ${service.name || ''}</p>
+    <p><b>Klient:</b> ${name || ''}</p>
+    <p><b>Adres / kontakt:</b><br>
+      ${address || ''}<br>
+      Tel: ${phone || ''}<br>
+      Email: ${email || ''}
+    </p>
+  `;
+
+  if (window.sendEmail) {
+    await window.sendEmail(`Nowa rezerwacja Nr: ${bookingNo} Termin: ${whenStr}`, html);
+  }
+} catch (e) {
+  console.warn('email error', e);
+}
 
       // 6) komunikat + reset
       const thanks = document.getElementById('bookingThanks');
