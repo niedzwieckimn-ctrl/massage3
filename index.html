@@ -398,6 +398,31 @@ window.addEventListener('storage', (e) => {
     }
   });
 </script>
+<script>
+  // Wymuś PL na istniejącym już pickerze (jeśli został zainicjowany wcześniej)
+  document.addEventListener('DOMContentLoaded', function () {
+    var dateEl = document.getElementById('date');
+    if (!dateEl || !window.flatpickr) return;
+
+    // jeśli instancja już istnieje – przestaw locale „na żywo”
+    if (dateEl._flatpickr) {
+      dateEl._flatpickr.set('locale', window.flatpickr.l10ns.pl);
+      // poniedziałek jako pierwszy dzień (gdyby locale nie nadpisało)
+      dateEl._flatpickr.set('firstDayOfWeek', 1);
+      dateEl._flatpickr.redraw();
+      return;
+    }
+
+    // jeśli instancji nie ma, zainicjuj od razu z PL
+    flatpickr(dateEl, {
+      locale: window.flatpickr.l10ns.pl,
+      dateFormat: 'Y-m-d',
+      minDate: 'today',
+      disableMobile: true,
+      static: true
+    });
+  });
+</script>
 
 <script>
   // proste YYYY-MM-DD z czasu lokalnego
