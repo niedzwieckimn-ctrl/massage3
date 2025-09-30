@@ -488,6 +488,14 @@ window.addEventListener('storage', (e) => {
 <script src="assets/app.booking.js"></script>
 
 <!-- Prosty adapter na stronie publicznej -->
+<script>
+  window.addEventListener('error', e => {
+    console.log('[GLOBAL ERROR]', e.message, 'at', e.filename+':'+e.lineno+':'+e.colno);
+  });
+  window.addEventListener('unhandledrejection', e => {
+    console.log('[PROMISE REJECTION]', e.reason);
+  });
+</script>
 </body>
 </html>
 
