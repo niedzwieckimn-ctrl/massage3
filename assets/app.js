@@ -76,106 +76,11 @@ function renderTimeOptions(){
   timeSel.disabled = false;
 }
 
-// --- e-mail (Netlify Function) — do masażystki po złożeniu rezerwacji
-const SEND_ENDPOINT = '/.netlify/functions/send-email';
-async function sendEmail({to, subject, html}) {
-  const r = await fetch(SEND_ENDPOINT, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({to, subject, html})
-  });
-  if (!r.ok) throw new Error('Email HTTP ' + r.status);
-}
-
-async function handleSubmit(e){
-  e.preventDefault();
-  const btn = e.submitter || el('button[type=submit]', e.target);
-  if (btn) btn.disabled = true;
-
-  // numer rezerwacji
-  const bookingNo = Math.floor(10000 + Math.random() * 90000);
-
-  // pola formularza
-  const rodo      = el('#rodo').checked;
-  const name      = el('#name').value.trim();
-  const email     = el('#email').value.trim();
-  const phone     = el('#phone').value.trim();
-  const address   = el('#address').value.trim();
-  const serviceId = el('#service').value;
-  const slotId    = el('#time').value;
-  const notes     = el('#notes').value.trim();
-
-  if(!rodo){ alert('Musisz wyrazić zgodę RODO.'); if(btn) btn.disabled=false; return; }
-  if(!name || !email || !phone || !serviceId || !slotId){
-    alert('Uzupełnij wszystkie wymagane pola.'); if(btn) btn.disabled=false; return;
-  }
-
-  // wczytaj opis zabiegu do maila
-  const svc = await dbLoadServices();
-  const service = (svc||[]).find(s => s.id === serviceId) || { name:'(brak)', price:0 };
-
-  try {
-    // 1) klient: znajdź/utwórz (funkcja masz w index.html)
-    const client_id = await dbEnsureClient({ name, email, phone, address });
-    if(!client_id) throw new Error('Nie udało się zapisać klienta.');
-
-    // 2) rezerwacja w Supabase (funkcja masz w index.html)
-    const r = await dbCreateBooking({ slot_id: slotId, service_id: serviceId, client_id, notes });
-    if (!r.ok) throw new Error('Nie udało się utworzyć rezerwacji.');
-
-    // 3) oznacz slot jako zajęty (Supabase)
-    const { error: markErr } = await window.sb
-      .from('slots')
-      .update({ taken: true })
-      .eq('id', slotId);
-    if (markErr) throw markErr;
-
-    // 4) odśwież cache slotów (CloudSlots) i UI
-    if (window.CloudSlots) { await window.CloudSlots.pull(); }
-    if (window.fp?.redraw) window.fp.redraw();
-
-    // 5) e-mail do masażystki (Netlify Function)
-    try {
-      const whenOpt = el('#time').selectedOptions?.[0];
-      const whenStr = whenOpt?.dataset?.when
-        ? new Date(whenOpt.dataset.when).toLocaleString('pl-PL',{dateStyle:'full',timeStyle:'short'})
-        : '';
-      const html = `
-        <h2>Nowa rezerwacja</h2>
-        <p><b>Nr rezerwacji:</b> ${bookingNo}</p>
-        <p><b>Termin:</b> ${whenStr}</p>
-        <p><b>Zabieg:</b> ${service.name}</p>
-        <p><b>Klient:</b> ${name}</p>
-        <p><b>Adres / kontakt:</b><br>${address}<br>Tel: ${phone}<br>Email: ${email}</p>
-        ${notes ? `<p><b>Uwagi:</b> ${notes}</p>` : ''}
-      `;
-      // masz helper window.sendEmail już w index.html
-      await window.sendEmail({ subject: `Nowa rezerwacja — ${whenStr}`, html });
-    } catch (mailErr) {
-      console.warn('[email] nie wysłano (ok, nie blokuje rezerwacji):', mailErr);
-    }
-
-    // 6) feedback i reset
-    const thanks = document.getElementById('bookingThanks');
-    if (thanks){ thanks.classList.add('show'); setTimeout(()=>thanks.classList.remove('show'), 4000); }
-    e.target.reset();
-    renderTimeOptions();
-    alert('Dziękujemy! Rezerwacja złożona — poczekaj na potwierdzenie.');
-
-  } catch (err) {
-    console.error('[booking] błąd', err);
-    alert('Nie udało się złożyć rezerwacji. Spróbuj ponownie.');
-  } finally {
-    if (btn) btn.disabled = false;
-  }
-}
-
 // --- init
 document.addEventListener('DOMContentLoaded', ()=>{
   ensureServicesSeed();              // jeśli pusto – zasiej 1 usługę
   renderServicesSelect();
   el('#date')?.addEventListener('change', renderTimeOptions);
-  el('#form')?.addEventListener('submit', handleSubmit);
   el('#date')?.setAttribute('min', new Date().toISOString().slice(0,10));
   // stopka kontakt
   const s = Store.get('settings',{}); el('#contact').textContent = `${s.contactEmail||''} • ${s.contactTel||''}`;
@@ -217,22 +122,3 @@ window.addEventListener('slots-synced', () => {
     }
   } catch (e) { console.warn('slots-synced handler error', e); }
 });
-async function sendEmail(subject, html) {
-  try {
-    const r = await fetch('/.netlify/functions/send-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subject, html })
-    });
-
-    if (!r.ok) {
-      const text = await r.text();
-      throw new Error('Email HTTP ' + r.status + ' - ' + text);
-    }
-
-    return await r.json();
-  } catch (err) {
-    console.error('sendEmail error:', err);
-    throw err;
-  }
-}
