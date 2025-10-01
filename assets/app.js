@@ -172,9 +172,9 @@ if (whenISO) {
 // e-mail do masażystki (nie blokuje UX)
 try {
   if (window.sendEmail) {
-    const subject = `Nowa rezerwacja #${bookingNo} – ${whenStr}`;
+    const subject = `Masz nową rezerwację!😁⚡ #${bookingNo} – ${whenStr}`;
     const html = `
-      <h2>Nowa rezerwacja</h2>
+      <h2>Dane rezerwacji:</h2>
       <p><b>Nr rezerwacji:</b> ${bookingNo}</p>
       <p><b>Termin:</b> ${whenStr}</p>
       <p><b>Zabieg:</b> ${service?.name || '-'}</p>
