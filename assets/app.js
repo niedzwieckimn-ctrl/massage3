@@ -169,19 +169,6 @@ if (whenISO) {
   }
 }
 
-// budujemy string terminu
-let whenStr = '---';
-if (whenISO) {
-  try {
-    whenStr = new Date(whenISO).toLocaleString('pl-PL', {
-      dateStyle: 'full',
-      timeStyle: 'short'
-    });
-  } catch (e) {
-    console.error('Błąd przy formacie daty', e);
-  }
-}
-
 // e-mail do masażystki (nie blokuje UX)
 try {
   if (window.sendEmail) {
@@ -203,7 +190,6 @@ try {
 } catch (mailErr) {
   console.warn('[email] nie wysłano (nie blokuje):', mailErr);
 }
-
 
 
       // 6) komunikat + reset
