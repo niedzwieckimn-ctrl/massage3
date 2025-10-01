@@ -16,7 +16,7 @@ const Store = {
       {id:Store.uid(), name:'Masaż relaksacyjny 90 min', durationMin:90, price:250}
     ];
     const pin='2505';
-    const settings={contactEmail:'massage.n.spa@gmail.com', contactTel:'729 979 396', rodoText:'Wyrażam zgodę na przetwarzanie danych osobowych w celu realizacji rezerwacji.'};
+    const settings={contactEmail:'massages.n.spa@gmail.com', contactTel:'729 979 396', rodoText:'Wyrażam zgodę na przetwarzanie danych osobowych w celu realizacji rezerwacji.'};
     const slots=[ // available slots timestamps (ISO)
     ];
     const bookings=[];
