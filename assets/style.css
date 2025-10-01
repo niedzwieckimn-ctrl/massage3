@@ -298,4 +298,25 @@ textarea:-webkit-autofill:focus {
   border-color: #8B4513 !important;
   color: #fff !important;
 }
+/* 2) Ustal kolory dla wybranego dnia we wszystkich stanach */
+.flatpickr-calendar .dayContainer .flatpickr-day.selected,
+.flatpickr-calendar .dayContainer .flatpickr-day.selected:hover,
+.flatpickr-calendar .dayContainer .flatpickr-day.selected:focus,
+.flatpickr-calendar .dayContainer .flatpickr-day.startRange,
+.flatpickr-calendar .dayContainer .flatpickr-day.startRange:hover,
+.flatpickr-calendar .dayContainer .flatpickr-day.startRange:focus,
+.flatpickr-calendar .dayContainer .flatpickr-day.endRange,
+.flatpickr-calendar .dayContainer .flatpickr-day.endRange:hover,
+.flatpickr-calendar .dayContainer .flatpickr-day.endRange:focus {
+  background: #E0FFFF !important;   /* Twoje tło */
+  border-color: #8B4513 !important;  /* obrys */
+  color: #000 !important;
+}
+
+/* 3) Dzień „dzisiaj”, gdy NIE jest wybrany – bez tła */
+.flatpickr-calendar .dayContainer .flatpickr-day.today:not(.selected) {
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
 
