@@ -1,16 +1,7 @@
 // assets/app.calendar.js
 (function (global) {
   // ===== helpers =====
-
-function ymd(d) {
-  const x = new Date(d);
-  const y = x.getFullYear();
-  const m = String(x.getMonth() + 1).padStart(2, '0');
-  const dd = String(x.getDate()).padStart(2, '0');
-  return `${y}-${m}-${dd}`;   // ⬅︎ ten return był brakujący
-}
-
-
+  function ymd(d) { return new Date(d).toISOString().slice(0,10); }
   function byTime(a,b){ return new Date(a.when) - new Date(b.when); }
 
   function getSlots(){
@@ -31,51 +22,54 @@ function ymd(d) {
     return map;
   }
 
- function fillTimes(dateYmd) {
-  const timeSel = document.getElementById('time');
-  if (!timeSel) return;
+  // ===== główna funkcja: wypełnij godziny =====
+  function fillTimes(dateStr){
+    var timeEl = document.getElementById('time');
+    if (!timeEl) return;
 
-  // wyczyść
-  timeSel.innerHTML = '';
+    // wyczyść
+    timeEl.innerHTML = '';
 
-  // wczytaj sloty z cache
-  let slots = [];
-  try { slots = JSON.parse(localStorage.getItem('slots') || '[]') || []; } catch {}
+    var slots = getSlots();
+    var todays = [];
+    for (var i=0;i<slots.length;i++){
+      var s = slots[i];
+      if (!s.taken && ymd(s.when) === dateStr) todays.push(s);
+    }
+    todays.sort(byTime);
 
-  // filtr: wybrany dzień (po lokalnym YYYY-MM-DD), tylko wolne i w przyszłości (dla "dziś" – tylko przyszłe godziny)
-  const now = new Date();
-  const todayYmd = ymd(now);
+    if (todays.length === 0){
+      var none = new Option('Brak wolnych godzin','');
+      none.disabled = true; none.selected = true;
+      timeEl.add(none);
+      return;
+    }
 
-  const sameDay = (iso) => {
-    const d = new Date(iso);
-    return ymd(d) === dateYmd;
-  };
+    // jeżeli tylko jedna – ustaw automatycznie
+    if (todays.length === 1){
+      var t = new Date(todays[0].when);
+      var hh = String(t.getHours()).padStart(2,'0');
+      var mm = String(t.getMinutes()).padStart(2,'0');
+      var opt = new Option(hh+':'+mm, todays[0].id);
+      opt.selected = true;
+      timeEl.add(opt);
+      timeEl.dispatchEvent(new Event('change', { bubbles: true }));
+      return;
+    }
 
-  const isFutureIfToday = (iso) => {
-    const d = new Date(iso);
-    if (dateYmd === todayYmd) return d.getTime() > now.getTime();
-    return true;
-  };
+    // inaczej: placeholder + wszystkie godziny
+    var ph = new Option('Wybierz godzinę…','');
+    ph.disabled = true; ph.selected = true;
+    timeEl.add(ph);
 
-  const available = slots
-    .filter(s => !s.taken && s.when && sameDay(s.when) && isFutureIfToday(s.when))
-    .sort((a,b) => new Date(a.when) - new Date(b.when));
-
-  if (!available.length) {
-    timeSel.innerHTML = `<option value="">Brak wolnych godzin</option>`;
-    return;
+    for (var j=0;j<todays.length;j++){
+      var s2 = todays[j];
+      var tt = new Date(s2.when);
+      var hh2 = String(tt.getHours()).padStart(2,'0');
+      var mm2 = String(tt.getMinutes()).padStart(2,'0');
+      timeEl.add(new Option(hh2+':'+mm2, s2.id));
+    }
   }
-
-  timeSel.innerHTML = available.map(s => {
-    const t = new Date(s.when);
-    const hh = String(t.getHours()).padStart(2,'0');
-    const mm = String(t.getMinutes()).padStart(2,'0');
-    // value: ID slota — reszta logiki (zapisywanie rezerwacji) zakłada ID
-   return `<option value="${s.id}" data-when="${s.when}">${hh}:${mm}</option>`;
-
-  }).join('');
-}
-
 
   // ===== mount: ustaw datę i wypełnij godziny =====
   function mount(){
