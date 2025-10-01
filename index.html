@@ -190,7 +190,7 @@
 
 
 
-` 
+ 
 
 <!-- Poprawny baner "dziękujemy" (poza <script>) -->
 <style>
@@ -360,7 +360,8 @@ window.addEventListener('storage', (e) => {
             window.ModCalendar.fillTimes(ymdSel);
           }
         }
-     	onReady: function(selectedDates, dateStr, instance) {
+      },
+	  	onReady: function(selectedDates, dateStr, instance) {
   // tworzymy element <div> z komunikatem
   const note = document.createElement('div');
   note.textContent = 'Rezerwacja możliwa tylko z wyprzedzeniem 48h';
@@ -371,8 +372,8 @@ window.addEventListener('storage', (e) => {
 
   // dołączamy do kontenera kalendarza
   instance.calendarContainer.appendChild(note);
-},
- }
+}
+
     });
 
     // opcjonalnie: wstępne wypełnienie jeśli input ma wartość startową
@@ -502,7 +503,8 @@ window.addEventListener('storage', (e) => {
       if(e.key==='slots'){
         freeMap = buildFreeDaysMap();
         if(window.fp && window.fp.redraw) window.fp.redraw();
-      onReady: function(selectedDates, dateStr, instance) {
+      }
+	  	  	onReady: function(selectedDates, dateStr, instance) {
   // tworzymy element <div> z komunikatem
   const note = document.createElement('div');
   note.textContent = 'Rezerwacja możliwa tylko z wyprzedzeniem 48h';
@@ -513,7 +515,6 @@ window.addEventListener('storage', (e) => {
 
   // dołączamy do kontenera kalendarza
   instance.calendarContainer.appendChild(note);
-},
 }
     });
   });
