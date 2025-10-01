@@ -345,35 +345,34 @@ window.addEventListener('storage', (e) => {
     const dateInput = document.getElementById('date');
     if (!dateInput) return;
 
+    // Jeśli już gdzieś indziej zainicjalizowano flatpickr na #date, nie rób tego drugi raz
+    if (dateInput._flatpickr) return;
+
     const fp = flatpickr(dateInput, {
-	  locale: { ...flatpickr.l10ns.pl, firstDayOfWeek: 1 },
+      locale: { ...flatpickr.l10ns.pl, firstDayOfWeek: 1 },
       dateFormat: 'Y-m-d',
       minDate: 'today',
       onChange: (selectedDates) => {
         if (selectedDates && selectedDates[0]) {
-          const d = selectedDates[0];
-          const y = d.getFullYear();
-          const m = String(d.getMonth()+1).padStart(2,'0');
-          const dd = String(d.getDate()).padStart(2,'0');
+          const d  = selectedDates[0];
+          const y  = d.getFullYear();
+          const m  = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
           const ymdSel = `${y}-${m}-${dd}`;
           if (window.ModCalendar && typeof window.ModCalendar.fillTimes === 'function') {
             window.ModCalendar.fillTimes(ymdSel);
           }
         }
       },
-	  	onReady: function(selectedDates, dateStr, instance) {
-  // tworzymy element <div> z komunikatem
-  const note = document.createElement('div');
-  note.textContent = 'Rezerwacja możliwa tylko z wyprzedzeniem 48h';
-  note.style.fontSize = '12px';
-  note.style.color = '#b00';       // czerwony tekst
-  note.style.textAlign = 'center';
-  note.style.marginTop = '4px';
-
-  // dołączamy do kontenera kalendarza
-  instance.calendarContainer.appendChild(note);
-}
-
+      onReady: function(selectedDates, dateStr, instance) {
+        const note = document.createElement('div');
+        note.textContent = 'Rezerwacja możliwa tylko z wyprzedzeniem 48h';
+        note.style.fontSize = '12px';
+        note.style.color = '#b00';
+        note.style.textAlign = 'center';
+        note.style.marginTop = '4px';
+        instance.calendarContainer.appendChild(note);
+      }
     });
 
     // opcjonalnie: wstępne wypełnienie jeśli input ma wartość startową
@@ -382,6 +381,7 @@ window.addEventListener('storage', (e) => {
     }
   });
 </script>
+
 
 <script src="assets/send-email.js"></script>
 <script src="assets/app.js"></script>
@@ -464,10 +464,10 @@ window.addEventListener('storage', (e) => {
 
     // inicjalizacja flatpickr
     window.fp = flatpickr(dateInput, {
-	  locale: { ...flatpickr.l10ns.pl, firstDayOfWeek: 1 },
+      locale: { ...flatpickr.l10ns.pl, firstDayOfWeek: 1 },
       dateFormat: 'Y-m-d',
       minDate: 'today',
-	  disableMobile: true,   // wymuś nasz kalendarz zamiast natywnego
+      disableMobile: true,   // wymuś nasz kalendarz zamiast natywnego
       static: true,          // poprawne pozycjonowanie na mobilnych
 
       onDayCreate: function(dObj, dStr, inst, dayElem){
@@ -489,6 +489,16 @@ window.addEventListener('storage', (e) => {
         if(!d) return;
         // jeśli masz już działające odświeżanie godzin po zmianie #date — nic nie rób
         // (input dostaje wartość Y-m-d automatycznie)
+      },
+      // 👇 DODANE: komunikat na dole kalendarza
+      onReady: function(selectedDates, dateStr, instance) {
+        const note = document.createElement('div');
+        note.textContent = 'Rezerwacja możliwa tylko z wyprzedzeniem 48h';
+        note.style.fontSize = '12px';
+        note.style.color = '#b00';
+        note.style.textAlign = 'center';
+        note.style.marginTop = '4px';
+        instance.calendarContainer.appendChild(note);
       }
     });
 
@@ -504,20 +514,15 @@ window.addEventListener('storage', (e) => {
         freeMap = buildFreeDaysMap();
         if(window.fp && window.fp.redraw) window.fp.redraw();
       }
-	  	  	onReady: function(selectedDates, dateStr, instance) {
-  // tworzymy element <div> z komunikatem
-  const note = document.createElement('div');
-  note.textContent = 'Rezerwacja możliwa tylko z wyprzedzeniem 48h';
-  note.style.fontSize = '12px';
-  note.style.color = '#b00';       // czerwony tekst
-  note.style.textAlign = 'center';
-  note.style.marginTop = '4px';
+    });
 
-  // dołączamy do kontenera kalendarza
-  instance.calendarContainer.appendChild(note);
-}
+    // opcjonalnie: wstępne wypełnienie jeśli input ma wartość startową
+    if (dateInput.value && window.ModCalendar?.fillTimes) {
+      window.ModCalendar.fillTimes(dateInput.value);
+    }
   });
 </script>
+
 
 <script src="assets/app.helpers.js"></script>
 <script src="assets/app.booking.js"></script>
