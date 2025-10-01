@@ -294,7 +294,7 @@ textarea:-webkit-autofill:focus {
 .flatpickr-calendar .dayContainer .flatpickr-day.selected,
 .flatpickr-calendar .dayContainer .flatpickr-day.selected:focus,
 .flatpickr-calendar .dayContainer .flatpickr-day.selected:hover {
-  background: #E0FFFF !important;   /* <- Twój HEX/RGB */
+  background: #A0522D !important;   /* <- Twój HEX/RGB */
   border-color: #8B4513 !important;
   color: #fff !important;
 }
