@@ -309,8 +309,8 @@ textarea:-webkit-autofill:focus {
 .flatpickr-calendar .dayContainer .flatpickr-day.endRange:hover,
 .flatpickr-calendar .dayContainer .flatpickr-day.endRange:focus {
   background: #E0FFFF !important;   /* Twoje tło */
-  border-color: #8B4513 !important;  /* obrys */
-  color: #000 !important;
+  border-color: #008000 !important;  /* obrys */
+  color: #008000 !important;
 }
 
 /* 3) Dzień „dzisiaj”, gdy NIE jest wybrany – bez tła */
