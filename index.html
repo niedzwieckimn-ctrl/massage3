@@ -479,13 +479,27 @@ const cutoff48h = Date.now() + 48 * 60 * 60 * 1000; // teraz + 48h
       onMonthChange: function(){ freeMap = buildFreeDaysMap(); },
       onYearChange:  function(){ freeMap = buildFreeDaysMap(); },
       onOpen:        function(){ freeMap = buildFreeDaysMap(); },
-      onChange: function(selectedDates){
-        var d = selectedDates && selectedDates[0];
-        if(!d) return;
-        // jeśli masz już działające odświeżanie godzin po zmianie #date — nic nie rób
-        // (input dostaje wartość Y-m-d automatycznie)
-      }
-    });
+     onChange: function(selectedDates) {
+  var d = selectedDates && selectedDates[0];
+  if(!d) return;
+
+  const cutoff = Date.now() + 48 * 60 * 60 * 1000;
+  if (d.getTime() < cutoff) {
+    alert('Rezerwacja możliwa tylko z wyprzedzeniem 48h');
+    this.clear();   // czyści pole daty
+    return;
+  }
+
+  // jeśli OK → normalne działanie
+  var y = d.getFullYear();
+  var m = String(d.getMonth()+1).padStart(2,'0');
+  var dd = String(d.getDate()).padStart(2,'0');
+  var ymdSel = `${y}-${m}-${dd}`;
+  if (window.ModCalendar && typeof window.ModCalendar.fillTimes === 'function') {
+    window.ModCalendar.fillTimes(ymdSel);
+  }
+}
+
 
     // gdy sloty się zaktualizują – przerysuj kalendarz
     window.addEventListener('slots-synced', function(){
