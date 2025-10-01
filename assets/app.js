@@ -156,35 +156,55 @@ const r = await dbCreateBooking({
       renderTimeOptions();
       if (window.fp?.redraw) window.fp.redraw();
 
-      // 5) e-mail do masażystki (nie blokuje sukcesu rezerwacji)
-      try {
-        const opt = el('#time')?.selectedOptions?.[0];
-const whenISO =
-  opt?.dataset?.when
-  || ((Store.get('slots',[])||[]).find(s=>s.id===slotId)?.when) // fallback z cache
-  || null;
-const whenStr = whenISO
-  ? new Date(whenISO).toLocaleString('pl-PL',{dateStyle:'full', timeStyle:'short'})
-  : '';
+// budujemy string terminu
+let whenStr = '---';
+if (whenISO) {
+  try {
+    whenStr = new Date(whenISO).toLocaleString('pl-PL', {
+      dateStyle: 'full',
+      timeStyle: 'short'
+    });
+  } catch (e) {
+    console.error('Błąd przy formacie daty', e);
+  }
+}
 
-        const services = await dbLoadServices();
-        const service = (services || []).find(s => s.id === serviceId) || { name: '(brak)' };
+// budujemy string terminu
+let whenStr = '---';
+if (whenISO) {
+  try {
+    whenStr = new Date(whenISO).toLocaleString('pl-PL', {
+      dateStyle: 'full',
+      timeStyle: 'short'
+    });
+  } catch (e) {
+    console.error('Błąd przy formacie daty', e);
+  }
+}
 
-        const html = `
-          <h2>Nowa rezerwacja</h2>
-          <p><b>Nr rezerwacji:</b> ${bookingNo}</p>
-          <p><b>Termin:</b> ${whenStr}</p>
-          <p><b>Zabieg:</b> ${service.name}</p>
-          <p><b>Klient:</b> ${name}</p>
-          <p><b>Adres / kontakt:</b><br>${address}<br>Tel: ${phone}<br>Email: ${email}</p>
-          ${notes ? `<p><b>Uwagi:</b> ${notes}</p>` : ''}
-        `;
-        if (window.sendEmail) {
-          await window.sendEmail({ subject: `Nowa rezerwacja — ${whenStr}`, html });
-        }
-      } catch (mailErr) {
-        console.warn('[email] nie wysłano (nie blokuje):', mailErr);
-      }
+// e-mail do masażystki (nie blokuje UX)
+try {
+  if (window.sendEmail) {
+    const subject = `Nowa rezerwacja #${bookingNo} – ${whenStr}`;
+    const html = `
+      <h2>Nowa rezerwacja</h2>
+      <p><b>Nr rezerwacji:</b> ${bookingNo}</p>
+      <p><b>Termin:</b> ${whenStr}</p>
+      <p><b>Zabieg:</b> ${service?.name || '-'}</p>
+      <p><b>Klient:</b> ${name}</p>
+      <p><b>Adres / kontakt:</b><br>${address || ''}<br>Tel: ${phone || ''}<br>Email: ${email || ''}</p>
+      ${notes ? `<p><b>Uwagi:</b><br>${notes}</p>` : ''}
+    `;
+    await window.sendEmail(String(subject), String(html));
+    console.log('[MAIL OK]');
+  } else {
+    console.warn('[email] window.sendEmail nie jest załadowane');
+  }
+} catch (mailErr) {
+  console.warn('[email] nie wysłano (nie blokuje):', mailErr);
+}
+
+
 
       // 6) komunikat + reset
       const thanks = document.getElementById('bookingThanks');
