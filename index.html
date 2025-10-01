@@ -105,7 +105,6 @@
     } catch (e) {
       console.warn('[public] services crash:', e);
     }
-	
   });
 </script>
 
@@ -191,7 +190,7 @@
 
 
 
- 
+` 
 
 <!-- Poprawny baner "dziękujemy" (poza <script>) -->
 <style>
@@ -367,19 +366,8 @@ window.addEventListener('storage', (e) => {
     // opcjonalnie: wstępne wypełnienie jeśli input ma wartość startową
     if (dateInput.value && window.ModCalendar?.fillTimes) {
       window.ModCalendar.fillTimes(dateInput.value);
-    }onReady: function(selectedDates, dateStr, instance) {
-  // tworzymy element <div> z komunikatem
-  const note = document.createElement('div');
-  note.textContent = 'Rezerwacja możliwa tylko z wyprzedzeniem 48h';
-  note.style.fontSize = '12px';
-  note.style.color = '#b00';       // czerwony tekst
-  note.style.textAlign = 'center';
-  note.style.marginTop = '4px';
-
-  // dołączamy do kontenera kalendarza
-  instance.calendarContainer.appendChild(note);
-},
-onReady: function(selectedDates, dateStr, instance) {
+    }
+	onReady: function(selectedDates, dateStr, instance) {
   // tworzymy element <div> z komunikatem
   const note = document.createElement('div');
   note.textContent = 'Rezerwacja możliwa tylko z wyprzedzeniem 48h';
@@ -502,19 +490,6 @@ onReady: function(selectedDates, dateStr, instance) {
         // jeśli masz już działające odświeżanie godzin po zmianie #date — nic nie rób
         // (input dostaje wartość Y-m-d automatycznie)
       }
-	  onReady: function(selectedDates, dateStr, instance) {
-  // tworzymy element <div> z komunikatem
-  const note = document.createElement('div');
-  note.textContent = 'Rezerwacja możliwa tylko z wyprzedzeniem 48h';
-  note.style.fontSize = '12px';
-  note.style.color = '#b00';       // czerwony tekst
-  note.style.textAlign = 'center';
-  note.style.marginTop = '4px';
-
-  // dołączamy do kontenera kalendarza
-  instance.calendarContainer.appendChild(note);
-},
-
     });
 
     // gdy sloty się zaktualizują – przerysuj kalendarz
@@ -529,6 +504,19 @@ onReady: function(selectedDates, dateStr, instance) {
         freeMap = buildFreeDaysMap();
         if(window.fp && window.fp.redraw) window.fp.redraw();
       }
+	 onReady: function(selectedDates, dateStr, instance) {
+  // tworzymy element <div> z komunikatem
+  const note = document.createElement('div');
+  note.textContent = 'Rezerwacja możliwa tylko z wyprzedzeniem 48h';
+  note.style.fontSize = '12px';
+  note.style.color = '#b00';       // czerwony tekst
+  note.style.textAlign = 'center';
+  note.style.marginTop = '4px';
+
+  // dołączamy do kontenera kalendarza
+  instance.calendarContainer.appendChild(note);
+},
+ 
     });
   });
 </script>
