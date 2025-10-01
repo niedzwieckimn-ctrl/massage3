@@ -6,7 +6,7 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>Massages &amp; SPA — Rezerwacja</title>
-<rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <link href="assets/style.css" rel="stylesheet">
 
 
@@ -348,7 +348,7 @@ window.addEventListener('storage', (e) => {
     const fp = flatpickr(dateInput, {
 	  locale: { ...flatpickr.l10ns.pl, firstDayOfWeek: 1 },
       dateFormat: 'Y-m-d',
-      minDate: new Date(Date.now() + 48 * 60 * 60 * 1000),
+      minDate: 'today',
       onChange: (selectedDates) => {
         if (selectedDates && selectedDates[0]) {
           const d = selectedDates[0];
@@ -453,8 +453,7 @@ window.addEventListener('storage', (e) => {
     window.fp = flatpickr(dateInput, {
 	  locale: { ...flatpickr.l10ns.pl, firstDayOfWeek: 1 },
       dateFormat: 'Y-m-d',
-      minDate: new Date(Date.now() + 48 * 60 * 60 * 1000),
-
+      minDate: 'today',
 	  disableMobile: true,   // wymuś nasz kalendarz zamiast natywnego
       static: true,          // poprawne pozycjonowanie na mobilnych
 
