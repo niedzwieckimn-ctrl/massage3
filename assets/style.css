@@ -206,10 +206,11 @@ tbody tr td:last-child {border-top-right-radius:10px;border-bottom-right-radius:
 .flatpickr-day.selected,
 .flatpickr-day.startRange,
 .flatpickr-day.endRange {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: #fff;
+  background: transparent !important;  /* bez ciemnego tła */
+  border-color: currentColor !important; /* zostaje zielona ramka */
+  color: inherit !important;            /* numer dnia normalny */
 }
+
 .flatpickr-day:hover {
   border-color: var(--brand);
   background: rgba(160, 120, 40, 0.1);
@@ -288,4 +289,28 @@ textarea:-webkit-autofill:focus {
   .logo img {
     max-width: 200px;   /* np. 160px na mobile */
   }
+}
+:root { --success: #16a34a; } /* zielony fallback */
+
+.flatpickr-day.has-slots{ box-shadow: inset 0 -2px 0 0 currentColor; color: var(--success); border-color: var(--success); }
+.flatpickr-day.no-slots{ opacity:.45; }
+.flatpickr-day.has-slots::after{ content: attr(data-count); position:absolute; bottom:2px; right:4px; font-size:10px; }
+  // …
+/* Wybrany dzień – mój kolor, przebija Flatpickra */
+.flatpickr-calendar .dayContainer .flatpickr-day.selected,
+.flatpickr-calendar .dayContainer .flatpickr-day.selected:focus,
+.flatpickr-calendar .dayContainer .flatpickr-day.selected:hover {
+  background: #E0FFFF !important;   /* <- Twój HEX/RGB */
+  border-color: #8B4513 !important;
+  color: #fff !important;
+}
+.flatpickr-calendar .dayContainer .flatpickr-day.startRange,
+.flatpickr-calendar .dayContainer .flatpickr-day.endRange,
+.flatpickr-calendar .dayContainer .flatpickr-day.startRange:hover,
+.flatpickr-calendar .dayContainer .flatpickr-day.endRange:hover,
+.flatpickr-calendar .dayContainer .flatpickr-day.startRange:focus,
+.flatpickr-calendar .dayContainer .flatpickr-day.endRange:focus {
+  background: #E0FFFF !important;
+  border-color: #8B4513 !important;
+  color: #fff !important;
 }
