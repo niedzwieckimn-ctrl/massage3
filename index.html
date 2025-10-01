@@ -6,9 +6,15 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>Massages &amp; SPA — Rezerwacja</title>
-<link href="assets/style.css" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<link href="assets/style.css" rel="stylesheet">
+
+
+<!-- Flatpickr JS z lokalizacjami -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pl.js"></script>
+
+<a href="https://www.massagesandspa.pl" class="back-home">← Powrót</a>
 
 </head>
 <body>
@@ -43,7 +49,7 @@
 </div>
 <div>
 <label>Data *</label>
-<input class="input" id="date" required="" type="date"/>
+<input class="input" id="date" required="" type="text" readonly />
 </div>
 <div>
 <label>Godzina *</label>
@@ -64,6 +70,8 @@
 </div>
 <div class="footer">© Massages &amp; SPA • <span id="contact"></span></div>
 </div>
+
+
 
 <script>
   // SUPABASE → render #service (nadpisujemy select, więc nie będzie duplikatów)
@@ -130,64 +138,59 @@
     return created?.id || null;
   }
 
-  async function dbCreateBooking({slot_id, service_id, client_id, notes}){
-    const { data: booking, error: e1 } = await sb
+</script>
+<script>
+  async function dbCreateBooking({
+    slot_id, service_id, client_id, notes,
+    service_name, client_name, client_email, phone,
+    address, booking_no, slot_when
+  }){
+    // pakiet do inserta
+    let ins = {
+      slot_id,
+      service_id,
+      client_id,
+      notes: notes || null,
+      service_name: service_name || null,
+      client_name: client_name || null,
+      client_email: client_email || null,
+      phone: phone || null,
+      address: address || null,       // kolumna 'address' (text)
+      booking_no: booking_no || null, // kolumna 'booking_no' (text)
+      slot_when: slot_when || null    // kolumna 'slot_when' (timestamptz)
+    };
+
+    // podejście 1: z pełnym zestawem pól
+    let res = await sb
       .from('bookings')
-      .insert({ slot_id, service_id, client_id, notes })
-      .select('id, created_at')
+      .insert(ins)
+      .select('id, created_at, booking_no, slot_when')
       .single();
-    if(e1){ console.warn('[public] booking insert error:', e1); return { ok:false, error:e1 }; }
 
-    // oznacz slot jako zajęty
-    const { error: e2 } = await sb
-      .from('slots')
-      .update({ taken: true })
-      .eq('id', slot_id);
-    if(e2){ console.warn('[public] slot mark taken error:', e2); }
+    // fallback, gdyby któraś kolumna nie istniała (kod 42703)
+    if (res.error && String(res.error.code) === '42703') {
+      if (res.error.message.includes('address'))    delete ins.address;
+      if (res.error.message.includes('booking_no')) delete ins.booking_no;
+      if (res.error.message.includes('slot_when'))  delete ins.slot_when;
 
-    return { ok:true, booking };
+      res = await sb
+        .from('bookings')
+        .insert(ins)
+        .select('id, created_at, booking_no, slot_when')
+        .single();
+    }
+
+    if (res.error) {
+      console.warn('[public] booking insert error:', res.error);
+      return { ok: false, error: res.error };
+    }
+    return { ok: true, booking: res.data };
   }
 </script>
 
-<script>
-  // SUPABASE → LocalStorage: services + slots, potem odśwież UI
-  document.addEventListener('DOMContentLoaded', async () => {
-    if (!window.sb) return;
-    try {
-      const [{ data: svc, error: e1 }, { data: slots, error: e2 }] = await Promise.all([
-        window.sb.from('services')
-          .select('id, name, price, duration_min, active')
-          .eq('active', true)
-          .order('name', { ascending: true }),
-        window.sb.from('slots')
-          .select('id, when, taken')
-          .eq('taken', false)
-          .order('when', { ascending: true })
-      ]);
 
-      if (!e1 && Array.isArray(svc)) {
-        localStorage.setItem('services', JSON.stringify(svc));
-        const sel = document.getElementById('service');
-        if (sel) {
-          sel.innerHTML = '<option value="">Wybierz zabieg</option>' +
-            svc.map(s => {
-              const price = (Number(s.price) || 0).toFixed(2).replace('.', ',');
-              return `<option value="${s.id}" data-name="${s.name}">${s.name} — ${price} zł</option>`;
-            }).join('');
-        }
-      }
 
-      if (!e2 && Array.isArray(slots)) {
-        localStorage.setItem('slots', JSON.stringify(slots));
-        if (typeof window.renderTimeOptions === 'function') {
-          window.renderTimeOptions();
-        }
-      }
-    } catch (err) {
-      console.warn('[public sync] fail:', err);
-    }
-  });
-</script>
+ 
 
 <!-- Poprawny baner "dziękujemy" (poza <script>) -->
 <style>
@@ -211,7 +214,7 @@
 #bookingThanks.show { display:block; }
 
 </style>
-<div id="bookingThanks">Dziękujemy za dokonanie rezerwacji, poczekaj na jej potwierdzenie!</div>
+<div id="bookingThanks">Dziękujemy za dokonanie rezerwacji </br> poczekaj na jej potwierdzenie!</div>
 <!-- Toast / Banner -->
 <div id="toast" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%) scale(0.98);opacity:0;z-index:9999;min-width:280px;max-width:90vw;padding:14px 18px;border-radius:12px;font:500 14px/1.4 system-ui,-apple-system,'Segoe UI',Roboto; box-shadow:0 8px 30px rgba(0,0,0,.22); transition:opacity .18s ease, transform .18s ease; pointer-events:none;">
   <span id="toast-text"></span>
@@ -337,16 +340,173 @@ window.addEventListener('storage', (e) => {
     }
   };
 </script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const dateInput = document.getElementById('date');
+    if (!dateInput) return;
 
+    const fp = flatpickr(dateInput, {
+	  locale: { ...flatpickr.l10ns.pl, firstDayOfWeek: 1 },
+      dateFormat: 'Y-m-d',
+      minDate: 'today',
+      onChange: (selectedDates) => {
+        if (selectedDates && selectedDates[0]) {
+          const d = selectedDates[0];
+          const y = d.getFullYear();
+          const m = String(d.getMonth()+1).padStart(2,'0');
+          const dd = String(d.getDate()).padStart(2,'0');
+          const ymdSel = `${y}-${m}-${dd}`;
+          if (window.ModCalendar && typeof window.ModCalendar.fillTimes === 'function') {
+            window.ModCalendar.fillTimes(ymdSel);
+          }
+        }
+      }
+    });
+
+    // opcjonalnie: wstępne wypełnienie jeśli input ma wartość startową
+    if (dateInput.value && window.ModCalendar?.fillTimes) {
+      window.ModCalendar.fillTimes(dateInput.value);
+    }
+  });
+</script>
+
+<script src="assets/send-email.js"></script>
 <script src="assets/app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/supabase-client.js"></script>
+``<script src="assets/supabase-client.js"></script>
+<script src="assets/app.calendar.js"></script>
 <script src="assets/cloud-slots-adapter.js"></script>
+<script>
+  // start: ściągnij sloty i odśwież kalendarz
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (window.CloudSlots) {
+      await window.CloudSlots.pull();
+      if (window.fp?.redraw) window.fp.redraw();
+      // ustaw pierwszy dzień z wolnymi terminami
+      const slots = CloudSlots.get();
+      if (slots.length) {
+        const d = new Date(slots[0].when);
+        const ymd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const dateEl = document.getElementById('date');
+        if (dateEl && !dateEl.value) {
+          dateEl.value = ymd;
+          dateEl.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+    }
+  });
+</script>
+
+<script>
+  // proste YYYY-MM-DD z czasu lokalnego
+  function ymd(d){
+    var x = new Date(d);
+    var y = x.getFullYear();
+    var m = String(x.getMonth()+1).padStart(2,'0');
+    var dd= String(x.getDate()).padStart(2,'0');
+    return y+'-'+m+'-'+dd;
+  }
+
+  function readSlotsFromLS(){
+    try { return JSON.parse(localStorage.getItem('slots')||'[]')||[]; }
+    catch(_) { return []; }
+  }
+
+  // zlicza wolne sloty per dzień (uwzględnia „dziś” > teraz)
+  function buildFreeDaysMap(){
+    var now = new Date();
+    var today = ymd(now);
+    var all = (window.CloudSlots && typeof CloudSlots.get==='function')
+      ? CloudSlots.get()
+      : readSlotsFromLS();
+
+    var map = {};
+    for (var i=0;i<all.length;i++){
+      var s = all[i];
+      if (!s || s.taken || !s.when) continue;
+      var d = new Date(s.when);
+      var k = ymd(d);
+      if (k===today && d.getTime()<=now.getTime()) continue; // przeszłe godziny dziś – pomiń
+      map[k] = (map[k]||0) + 1;
+    }
+    return map;
+  }
+
+  // lekki styl do podświetlania
+  (function injectCalendarStyles(){
+    var style = document.createElement('style');
+    style.textContent = `
+      .flatpickr-day.has-slots{ box-shadow: inset 0 -2px 0 0 currentColor; color: var(--success); border-color: var(--success); }
+      .flatpickr-day.no-slots{ opacity:.45; }
+      .flatpickr-day.has-slots::after{ content: attr(data-count); position:absolute; bottom:2px; right:4px; font-size:10px; }
+    `;
+    document.head.appendChild(style);
+  })();
+
+  document.addEventListener('DOMContentLoaded', function(){
+    var dateInput = document.getElementById('date');
+    if(!dateInput || !window.flatpickr) return;
+
+    var freeMap = buildFreeDaysMap();
+
+    // inicjalizacja flatpickr
+    window.fp = flatpickr(dateInput, {
+	  locale: { ...flatpickr.l10ns.pl, firstDayOfWeek: 1 },
+      dateFormat: 'Y-m-d',
+      minDate: 'today',
+	  disableMobile: true,   // wymuś nasz kalendarz zamiast natywnego
+      static: true,          // poprawne pozycjonowanie na mobilnych
+
+      onDayCreate: function(dObj, dStr, inst, dayElem){
+        var key = ymd(dayElem.dateObj || dObj);
+        dayElem.classList.remove('has-slots','no-slots');
+        if (freeMap[key]){
+          dayElem.classList.add('has-slots');
+          dayElem.setAttribute('data-count', freeMap[key]);
+        } else {
+          dayElem.classList.add('no-slots');
+          dayElem.removeAttribute('data-count');
+        }
+      },
+      onMonthChange: function(){ freeMap = buildFreeDaysMap(); },
+      onYearChange:  function(){ freeMap = buildFreeDaysMap(); },
+      onOpen:        function(){ freeMap = buildFreeDaysMap(); },
+      onChange: function(selectedDates){
+        var d = selectedDates && selectedDates[0];
+        if(!d) return;
+        // jeśli masz już działające odświeżanie godzin po zmianie #date — nic nie rób
+        // (input dostaje wartość Y-m-d automatycznie)
+      }
+    });
+
+    // gdy sloty się zaktualizują – przerysuj kalendarz
+    window.addEventListener('slots-synced', function(){
+      freeMap = buildFreeDaysMap();
+      if(window.fp && window.fp.redraw) window.fp.redraw();
+    });
+
+    // oraz gdy LS zmieni 'slots' (np. inna karta)
+    window.addEventListener('storage', function(e){
+      if(e.key==='slots'){
+        freeMap = buildFreeDaysMap();
+        if(window.fp && window.fp.redraw) window.fp.redraw();
+      }
+    });
+  });
+</script>
+
 <script src="assets/app.helpers.js"></script>
-<script src="assets/send-email.js"></script> <!-- helper frontowy do maili -->
 <script src="assets/app.booking.js"></script>
 
 <!-- Prosty adapter na stronie publicznej -->
+<script>
+  window.addEventListener('error', e => {
+    console.log('[GLOBAL ERROR]', e.message, 'at', e.filename+':'+e.lineno+':'+e.colno);
+  });
+  window.addEventListener('unhandledrejection', e => {
+    console.log('[PROMISE REJECTION]', e.reason);
+  });
+</script>
 </body>
 </html>
 
