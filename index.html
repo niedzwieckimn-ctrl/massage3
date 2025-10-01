@@ -344,11 +344,15 @@ window.addEventListener('storage', (e) => {
   document.addEventListener('DOMContentLoaded', () => {
     const dateInput = document.getElementById('date');
     if (!dateInput) return;
+const cutoff48h = Date.now() + 48 * 60 * 60 * 1000; // teraz + 48h
 
     const fp = flatpickr(dateInput, {
 	  locale: { ...flatpickr.l10ns.pl, firstDayOfWeek: 1 },
       dateFormat: 'Y-m-d',
-      minDate: 'today',
+      mdisable: [
+  (d) => d.getTime() < cutoff48h
+],
+
       onChange: (selectedDates) => {
         if (selectedDates && selectedDates[0]) {
           const d = selectedDates[0];
@@ -448,12 +452,16 @@ window.addEventListener('storage', (e) => {
     if(!dateInput || !window.flatpickr) return;
 
     var freeMap = buildFreeDaysMap();
+const cutoff48h = Date.now() + 48 * 60 * 60 * 1000; // teraz + 48h
 
     // inicjalizacja flatpickr
     window.fp = flatpickr(dateInput, {
 	  locale: { ...flatpickr.l10ns.pl, firstDayOfWeek: 1 },
       dateFormat: 'Y-m-d',
-      minDate: 'today',
+      disable: [
+  (d) => d.getTime() < cutoff48h
+],
+
 	  disableMobile: true,   // wymuś nasz kalendarz zamiast natywnego
       static: true,          // poprawne pozycjonowanie na mobilnych
 
