@@ -53,7 +53,7 @@
 </div>
 
 <div class="calendar-note">
-  Rezerwacja możliwa tylko z wyprzedzeniem 24h
+  Rezerwacja możliwa tylko z wyprzedzeniem 48h
 </div>
 
 <div>
@@ -349,13 +349,13 @@ window.addEventListener('storage', (e) => {
   document.addEventListener('DOMContentLoaded', () => {
     const dateInput = document.getElementById('date');
     if (!dateInput) return;
-const cutoff24h = Date.now() + 24 * 60 * 60 * 1000; // teraz + 24h
-	  
+const cutoff48h = Date.now() + 48 * 60 * 60 * 1000; // teraz + 48h
+
     const fp = flatpickr(dateInput, {
 	  locale: { ...flatpickr.l10ns.pl, firstDayOfWeek: 1 },
       dateFormat: 'Y-m-d',
       disable: [
-  (d) => d.getTime() < cutoff24h
+  (d) => d.getTime() < cutoff48h
 ],
 
       onChange: (selectedDates) => {
@@ -382,7 +382,7 @@ const cutoff24h = Date.now() + 24 * 60 * 60 * 1000; // teraz + 24h
 <script src="assets/send-email.js"></script>
 <script src="assets/app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/supabase-client.js"></script>
+``<script src="assets/supabase-client.js"></script>
 <script src="assets/app.calendar.js"></script>
 <script src="assets/cloud-slots-adapter.js"></script>
 <script>
@@ -457,14 +457,14 @@ const cutoff24h = Date.now() + 24 * 60 * 60 * 1000; // teraz + 24h
     if(!dateInput || !window.flatpickr) return;
 
     var freeMap = buildFreeDaysMap();
-const cutoff24h = Date.now() + 24 * 60 * 60 * 1000; // teraz + 24h
+const cutoff48h = Date.now() + 48 * 60 * 60 * 1000; // teraz + 48h
 
     // inicjalizacja flatpickr
     window.fp = flatpickr(dateInput, {
 	  locale: { ...flatpickr.l10ns.pl, firstDayOfWeek: 1 },
       dateFormat: 'Y-m-d',
       disable: [
-  (d) => d.getTime() < cutoff24h
+  (d) => d.getTime() < cutoff48h
 ],
 
 	  disableMobile: true,   // wymuś nasz kalendarz zamiast natywnego
