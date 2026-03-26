@@ -53,7 +53,7 @@
 </div>
 
 <div class="calendar-note">
-  Rezerwacja możliwa tylko z wyprzedzeniem 48h
+  Rezerwacja możliwa tylko z wyprzedzeniem 24h
 </div>
 
 <div>
@@ -349,13 +349,13 @@ window.addEventListener('storage', (e) => {
   document.addEventListener('DOMContentLoaded', () => {
     const dateInput = document.getElementById('date');
     if (!dateInput) return;
-const cutoff48h = Date.now() + 48 * 60 * 60 * 1000; // teraz + 48h
-
+const cutoff24h = Date.now() + 24 * 60 * 60 * 1000; // teraz + 24h
+	  
     const fp = flatpickr(dateInput, {
 	  locale: { ...flatpickr.l10ns.pl, firstDayOfWeek: 1 },
       dateFormat: 'Y-m-d',
       disable: [
-  (d) => d.getTime() < cutoff48h
+  (d) => d.getTime() < cutoff24h
 ],
 
       onChange: (selectedDates) => {
