@@ -457,14 +457,14 @@ const cutoff24h = Date.now() + 24 * 60 * 60 * 1000; // teraz + 24h
     if(!dateInput || !window.flatpickr) return;
 
     var freeMap = buildFreeDaysMap();
-const cutoff48h = Date.now() + 48 * 60 * 60 * 1000; // teraz + 48h
+const cutoff24h = Date.now() + 24 * 60 * 60 * 1000; // teraz + 24h
 
     // inicjalizacja flatpickr
     window.fp = flatpickr(dateInput, {
 	  locale: { ...flatpickr.l10ns.pl, firstDayOfWeek: 1 },
       dateFormat: 'Y-m-d',
       disable: [
-  (d) => d.getTime() < cutoff48h
+  (d) => d.getTime() < cutoff24h
 ],
 
 	  disableMobile: true,   // wymuś nasz kalendarz zamiast natywnego
