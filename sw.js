@@ -1,4 +1,4 @@
-const CACHE='massages-spa-client-secure-v1';
+const CACHE='massages-spa-client-secure-v2';
 const CORE=['/','/index.html','/assets/style.css','/assets/app.js','/assets/logo.svg','/assets/supabase-client.js','/manifest.json','/icons/icon-192.png','/icons/icon-512.png','/icons/icon-512-maskable.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE&&!key.startsWith('clinical-spa-')).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
