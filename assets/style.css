@@ -172,7 +172,7 @@ tbody tr td:last-child {border-top-right-radius:10px;border-bottom-right-radius:
 #bookingThanks{
   position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
   min-width:260px;max-width:min(92vw,560px);
-  background:var(--brand);color:#fff;border-radius:14px;
+  background:#3f7d4a;color:#fff;border-radius:14px;
   padding:16px 18px;text-align:center;z-index:9999;
   box-shadow:0 10px 30px rgba(0,0,0,.12);
 }
