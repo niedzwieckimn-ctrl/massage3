@@ -204,6 +204,17 @@ tbody tr td:last-child {border-top-right-radius:10px;border-bottom-right-radius:
   font-weight: 500;
 }
 
+.flatpickr-day.short-notice,
+.flatpickr-day.short-notice:hover,
+.flatpickr-day.short-notice.selected {
+  border: 2px solid #e88a0b;
+  background: #fff1db;
+  color: #a85d00;
+  font-weight: 700;
+}
+
+.short-notice-legend{color:#a85d00;font-weight:700}
+
 
 .flatpickr-day:hover {
   border-color: var(--brand);
@@ -325,4 +336,3 @@ textarea:-webkit-autofill:focus {
   text-align: center;
   margin-top: 4px;
 }
-
